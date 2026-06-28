@@ -26,7 +26,13 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function HashHero() {
+interface HashHeroProps {
+  onEnter: () => void;
+  onDocs: () => void;
+  onAbout: () => void;
+}
+
+export function HashHero({ onEnter, onDocs, onAbout }: HashHeroProps) {
   const [display, setDisplay] = useState<string>(TITLE);
   const [hashes, setHashes] = useState<string[]>(() => ROWS.map(() => randomHex(48)));
 
@@ -66,6 +72,18 @@ export function HashHero() {
       <p className="kicker">PREPAID&nbsp;COMPUTE&nbsp;&bull;&nbsp;SSH&nbsp;SANDBOXES&nbsp;&bull;&nbsp;METERED&nbsp;IN&nbsp;ALGO</p>
 
       <h1 className="display hero-title">{display}</h1>
+
+      <div className="hero-cta">
+        <button className="btn" onClick={onEnter}>
+          EXPLORE THE MARKETPLACE&nbsp;→
+        </button>
+        <button className="btn ghost" onClick={onDocs}>
+          DOCS
+        </button>
+        <button className="btn ghost" onClick={onAbout}>
+          ABOUT
+        </button>
+      </div>
 
       <div className="hero-foot">
         <p className="hero-body">

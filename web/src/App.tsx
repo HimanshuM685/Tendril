@@ -7,14 +7,18 @@ import { Explore } from "./components/Explore";
 import { Contribute } from "./components/Contribute";
 import { LeasePanel } from "./components/LeasePanel";
 import { HashHero } from "./components/HashHero";
+import { Docs } from "./components/Docs";
+import { About } from "./components/About";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 
 type Tab = "explore" | "contribute";
+type View = "landing" | "app" | "docs" | "about";
 export type Session = { token: string; address: string };
 
 export function App() {
   const { activeAddress, signTransactions } = useWallet();
+  const [view, setView] = useState<View>("landing");
   const [tab, setTab] = useState<Tab>("explore");
   const [lease, setLease] = useState<ActiveLease | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -60,23 +64,42 @@ export function App() {
     }
   }
 
+  const enterApp = (t: Tab) => {
+    setTab(t);
+    setView("app");
+  };
+
   return (
     <div className="app">
       <div className="scanlines" aria-hidden="true"></div>
 
       <header className="masthead">
         <nav className="mast-left">
-          <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>
-            EXPLORE
+          {view === "app" ? (
+            <>
+              <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>
+                EXPLORE
+              </button>
+              <button
+                className={tab === "contribute" ? "active" : ""}
+                onClick={() => setTab("contribute")}
+              >
+                CONTRIBUTE
+              </button>
+            </>
+          ) : (
+            view !== "landing" && (
+              <button onClick={() => enterApp("explore")}>EXPLORE&nbsp;→</button>
+            )
+          )}
+          <button className={view === "docs" ? "active" : ""} onClick={() => setView("docs")}>
+            DOCS
           </button>
-          <button
-            className={tab === "contribute" ? "active" : ""}
-            onClick={() => setTab("contribute")}
-          >
-            CONTRIBUTE
+          <button className={view === "about" ? "active" : ""} onClick={() => setView("about")}>
+            ABOUT
           </button>
         </nav>
-        <span className="wordmark">
+        <span className="wordmark" onClick={() => setView("landing")} role="button" tabIndex={0}>
           TENDRIL<span className="wm-tld">.ALGO</span>
         </span>
         <div className="mast-right">
@@ -92,44 +115,57 @@ export function App() {
       <div className="rule rule-heavy"></div>
 
       <main>
-        <HashHero />
-
-        <div className="rule rule-heavy"></div>
-
         {error && <div className="error">{error}</div>}
 
-        {session && (
-          <WalletPanel
-            wallet={wallet}
-            address={session.address}
-            signTransactions={signTransactions as never}
-            token={session.token}
-            onChanged={() => refreshWallet(session.token)}
-            onError={setError}
+        {view === "landing" && (
+          <HashHero
+            onEnter={() => enterApp("explore")}
+            onDocs={() => setView("docs")}
+            onAbout={() => setView("about")}
           />
         )}
 
-        <section className="index">
-          <div className="section-head">
-            <div className="sh-left">
-              <p className="kicker">// {tab === "explore" ? "THE MARKETPLACE" : "SHARE COMPUTE"}</p>
-              <h2 className="display section-title">{tab === "explore" ? "EXPLORE" : "CONTRIBUTE"}</h2>
-            </div>
-          </div>
-          <div className="rule"></div>
+        {view === "docs" && <Docs />}
+        {view === "about" && <About />}
 
-          {tab === "explore" ? (
-            <Explore
-              session={session}
-              balanceMicroAlgos={wallet?.balanceMicroAlgos ?? 0}
-              onLeased={setLease}
-            />
-          ) : (
-            <Contribute address={activeAddress} />
-          )}
+        {view === "app" && (
+          <>
+            {session && (
+              <WalletPanel
+                wallet={wallet}
+                address={session.address}
+                signTransactions={signTransactions as never}
+                token={session.token}
+                onChanged={() => refreshWallet(session.token)}
+                onError={setError}
+              />
+            )}
 
-          {lease && <LeasePanel lease={lease} onRelease={() => setLease(null)} />}
-        </section>
+            <section className="index">
+              <div className="section-head">
+                <div className="sh-left">
+                  <p className="kicker">// {tab === "explore" ? "THE MARKETPLACE" : "SHARE COMPUTE"}</p>
+                  <h2 className="display section-title">
+                    {tab === "explore" ? "EXPLORE" : "CONTRIBUTE"}
+                  </h2>
+                </div>
+              </div>
+              <div className="rule"></div>
+
+              {tab === "explore" ? (
+                <Explore
+                  session={session}
+                  balanceMicroAlgos={wallet?.balanceMicroAlgos ?? 0}
+                  onLeased={setLease}
+                />
+              ) : (
+                <Contribute address={activeAddress} />
+              )}
+
+              {lease && <LeasePanel lease={lease} onRelease={() => setLease(null)} />}
+            </section>
+          </>
+        )}
       </main>
 
       <div className="rule rule-heavy"></div>
