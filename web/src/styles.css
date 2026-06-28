@@ -389,6 +389,48 @@ main { display: block; }
   word-break: break-all;
 }
 
+/* terminal-style code block with a copy button (green on the cream card) */
+.codeblock {
+  background: var(--green);
+  color: var(--cream);
+  border: 1px solid var(--green);
+  margin: 12px 0;
+}
+.codeblock-bar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--cream);
+}
+.codeblock-title {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  padding: 7px 12px;
+}
+.codeblock-copy {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--cream);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--cream);
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.codeblock-copy:hover,
+.codeblock-copy.done { background: var(--cream); color: var(--green); }
+.codeblock-body {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 /* ---- lease panel (cream card) ------------------------------------------- */
 .lease-panel {
   max-width: var(--maxw);

@@ -9,6 +9,7 @@ import { fetchMyNodes } from "../api";
  */
 export function Contribute({ address }: { address: string | null }) {
   const [nodes, setNodes] = useState<ComputeNode[]>([]);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!address) {
@@ -36,6 +37,12 @@ REGISTRY_URL=http://<backend-host>:4000
 # 2) bring up the contributor
 docker compose up --build contributor`;
 
+  function copyCmd() {
+    void navigator.clipboard?.writeText(cmd);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
     <div>
       <p className="muted">
@@ -46,7 +53,19 @@ docker compose up --build contributor`;
 
       <div className="card wide">
         <strong>1. Run the contributor agent (Docker)</strong>
-        <pre className="cmd">{cmd}</pre>
+        <div className="codeblock">
+          <div className="codeblock-bar">
+            <span className="codeblock-title">SHELL</span>
+            <button
+              className={`codeblock-copy${copied ? " done" : ""}`}
+              type="button"
+              onClick={copyCmd}
+            >
+              {copied ? "COPIED" : "COPY"}
+            </button>
+          </div>
+          <pre className="codeblock-body">{cmd}</pre>
+        </div>
         <p className="muted small">
           Generate a key with <code>npm run keygen</code>, fund it on testnet, set the values in{" "}
           <code>.env</code>, then bring up the container. It mounts the host Docker socket and runs
