@@ -1,0 +1,25 @@
+{
+  "name": "tendril",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tendril — a 402-gated, native-ALGO compute marketplace for individual contributors on Algorand",
+  "workspaces": [
+    "shared",
+    "backend",
+    "contributor",
+    "web",
+    "example-buyer"
+  ],
+  "scripts": {
+    "backend": "npm run dev -w backend",
+    "contributor": "npm run dev -w contributor",
+    "web": "npm run dev -w web",
+    "client": "npm run start -w example-buyer",
+    "keygen": "npm run keygen -w contributor",
+    "typecheck": "tsc -b shared backend contributor example-buyer",
+    "build:shared": "tsc -b shared"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
