@@ -1,0 +1,103 @@
+import { useState } from "react";
+import type { WalletSummary } from "@tendril/shared";
+import { formatAlgo } from "@tendril/shared";
+import { topUp } from "../wallet";
+
+type SignTransactions = (
+  txnGroup: Uint8Array[],
+  indexesToSign?: number[],
+) => Promise<(Uint8Array | null)[]>;
+
+interface Props {
+  wallet: WalletSummary | null;
+  address: string;
+  token: string;
+  signTransactions: SignTransactions;
+  onChanged: () => void;
+  onError: (msg: string) => void;
+}
+
+const PRESETS = [0.5, 1, 5];
+
+/** Prepaid balance + a top-up control + deposit/spend history. */
+export function WalletPanel({ wallet, address, token, signTransactions, onChanged, onError }: Props) {
+  const [amount, setAmount] = useState(1);
+  const [busy, setBusy] = useState(false);
+
+  async function deposit() {
+    if (!(amount > 0)) return;
+    setBusy(true);
+    try {
+      await topUp(token, address, signTransactions, amount);
+      onChanged();
+    } catch (e) {
+      onError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const balance = wallet?.balanceMicroAlgos ?? 0;
+
+  return (
+    <section className="wallet-panel">
+      <div className="wallet-balance">
+        <span className="muted small">Prepaid balance</span>
+        <strong className="balance">{formatAlgo(balance)}</strong>
+      </div>
+
+      <div className="topup">
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            className={`btn ghost${amount === p ? " active" : ""}`}
+            onClick={() => setAmount(p)}
+          >
+            {p} ALGO
+          </button>
+        ))}
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          className="topup-amount"
+        />
+        <button className="btn" disabled={busy} onClick={deposit}>
+          {busy ? "Topping up…" : "Top up"}
+        </button>
+      </div>
+
+      {wallet && (wallet.topups.length > 0 || wallet.charges.length > 0) && (
+        <details className="history">
+          <summary className="muted small">History</summary>
+          <div className="history-grid">
+            <div>
+              <span className="muted small">Top-ups</span>
+              <ul>
+                {wallet.topups.slice(0, 8).map((t) => (
+                  <li key={t.txid}>
+                    +{formatAlgo(t.amountMicroAlgos)}{" "}
+                    <span className="muted small">{new Date(t.createdAt).toLocaleTimeString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <span className="muted small">Usage</span>
+              <ul>
+                {wallet.charges.slice(0, 8).map((c) => (
+                  <li key={c.id}>
+                    −{formatAlgo(c.amountMicroAlgos)}{" "}
+                    <span className="muted small">{c.seconds}s</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
