@@ -1,152 +1,166 @@
-# Graph Report - .  (2026-06-28)
+# Graph Report - .  (2026-06-29)
 
 ## Corpus Check
-- Corpus is ~11,601 words - fits in a single context window. You may not need a graph.
+- 29 files · ~16,057 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 356 nodes · 502 edges · 20 communities (17 shown, 3 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.88)
-- Token cost: 36,000 input · 4,200 output
+- 394 nodes · 573 edges · 25 communities (19 shown, 6 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 8 edges (avg confidence: 0.88)
+- Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Backend Auth & Database|Backend Auth & Database]]
-- [[_COMMUNITY_Contributor Sandbox & Agent|Contributor Sandbox & Agent]]
-- [[_COMMUNITY_Autonomous Buyer & Shared Types|Autonomous Buyer & Shared Types]]
-- [[_COMMUNITY_Backend Package & Deps|Backend Package & Deps]]
-- [[_COMMUNITY_Payment & Architecture Concepts|Payment & Architecture Concepts]]
-- [[_COMMUNITY_Web App & Wallet Deps|Web App & Wallet Deps]]
-- [[_COMMUNITY_Contributor Package & Deps|Contributor Package & Deps]]
+- [[_COMMUNITY_Frontend UI Components|Frontend UI Components]]
+- [[_COMMUNITY_Contributor Service Core|Contributor Service Core]]
+- [[_COMMUNITY_Backend API Core|Backend API Core]]
+- [[_COMMUNITY_Auth and Session Management|Auth and Session Management]]
+- [[_COMMUNITY_Backend Dependencies|Backend Dependencies]]
+- [[_COMMUNITY_Deployment and Infrastructure|Deployment and Infrastructure]]
+- [[_COMMUNITY_Frontend Dependencies|Frontend Dependencies]]
+- [[_COMMUNITY_Contributor Dependencies|Contributor Dependencies]]
 - [[_COMMUNITY_Web TypeScript Config|Web TypeScript Config]]
 - [[_COMMUNITY_Monorepo Root Config|Monorepo Root Config]]
-- [[_COMMUNITY_Buyer Package & Deps|Buyer Package & Deps]]
-- [[_COMMUNITY_Shared TS Base Config|Shared TS Base Config]]
-- [[_COMMUNITY_Shared Package Manifest|Shared Package Manifest]]
-- [[_COMMUNITY_Backend tsconfig|Backend tsconfig]]
-- [[_COMMUNITY_Contributor tsconfig|Contributor tsconfig]]
-- [[_COMMUNITY_Buyer tsconfig|Buyer tsconfig]]
-- [[_COMMUNITY_WebShared tsconfig|Web/Shared tsconfig]]
-- [[_COMMUNITY_Backend Runtime Config|Backend Runtime Config]]
-- [[_COMMUNITY_Contributor Runtime Config|Contributor Runtime Config]]
+- [[_COMMUNITY_Example Buyer Package|Example Buyer Package]]
+- [[_COMMUNITY_Base TypeScript Config|Base TypeScript Config]]
+- [[_COMMUNITY_Shared Package Config|Shared Package Config]]
+- [[_COMMUNITY_Backend TSConfig|Backend TSConfig]]
+- [[_COMMUNITY_Contributor TSConfig|Contributor TSConfig]]
+- [[_COMMUNITY_Example Buyer TSConfig|Example Buyer TSConfig]]
+- [[_COMMUNITY_Wallet and Algorand Ops|Wallet and Algorand Ops]]
+- [[_COMMUNITY_Shared TSConfig|Shared TSConfig]]
+- [[_COMMUNITY_Backend Config|Backend Config]]
+- [[_COMMUNITY_Contributor Config|Contributor Config]]
 - [[_COMMUNITY_Key Generation|Key Generation]]
+- [[_COMMUNITY_Sandbox SSH Entrypoint|Sandbox SSH Entrypoint]]
+- [[_COMMUNITY_Web SPA Entry|Web SPA Entry]]
+- [[_COMMUNITY_Project Identity|Project Identity]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `compilerOptions` - 15 edges
 2. `compilerOptions` - 13 edges
-3. `algoPayMiddleware()` - 11 edges
-4. `scripts` - 8 edges
-5. `startSandbox()` - 7 edges
-6. `getNode()` - 6 edges
-7. `getLease()` - 6 edges
-8. `usdToMicroAlgos()` - 6 edges
+3. `startSandbox()` - 9 edges
+4. `Backend / Registry` - 9 edges
+5. `scripts` - 8 edges
+6. `endLeaseAndBill()` - 8 edges
+7. `WalletSummary` - 7 edges
+8. `formatAlgo()` - 6 edges
 9. `ActiveLease` - 6 edges
-10. `Backend / Registry (Express + SQLite + socket.io)` - 6 edges
+10. `Contributor Agent` - 6 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Native ALGO Settlement (no USDC/ASA)` --semantically_similar_to--> `Native ALGO Payment`  [INFERRED] [semantically similar]
+- `Backend / Registry` --conceptually_related_to--> `WebSocket Proxy (nginx)`  [INFERRED]
   README.md → DEPLOY.md
-- `algoPayMiddleware()` --calls--> `usdToMicroAlgos()`  [INFERRED]
-  backend/src/pay-algo.ts → shared/src/index.ts
-- `Docker Compose: web service` --implements--> `Web App (Vite + React + use-wallet)`  [INFERRED]
+- `Props` --references--> `WalletSummary`  [EXTRACTED]
+  web/src/components/WalletPanel.tsx → shared/src/index.ts
+- `Docker Backend Service` --implements--> `Backend / Registry`  [INFERRED]
   docker-compose.yml → README.md
-- `Web SPA HTML Entry (main.tsx mount)` --implements--> `Web App (Vite + React + use-wallet)`  [INFERRED]
-  web/index.html → README.md
-- `algoPayMiddleware()` --calls--> `leasePrice()`  [INFERRED]
-  backend/src/pay-algo.ts → shared/src/index.ts
+- `Docker Contributor Service` --implements--> `Contributor Agent`  [INFERRED]
+  docker-compose.yml → README.md
+- `Docker Buyer Service` --implements--> `Example Buyer / Autonomous Agent`  [INFERRED]
+  docker-compose.yml → README.md
 
 ## Import Cycles
 - 1-file cycle: `contributor/src/index.ts -> contributor/src/index.ts`
 - 1-file cycle: `example-buyer/src/index.ts -> example-buyer/src/index.ts`
 
 ## Hyperedges (group relationships)
-- **Docker Compose Services Forming the Marketplace** — compose_backend_service, compose_web_service, compose_contributor_service, compose_buyer_service [EXTRACTED 1.00]
-- **402 Native-ALGO Payment Flow** — readme_402_challenge, readme_native_algo_payment, deploy_usd_algo_conversion, deploy_algod_endpoint, readme_synchronous_settlement [EXTRACTED 0.85]
-- **Ephemeral Docker Sandbox Trust Boundary** — readme_ephemeral_docker_sandbox, readme_contributor_agent, readme_cloudflared_tunnel, readme_lease_reaper [EXTRACTED 0.85]
+- **Prepaid Billing Flow** — tendril_custodial_model, tendril_pricing_model, tendril_watchdog, tendril_neon_postgres, tendril_algorand_algod [INFERRED 0.85]
+- **Three Deployable Components** — tendril_backend, tendril_contributor, tendril_web [EXTRACTED 1.00]
+- **Docker Compose Service Mapping** — deploy_docker_backend_service, deploy_docker_contributor_service, deploy_docker_buyer_service [EXTRACTED 1.00]
 
-## Communities (20 total, 3 thin omitted)
+## Communities (25 total, 6 thin omitted)
 
-### Community 0 - "Backend Auth & Database"
+### Community 0 - "Frontend UI Components"
 Cohesion: 0.06
-Nodes (53): issueLeaseToken(), issueNonce(), issuePaymentChallenge(), leaseIdFromAuthHeader(), NonceEntry, nonces, PaymentChallengeClaims, verifyAgentHello() (+45 more)
+Nodes (46): Contribute(), Explore(), Props, LeasePanel(), Props, Props, WalletBar(), PRESETS (+38 more)
 
-### Community 1 - "Contributor Sandbox & Agent"
-Cohesion: 0.08
-Nodes (36): main(), containerName(), execFileP, getFreePort(), runInSandbox(), Sandbox, sessionUrlFor(), startSandbox() (+28 more)
-
-### Community 2 - "Autonomous Buyer & Shared Types"
-Cohesion: 0.09
-Nodes (31): Contribute(), Explore(), Props, LeasePanel(), Props, WalletBar(), main(), ActiveLease (+23 more)
-
-### Community 3 - "Backend Package & Deps"
+### Community 1 - "Contributor Service Core"
 Cohesion: 0.07
-Nodes (26): dependencies, algosdk, better-sqlite3, cors, dotenv, express, jsonwebtoken, nanoid (+18 more)
+Nodes (39): main(), containerName(), ensureImage(), execFileP, getFreePort(), runInSandbox(), SandboxEndpoint, startSandbox() (+31 more)
 
-### Community 4 - "Payment & Architecture Concepts"
+### Community 2 - "Backend API Core"
+Cohesion: 0.08
+Nodes (34): main(), creditWallet(), debitWallet(), getBalance(), getWallet(), initDb(), pool, q() (+26 more)
+
+### Community 3 - "Auth and Session Management"
+Cohesion: 0.10
+Nodes (32): addressFromSession(), issueLeaseToken(), issueNonce(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), NonceEntry, nonces (+24 more)
+
+### Community 4 - "Backend Dependencies"
+Cohesion: 0.08
+Nodes (25): dependencies, algosdk, cors, dotenv, express, jsonwebtoken, nanoid, pg (+17 more)
+
+### Community 5 - "Deployment and Infrastructure"
 Cohesion: 0.12
-Nodes (26): Docker Compose: backend service, Docker Compose: buyer service, Docker Compose: contributor service, tendril-data SQLite Volume, Docker Compose: web service, Algod Endpoint (submit + confirm payments), Native ALGO Payment, USD to ALGO Price Conversion (ALGO_USD_PRICE / PRICE_PER_MIN_USD) (+18 more)
+Nodes (24): @tendril/shared, Docker Backend Service, Docker Buyer Service, Docker Contributor Service, Production Deployment, Sibling Container Pattern, WebSocket Proxy (nginx), Agentic Endpoints (+16 more)
 
-### Community 5 - "Web App & Wallet Deps"
+### Community 6 - "Frontend Dependencies"
 Cohesion: 0.08
 Nodes (23): dependencies, algosdk, @blockshake/defly-connect, @perawallet/connect, react, react-dom, @txnlab/use-wallet-react, devDependencies (+15 more)
 
-### Community 6 - "Contributor Package & Deps"
+### Community 7 - "Contributor Dependencies"
 Cohesion: 0.11
 Nodes (18): dependencies, algosdk, dotenv, nanoid, socket.io-client, @tendril/shared, tsx, devDependencies (+10 more)
 
-### Community 7 - "Web TypeScript Config"
+### Community 8 - "Web TypeScript Config"
 Cohesion: 0.11
 Nodes (17): compilerOptions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+9 more)
 
-### Community 8 - "Monorepo Root Config"
+### Community 9 - "Monorepo Root Config"
 Cohesion: 0.12
 Nodes (15): description, engines, node, name, private, scripts, backend, build:shared (+7 more)
 
-### Community 9 - "Buyer Package & Deps"
+### Community 10 - "Example Buyer Package"
 Cohesion: 0.13
 Nodes (14): dependencies, algosdk, dotenv, @tendril/shared, tsx, devDependencies, @types/node, typescript (+6 more)
 
-### Community 10 - "Shared TS Base Config"
+### Community 11 - "Base TypeScript Config"
 Cohesion: 0.14
 Nodes (13): compilerOptions, composite, declaration, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution (+5 more)
 
-### Community 11 - "Shared Package Manifest"
+### Community 12 - "Shared Package Config"
 Cohesion: 0.20
 Nodes (9): exports, main, name, private, scripts, build, type, types (+1 more)
 
-### Community 12 - "Backend tsconfig"
+### Community 13 - "Backend TSConfig"
 Cohesion: 0.25
 Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
 
-### Community 13 - "Contributor tsconfig"
+### Community 14 - "Contributor TSConfig"
 Cohesion: 0.25
 Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
 
-### Community 14 - "Buyer tsconfig"
+### Community 15 - "Example Buyer TSConfig"
 Cohesion: 0.25
 Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
 
-### Community 15 - "Web/Shared tsconfig"
+### Community 16 - "Wallet and Algorand Ops"
+Cohesion: 0.43
+Nodes (6): algod, decodeSigned(), noteText(), SettledTopUp, settleTopUp(), verifyLoginSignature()
+
+### Community 17 - "Shared TSConfig"
 Cohesion: 0.33
 Nodes (5): compilerOptions, outDir, rootDir, extends, include
 
 ## Knowledge Gaps
-- **176 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+171 more)
+- **184 isolated node(s):** `extends`, `rootDir`, `outDir`, `types`, `references` (+179 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ExplorerNode` connect `Autonomous Buyer & Shared Types` to `Backend Auth & Database`, `Contributor Sandbox & Agent`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `SandboxLimits` connect `Contributor Sandbox & Agent` to `Backend Auth & Database`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `usdToMicroAlgos()` connect `Autonomous Buyer & Shared Types` to `Backend Auth & Database`, `Contributor Sandbox & Agent`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Are the 6 inferred relationships involving `algoPayMiddleware()` (e.g. with `issuePaymentChallenge()` and `verifyPaymentChallenge()`) actually correct?**
-  _`algoPayMiddleware()` has 6 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `name`, `version`, `private` to the rest of the system?**
-  _177 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Backend Auth & Database` be split into smaller, more focused modules?**
-  _Cohesion score 0.06144393241167435 - nodes in this community are weakly interconnected._
-- **Should `Contributor Sandbox & Agent` be split into smaller, more focused modules?**
-  _Cohesion score 0.08305647840531562 - nodes in this community are weakly interconnected._
+- **Why does `WalletSummary` connect `Frontend UI Components` to `Contributor Service Core`, `Backend API Core`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `SandboxLimits` connect `Contributor Service Core` to `Auth and Session Management`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **Why does `SandboxAccess` connect `Frontend UI Components` to `Contributor Service Core`, `Backend API Core`, `Auth and Session Management`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Are the 2 inferred relationships involving `Backend / Registry` (e.g. with `Docker Backend Service` and `WebSocket Proxy (nginx)`) actually correct?**
+  _`Backend / Registry` has 2 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `extends`, `rootDir`, `outDir` to the rest of the system?**
+  _187 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Frontend UI Components` be split into smaller, more focused modules?**
+  _Cohesion score 0.06390977443609022 - nodes in this community are weakly interconnected._
+- **Should `Contributor Service Core` be split into smaller, more focused modules?**
+  _Cohesion score 0.07474747474747474 - nodes in this community are weakly interconnected._
