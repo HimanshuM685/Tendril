@@ -6,6 +6,7 @@ import { WalletPanel } from "./components/WalletPanel";
 import { Explore } from "./components/Explore";
 import { Contribute } from "./components/Contribute";
 import { LeasePanel } from "./components/LeasePanel";
+import { HashHero } from "./components/HashHero";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 
@@ -61,68 +62,84 @@ export function App() {
 
   return (
     <div className="app">
-      <header>
-        <div className="brand">
-          <span className="logo">🌿</span>
-          <div>
-            <h1>Tendril</h1>
-            <p className="tagline">
-              Top up once. Rent real compute. Time is metered straight from your ALGO balance.
-            </p>
-          </div>
+      <div className="scanlines" aria-hidden="true"></div>
+
+      <header className="masthead">
+        <nav className="mast-left">
+          <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>
+            EXPLORE
+          </button>
+          <button
+            className={tab === "contribute" ? "active" : ""}
+            onClick={() => setTab("contribute")}
+          >
+            CONTRIBUTE
+          </button>
+        </nav>
+        <span className="wordmark">
+          TENDRIL<span className="wm-tld">.ALGO</span>
+        </span>
+        <div className="mast-right">
+          <WalletBar
+            signedIn={!!session}
+            canSignIn={!!activeAddress}
+            signingIn={signingIn}
+            onSignIn={signIn}
+          />
         </div>
-        <WalletBar
-          signedIn={!!session}
-          canSignIn={!!activeAddress}
-          signingIn={signingIn}
-          onSignIn={signIn}
-        />
       </header>
 
-      {error && <div className="error">{error}</div>}
-
-      {session && (
-        <WalletPanel
-          wallet={wallet}
-          address={session.address}
-          signTransactions={signTransactions as never}
-          token={session.token}
-          onChanged={() => refreshWallet(session.token)}
-          onError={setError}
-        />
-      )}
-
-      <nav className="tabs">
-        <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>
-          Explore
-        </button>
-        <button
-          className={tab === "contribute" ? "active" : ""}
-          onClick={() => setTab("contribute")}
-        >
-          Contribute
-        </button>
-      </nav>
+      <div className="rule rule-heavy"></div>
 
       <main>
-        {tab === "explore" ? (
-          <Explore
-            session={session}
-            balanceMicroAlgos={wallet?.balanceMicroAlgos ?? 0}
-            onLeased={setLease}
+        <HashHero />
+
+        <div className="rule rule-heavy"></div>
+
+        {error && <div className="error">{error}</div>}
+
+        {session && (
+          <WalletPanel
+            wallet={wallet}
+            address={session.address}
+            signTransactions={signTransactions as never}
+            token={session.token}
+            onChanged={() => refreshWallet(session.token)}
+            onError={setError}
           />
-        ) : (
-          <Contribute address={activeAddress} />
         )}
 
-        {lease && (
-          <LeasePanel lease={lease} onRelease={() => setLease(null)} />
-        )}
+        <section className="index">
+          <div className="section-head">
+            <div className="sh-left">
+              <p className="kicker">// {tab === "explore" ? "THE MARKETPLACE" : "SHARE COMPUTE"}</p>
+              <h2 className="display section-title">{tab === "explore" ? "EXPLORE" : "CONTRIBUTE"}</h2>
+            </div>
+          </div>
+          <div className="rule"></div>
+
+          {tab === "explore" ? (
+            <Explore
+              session={session}
+              balanceMicroAlgos={wallet?.balanceMicroAlgos ?? 0}
+              onLeased={setLease}
+            />
+          ) : (
+            <Contribute address={activeAddress} />
+          )}
+
+          {lease && <LeasePanel lease={lease} onRelease={() => setLease(null)} />}
+        </section>
       </main>
 
-      <footer className="muted small">
-        Sandbox boundary: each lease runs an ephemeral Docker container — no host mount, no host
-        network, dropped capabilities, destroyed when the lease ends.
+      <div className="rule rule-heavy"></div>
+
+      <footer className="footer">
+        <span>&copy;&nbsp;TENDRIL</span>
+        <span className="foot-mid">
+          EPHEMERAL DOCKER SANDBOX &bull; NO HOST MOUNT &bull; DESTROYED ON LEASE END
+        </span>
+        <span>ALGORAND&nbsp;TESTNET</span>
       </footer>
     </div>
   );
