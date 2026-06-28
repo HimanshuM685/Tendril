@@ -28,7 +28,13 @@ export function Contribute({ address }: { address: string | null }) {
     };
   }, [address]);
 
-  const cmd = "AVM_PRIVATE_KEY=<your-key> PRICE_PER_HOUR_USD=1.0 npm run contributor";
+  const cmd = `# 1) set these in .env (copied from .env.example)
+AVM_PRIVATE_KEY=<your-key>
+PRICE_PER_HOUR_USD=1.0
+REGISTRY_URL=http://<backend-host>:4000
+
+# 2) bring up the contributor
+docker compose up --build contributor`;
 
   return (
     <div>
@@ -39,11 +45,13 @@ export function Contribute({ address }: { address: string | null }) {
       </p>
 
       <div className="card wide">
-        <strong>1. Run the contributor agent</strong>
+        <strong>1. Run the contributor agent (Docker)</strong>
         <pre className="cmd">{cmd}</pre>
         <p className="muted small">
-          Generate a key with <code>npm run keygen</code>, fund it on testnet, then
-          run the command above. Your node appears in Explore within seconds.
+          Generate a key with <code>npm run keygen</code>, fund it on testnet, set the values in{" "}
+          <code>.env</code>, then bring up the container. It mounts the host Docker socket and runs
+          each rented sandbox as a sibling container — nothing else to install. Your node appears in
+          Explore within seconds.
         </p>
       </div>
 
