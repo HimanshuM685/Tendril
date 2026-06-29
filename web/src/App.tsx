@@ -9,11 +9,12 @@ import { LeasePanel } from "./components/LeasePanel";
 import { HashHero } from "./components/HashHero";
 import { Docs } from "./components/Docs";
 import { About } from "./components/About";
+import { Dashboard } from "./components/Dashboard";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 
 type Tab = "explore" | "contribute";
-type View = "landing" | "app" | "docs" | "about";
+type View = "landing" | "app" | "dashboard" | "docs" | "about";
 export type Session = { token: string; address: string };
 
 export function App() {
@@ -92,6 +93,9 @@ export function App() {
               <button onClick={() => enterApp("explore")}>EXPLORE&nbsp;→</button>
             )
           )}
+          <button className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>
+            DASHBOARD
+          </button>
           <button className={view === "docs" ? "active" : ""} onClick={() => setView("docs")}>
             DOCS
           </button>
@@ -125,6 +129,9 @@ export function App() {
           />
         )}
 
+        {view === "dashboard" && (
+          <Dashboard wallet={wallet} address={session?.address ?? null} signedIn={!!session} />
+        )}
         {view === "docs" && <Docs />}
         {view === "about" && <About />}
 

@@ -127,7 +127,23 @@ export interface Payout {
   createdAt: number;
 }
 
-/** Wallet + its deposit/spend history and contributor earnings, GET /wallet. */
+/** Lifetime aggregates for an address (computed server-side, not capped). */
+export interface WalletStats {
+  /** Total ALGO ever spent on compute. */
+  totalSpentMicroAlgos: number;
+  /** Total ALGO ever deposited. */
+  totalToppedUpMicroAlgos: number;
+  /** Total billed compute time across all leases, in seconds. */
+  totalLeaseSeconds: number;
+  /** Number of leases that were billed. */
+  leaseCount: number;
+  /** Total ALGO earned as a contributor (payouts received). */
+  totalEarnedMicroAlgos: number;
+  /** Number of payouts received as a contributor. */
+  payoutCount: number;
+}
+
+/** Wallet + its deposit/spend history, contributor earnings, and lifetime stats. */
 export interface WalletSummary {
   address: string;
   balanceMicroAlgos: number;
@@ -135,6 +151,7 @@ export interface WalletSummary {
   charges: Charge[];
   /** Payouts received as a contributor (earnings history). */
   payouts: Payout[];
+  stats: WalletStats;
 }
 
 export interface Job {

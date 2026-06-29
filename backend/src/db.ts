@@ -1,5 +1,5 @@
 import pg from "pg";
-import type { Charge, Payout, TopUp, Wallet, WalletSummary } from "@tendril/shared";
+import type { Charge, Payout, TopUp, Wallet, WalletStats, WalletSummary } from "@tendril/shared";
 import { config } from "./config.js";
 
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
@@ -188,7 +188,7 @@ export async function recordPayout(
 }
 
 export async function walletSummary(address: string): Promise<WalletSummary> {
-  const [wallet, topupRows, chargeRows, payoutRows] = await Promise.all([
+  const [wallet, topupRows, chargeRows, payoutRows, chargeAgg, topupAgg, payoutAgg] = await Promise.all([
     getWallet(address),
     q<{ txid: string; address: string; amount_micro: number; created_at: number }>(
       "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
@@ -200,6 +200,24 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     ),
     q<{ id: number; to_addr: string; lease_id: string; amount_micro: number; txid: string | null; created_at: number }>(
       "SELECT * FROM payouts WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
+      [address],
+    ),
+    // Lifetime aggregates (not capped by the history LIMITs above). SUM(bigint)
+    // is numeric, so cast back to bigint for the int8→Number parser.
+    q<{ spent: number; secs: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_micro),0)::bigint AS spent,
+              COALESCE(SUM(seconds),0)::bigint AS secs,
+              COUNT(*)::bigint AS cnt
+         FROM charges WHERE address = $1`,
+      [address],
+    ),
+    q<{ topped: number }>(
+      "SELECT COALESCE(SUM(amount_micro),0)::bigint AS topped FROM topups WHERE address = $1",
+      [address],
+    ),
+    q<{ earned: number; pcnt: number }>(
+      `SELECT COALESCE(SUM(amount_micro),0)::bigint AS earned, COUNT(*)::bigint AS pcnt
+         FROM payouts WHERE to_addr = $1`,
       [address],
     ),
   ]);
@@ -226,7 +244,15 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     txid: p.txid,
     createdAt: p.created_at,
   }));
-  return { address, balanceMicroAlgos: wallet.balanceMicroAlgos, topups, charges, payouts };
+  const stats: WalletStats = {
+    totalSpentMicroAlgos: chargeAgg[0]?.spent ?? 0,
+    totalToppedUpMicroAlgos: topupAgg[0]?.topped ?? 0,
+    totalLeaseSeconds: chargeAgg[0]?.secs ?? 0,
+    leaseCount: chargeAgg[0]?.cnt ?? 0,
+    totalEarnedMicroAlgos: payoutAgg[0]?.earned ?? 0,
+    payoutCount: payoutAgg[0]?.pcnt ?? 0,
+  };
+  return { address, balanceMicroAlgos: wallet.balanceMicroAlgos, topups, charges, payouts, stats };
 }
 
 export default pool;

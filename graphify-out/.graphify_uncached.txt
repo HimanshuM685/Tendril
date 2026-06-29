@@ -1,0 +1,2 @@
+/Users/fusion/Code/GitRepos/Tendril/web/index.html
+/Users/fusion/Code/GitRepos/Tendril/web/public/favicon.svg
