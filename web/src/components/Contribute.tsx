@@ -9,7 +9,7 @@ import { fetchMyNodes } from "../api";
  */
 export function Contribute({ address }: { address: string | null }) {
   const [nodes, setNodes] = useState<ComputeNode[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     if (!address) {
@@ -29,18 +29,17 @@ export function Contribute({ address }: { address: string | null }) {
     };
   }, [address]);
 
-  const cmd = `# 1) set these in .env (copied from .env.example)
+  const envCmd = `# set these in .env (copied from .env.example)
 AVM_PRIVATE_KEY=<your-key>
 PRICE_PER_HOUR_USD=1.0
-REGISTRY_URL=http://<backend-host>:4000
-
-# 2) bring up the contributor
+REGISTRY_URL=http://<backend-host>:4000`;
+  const runCmd = `# bring up the contributor
 docker compose up --build contributor`;
 
-  function copyCmd() {
-    void navigator.clipboard?.writeText(cmd);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  function copy(id: string, text: string) {
+    void navigator.clipboard?.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500);
   }
 
   return (
@@ -52,20 +51,36 @@ docker compose up --build contributor`;
       </p>
 
       <div className="card wide">
-        <strong>1. Run the contributor agent (Docker)</strong>
+        <strong>1. Set your environment (.env)</strong>
+        <div className="codeblock">
+          <div className="codeblock-bar">
+            <span className="codeblock-title">.ENV</span>
+            <button
+              className={`codeblock-copy${copied === "env" ? " done" : ""}`}
+              type="button"
+              onClick={() => copy("env", envCmd)}
+            >
+              {copied === "env" ? "COPIED" : "COPY"}
+            </button>
+          </div>
+          <pre className="codeblock-body">{envCmd}</pre>
+        </div>
+
+        <strong>2. Bring up the contributor (Docker)</strong>
         <div className="codeblock">
           <div className="codeblock-bar">
             <span className="codeblock-title">SHELL</span>
             <button
-              className={`codeblock-copy${copied ? " done" : ""}`}
+              className={`codeblock-copy${copied === "run" ? " done" : ""}`}
               type="button"
-              onClick={copyCmd}
+              onClick={() => copy("run", runCmd)}
             >
-              {copied ? "COPIED" : "COPY"}
+              {copied === "run" ? "COPIED" : "COPY"}
             </button>
           </div>
-          <pre className="codeblock-body">{cmd}</pre>
+          <pre className="codeblock-body">{runCmd}</pre>
         </div>
+
         <p className="muted small">
           Generate a key with <code>npm run keygen</code>, fund it on testnet, set the values in{" "}
           <code>.env</code>, then bring up the container. It mounts the host Docker socket and runs
