@@ -38,6 +38,21 @@ function getFreePort(): Promise<number> {
   });
 }
 
+/** Number of CPUs the Docker daemon exposes — `docker run --cpus` can't exceed
+ *  it. Cached after the first lookup; 0 means "couldn't determine" (skip clamp). */
+let ncpuCache: number | null = null;
+async function dockerNcpu(): Promise<number> {
+  if (ncpuCache !== null) return ncpuCache;
+  try {
+    const { stdout } = await execFileP("docker", ["info", "--format", "{{.NCPU}}"]);
+    const n = parseInt(stdout.trim(), 10);
+    ncpuCache = Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    ncpuCache = 0;
+  }
+  return ncpuCache;
+}
+
 /** Build the SSH sandbox image locally if it isn't present (first run). */
 async function ensureImage(image: string): Promise<void> {
   try {
@@ -73,7 +88,16 @@ export async function startSandbox(
   await ensureImage(image);
   const name = containerName(leaseId);
   const memory = limits.memory || config.sandbox.memory;
-  const cpus = String(limits.cpus || config.sandbox.cpus);
+  // Clamp to what the daemon actually has — `docker run` rejects a --cpus value
+  // above the daemon's CPU count (e.g. a node that advertises 4 cores on a 2-CPU
+  // host). Fall back to the requested value if NCPU can't be determined.
+  let cpusNum = Number(limits.cpus || config.sandbox.cpus);
+  const ncpu = await dockerNcpu();
+  if (ncpu > 0 && cpusNum > ncpu) {
+    console.warn(`[docker] requested ${cpusNum} CPUs but daemon has ${ncpu}; clamping to ${ncpu}`);
+    cpusNum = ncpu;
+  }
+  const cpus = String(cpusNum);
   const gpus = limits.gpus || config.sandbox.gpus;
   const local = config.tunnelMode === "local";
 
