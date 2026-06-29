@@ -306,6 +306,25 @@ a { color: inherit; text-decoration: none; }
 .ledger .num { font-variant-numeric: tabular-nums; }
 @media (max-width: 700px) { .dash-cols { grid-template-columns: 1fr; } }
 
+/* ---- about page art ----------------------------------------------------- */
+.about-art {
+  margin: 0 0 28px;
+  border: 3px solid var(--cream);
+  outline: 1px solid var(--green);
+  outline-offset: -4px;
+  background: var(--green);
+  overflow: hidden;
+}
+.about-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Tone the art into the duotone palette so it sits with the rest. */
+  filter: grayscale(1) contrast(1.05) sepia(0.4) hue-rotate(90deg) saturate(1.4)
+    brightness(0.95);
+  mix-blend-mode: luminosity;
+}
+
 /* ---- main + section head ------------------------------------------------- */
 main { display: block; }
 .index {

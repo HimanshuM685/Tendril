@@ -8,6 +8,10 @@ export function About() {
       </div>
       <div className="rule"></div>
 
+      <figure className="about-art">
+        <img src="/hero-art.jpg" alt="Tendril — agentic compute" loading="lazy" />
+      </figure>
+
       <div className="prose">
         <p>
           Tendril is a lean, agent-first take on Akash / io.net — but for <strong>individuals</strong>{" "}
