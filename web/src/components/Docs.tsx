@@ -10,7 +10,7 @@ export function Docs() {
       </div>
       <div className="rule"></div>
 
-      <div className="prose">
+      <div className="prose panel">
         <p>
           Tendril is a prepaid marketplace for renting real machines by the hour, settled in native
           ALGO on Algorand. Top up once, rent a node, get a sandboxed SSH box, and pay only for the

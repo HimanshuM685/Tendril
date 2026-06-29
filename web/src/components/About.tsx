@@ -8,11 +8,11 @@ export function About() {
       </div>
       <div className="rule"></div>
 
-      <div className="prose">
-        <figure className="about-art">
-          <img src="/hero-art.jpg" alt="Tendril — many hands, one machine" loading="lazy" />
-        </figure>
+      <figure className="about-art">
+        <img src="/hero-art.jpg" alt="Tendril — many hands, one machine" loading="lazy" />
+      </figure>
 
+      <div className="prose panel">
         <p>
           Tendril is a lean, agent-first take on Akash / io.net — but for <strong>individuals</strong>{" "}
           instead of data centers. Anyone can rent out their PC's CPU/RAM/GPU; anyone (a human or an

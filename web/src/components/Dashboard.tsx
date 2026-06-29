@@ -79,7 +79,7 @@ export function Dashboard({ wallet, address, signedIn }: Props) {
             )}
           </div>
 
-          <div className="dash-cols">
+          <div className="dash-cols panel">
             <div>
               <h3>Spend history</h3>
               {wallet.charges.length === 0 ? (
