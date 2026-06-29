@@ -415,6 +415,75 @@ main { display: block; }
   padding: 7px 11px;
 }
 
+/* ---- wallet picker modal ------------------------------------------------ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 46, 29, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fade 0.15s both;
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  width: 100%;
+  max-width: 360px;
+  background: var(--cream);
+  color: var(--green);
+  border: 3px solid var(--cream);
+  outline: 1px solid var(--green);
+  outline-offset: -4px;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--green);
+  padding: 12px 16px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.modal-close {
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--green);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-close:hover { opacity: 0.6; }
+.modal-wallets { display: flex; flex-direction: column; padding: 14px 16px; gap: 10px; }
+.wallet-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  color: var(--green);
+  background: transparent;
+  border: 1px solid var(--green);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.wallet-choice:hover { background: var(--green); color: var(--cream); }
+.wallet-choice img { width: 24px; height: 24px; display: block; }
+.modal-foot {
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
 /* ---- wallet panel (cream card) ------------------------------------------ */
 .wallet-panel {
   max-width: var(--maxw);

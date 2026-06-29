@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 interface Props {
@@ -7,9 +8,32 @@ interface Props {
   onSignIn: () => void;
 }
 
-/** Connect/disconnect Pera or Defly, then sign in to load the prepaid wallet. */
+/**
+ * One "Connect Wallet" button → a picker modal (Pera / Defly / …) → on connect,
+ * sign-in fires automatically so the prepaid balance loads in a single flow.
+ */
 export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn }: Props) {
   const { wallets, activeAddress, activeWallet } = useWallet();
+  const [picking, setPicking] = useState(false);
+  // Only auto sign-in after a user-initiated connect (not on reload reconnect).
+  const autoSignIn = useRef(false);
+
+  useEffect(() => {
+    if (activeAddress && autoSignIn.current && !signedIn && canSignIn && !signingIn) {
+      autoSignIn.current = false;
+      onSignIn();
+    }
+  }, [activeAddress, signedIn, canSignIn, signingIn, onSignIn]);
+
+  async function connect(w: (typeof wallets)[number]) {
+    autoSignIn.current = true;
+    try {
+      await w.connect();
+      setPicking(false);
+    } catch {
+      autoSignIn.current = false;
+    }
+  }
 
   if (activeAddress) {
     return (
@@ -31,11 +55,38 @@ export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn }: Props) {
 
   return (
     <div className="wallet-bar">
-      {wallets.map((w) => (
-        <button key={w.id} className="btn" onClick={() => w.connect()}>
-          Connect {w.metadata.name}
-        </button>
-      ))}
+      <button className="btn" onClick={() => setPicking(true)}>
+        Connect Wallet
+      </button>
+
+      {picking && (
+        <div className="modal-backdrop" onClick={() => setPicking(false)}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-label="Select wallet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <span>// SELECT WALLET</span>
+              <button className="modal-close" aria-label="Close" onClick={() => setPicking(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-wallets">
+              {wallets.map((w) => (
+                <button key={w.id} className="wallet-choice" onClick={() => connect(w)}>
+                  {w.metadata.icon && <img src={w.metadata.icon} alt="" aria-hidden="true" />}
+                  <span>{w.metadata.name}</span>
+                </button>
+              ))}
+            </div>
+            <p className="modal-foot">
+              {signingIn ? "Signing in…" : "Connecting prompts a one-time signature to sign in."}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
