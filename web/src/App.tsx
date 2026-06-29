@@ -83,11 +83,28 @@ export function App() {
   );
 
   // While signed in, poll the balance so it visibly drains as compute is metered.
+  // Pause polling while the tab is hidden (no point hammering the backend in a
+  // background tab) and do an immediate refresh when it becomes visible again.
   useEffect(() => {
     if (!session) return;
-    refreshWallet(session.token);
-    const t = setInterval(() => refreshWallet(session.token), 5000);
-    return () => clearInterval(t);
+    const { token } = session;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      if (timer) return;
+      refreshWallet(token);
+      timer = setInterval(() => refreshWallet(token), 5000);
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [session, refreshWallet]);
 
   async function signIn() {

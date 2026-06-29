@@ -74,12 +74,18 @@ export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn }: Props) {
               </button>
             </div>
             <div className="modal-wallets">
-              {wallets.map((w) => (
-                <button key={w.id} className="wallet-choice" onClick={() => connect(w)}>
-                  {w.metadata.icon && <img src={w.metadata.icon} alt="" aria-hidden="true" />}
-                  <span>{w.metadata.name}</span>
-                </button>
-              ))}
+              {wallets.length === 0 ? (
+                <p className="muted small">
+                  No Algorand wallet detected. Install Pera or Defly, then reload.
+                </p>
+              ) : (
+                wallets.map((w) => (
+                  <button key={w.id} className="wallet-choice" onClick={() => connect(w)}>
+                    {w.metadata.icon && <img src={w.metadata.icon} alt="" aria-hidden="true" />}
+                    <span>{w.metadata.name}</span>
+                  </button>
+                ))
+              )}
             </div>
             <p className="modal-foot">
               {signingIn ? "Signing in…" : "Connecting prompts a one-time signature to sign in."}

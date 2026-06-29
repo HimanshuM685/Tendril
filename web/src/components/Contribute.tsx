@@ -3,6 +3,36 @@ import type { ComputeNode } from "@tendril/shared";
 import { fetchMyNodes } from "../api";
 
 /**
+ * Copy to clipboard with a fallback for non-secure contexts (plain http on a
+ * non-localhost host), where `navigator.clipboard` is undefined. Resolves to
+ * whether the copy actually succeeded.
+ */
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through to the execCommand path */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * On Tendril you contribute by running the agent daemon (it holds your key,
  * proves ownership, and manages sandboxes). This tab shows the command to start
  * it and lists the nodes currently registered under the connected wallet.
@@ -37,9 +67,11 @@ REGISTRY_URL=http://<backend-host>:4000`;
 docker compose up --build contributor`;
 
   function copy(id: string, text: string) {
-    void navigator.clipboard?.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500);
+    void writeClipboard(text).then((ok) => {
+      if (!ok) return; // don't claim "COPIED" if the copy actually failed
+      setCopied(id);
+      setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500);
+    });
   }
 
   return (
