@@ -221,6 +221,31 @@ a { color: inherit; text-decoration: none; }
 .prose .cmd { background: var(--cream); color: var(--green); border: 1px solid var(--cream); }
 .prose .cmd code { border: none; padding: 0; }
 
+/* ---- architecture diagram (inline SVG, on-palette) ---------------------- */
+.arch { margin: 22px 0 10px; max-width: 100%; }
+.arch svg { display: block; width: 100%; height: auto; }
+.arch .box-fill { fill: var(--cream); }
+.arch .box-edge { fill: none; stroke: var(--green); stroke-width: 1; }
+.arch .flow { stroke: var(--cream); stroke-width: 1.4; fill: none; }
+.arch .arrowhead { fill: var(--cream); }
+.arch text { font-family: var(--mono); }
+.arch .b-title {
+  fill: var(--green);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.arch .b-sub { fill: var(--green); font-size: 10.5px; letter-spacing: 0.07em; opacity: 0.72; }
+.arch .f-lbl { fill: var(--cream); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.arch-cap {
+  margin: 10px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  opacity: 0.72;
+}
+
 /* ---- main + section head ------------------------------------------------- */
 main { display: block; }
 .index {
