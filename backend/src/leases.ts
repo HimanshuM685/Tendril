@@ -90,7 +90,7 @@ export async function endLeaseAndBill(leaseId: string, reason: string): Promise<
   const elapsedSeconds = Math.max(0, Math.round((Date.now() - lease.startedAt) / 1000));
   const owed = proratedCost(lease.rateMicroAlgosPerHour, elapsedSeconds);
   try {
-    const { charged } = await debitWallet(lease.renterAddr, owed, lease.id, elapsedSeconds);
+    const { charged } = await debitWallet(lease.renterAddr, owed, lease.id, lease.payToAddr, elapsedSeconds);
     console.log(
       `[bill] lease ${lease.id} (${reason}): ${elapsedSeconds}s → charged ${charged} µALGO`,
     );

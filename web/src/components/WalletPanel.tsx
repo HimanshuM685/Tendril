@@ -90,7 +90,12 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
                 {wallet.charges.slice(0, 8).map((c) => (
                   <li key={c.id}>
                     −{formatAlgo(c.amountMicroAlgos)}{" "}
-                    <span className="muted small">{c.seconds}s</span>
+                    <span className="muted small">
+                      {c.seconds}s
+                      {c.payToAddr && (
+                        <> · → {c.payToAddr.slice(0, 6)}…{c.payToAddr.slice(-4)}</>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -43,10 +43,13 @@ export async function initDb(): Promise<void> {
       id           BIGSERIAL PRIMARY KEY,
       address      TEXT NOT NULL,
       lease_id     TEXT NOT NULL,
+      pay_to       TEXT NOT NULL DEFAULT '',
       amount_micro BIGINT NOT NULL,
       seconds      INTEGER NOT NULL,
       created_at   BIGINT NOT NULL
     );
+    -- Add pay_to to charges created by older builds (idempotent).
+    ALTER TABLE charges ADD COLUMN IF NOT EXISTS pay_to TEXT NOT NULL DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS payouts (
       id           BIGSERIAL PRIMARY KEY,
@@ -136,6 +139,7 @@ export async function debitWallet(
   address: string,
   requestedMicroAlgos: number,
   leaseId: string,
+  payToAddr: string,
   seconds: number,
 ): Promise<{ charged: number; balance: number }> {
   const client = await pool.connect();
@@ -154,9 +158,9 @@ export async function debitWallet(
         [remaining, Date.now(), address],
       );
       await client.query(
-        `INSERT INTO charges (address, lease_id, amount_micro, seconds, created_at)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [address, leaseId, charged, seconds, Date.now()],
+        `INSERT INTO charges (address, lease_id, pay_to, amount_micro, seconds, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [address, leaseId, payToAddr, charged, seconds, Date.now()],
       );
     }
     await client.query("COMMIT");
@@ -190,7 +194,7 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
       "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
       [address],
     ),
-    q<{ id: number; address: string; lease_id: string; amount_micro: number; seconds: number; created_at: number }>(
+    q<{ id: number; address: string; lease_id: string; pay_to: string; amount_micro: number; seconds: number; created_at: number }>(
       "SELECT * FROM charges WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
       [address],
     ),
@@ -209,6 +213,7 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     id: c.id,
     address: c.address,
     leaseId: c.lease_id,
+    payToAddr: c.pay_to,
     amountMicroAlgos: c.amount_micro,
     seconds: c.seconds,
     createdAt: c.created_at,

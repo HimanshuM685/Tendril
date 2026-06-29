@@ -104,8 +104,11 @@ export interface TopUp {
 /** A metered deduction from a wallet for compute usage (billed once, at end). */
 export interface Charge {
   id: number;
+  /** Renter address that was charged (the payer). */
   address: string;
   leaseId: string;
+  /** Contributor / compute-owner address this usage was paid for. */
+  payToAddr: string;
   amountMicroAlgos: number;
   /** Seconds of usage this charge covers (the billed duration). */
   seconds: number;
