@@ -365,6 +365,40 @@ a { color: inherit; text-decoration: none; }
 /* On the cream history card, flip the ledger rules from cream to green. */
 .panel .ledger th { border-bottom-color: var(--green); }
 .panel .ledger td { border-bottom-color: rgba(11, 93, 58, 0.16); }
+
+/* ---- balance chart (inline SVG on the cream card) ----------------------- */
+.chart-card { margin-bottom: 28px; }
+.chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.chart-head h3 {
+  font-family: var(--mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+  margin: 0;
+}
+.chart-now {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  line-height: 1;
+}
+.balance-chart { margin: 14px 0 0; }
+.balance-chart svg { display: block; width: 100%; height: auto; }
+.bc-grid { stroke: var(--green); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.3; }
+.bc-area { fill: var(--green); opacity: 0.1; }
+.bc-line { fill: none; stroke: var(--green); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.bc-dot { fill: var(--green); }
+.bc-dot-now { fill: var(--cream); stroke: var(--green); stroke-width: 2.5; }
+.bc-vlabel { fill: var(--green); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; }
+.bc-tlabel { fill: var(--green); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; opacity: 0.6; }
+/* draw the line on first paint */
+.bc-line {
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: bc-draw 1.1s 0.15s ease forwards;
+}
+@keyframes bc-draw { to { stroke-dashoffset: 0; } }
 @media (max-width: 700px) { .dash-cols { grid-template-columns: 1fr; } }
 
 /* ---- about page art ----------------------------------------------------- */

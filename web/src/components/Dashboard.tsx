@@ -1,5 +1,6 @@
 import type { WalletStats, WalletSummary } from "@tendril/shared";
 import { formatAlgo } from "@tendril/shared";
+import { BalanceChart } from "./BalanceChart";
 
 interface Props {
   wallet: WalletSummary | null;
@@ -78,6 +79,12 @@ export function Dashboard({ wallet, address, signedIn }: Props) {
               <Stat label="Earned (contributor)" value={formatAlgo(stats.totalEarnedMicroAlgos)} />
             )}
           </div>
+
+          <BalanceChart
+            topups={wallet.topups}
+            charges={wallet.charges}
+            currentBalance={wallet.balanceMicroAlgos}
+          />
 
           <div className="dash-cols panel">
             <div>
