@@ -7,8 +7,25 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 loadEnv();
 loadEnv({ path: resolve(repoRoot, ".env") });
 
+/**
+ * Normalize REGISTRY_URL: tolerate a bare host (`example.com`) by defaulting to
+ * http://, strip any trailing slash, and fail early with a clear message if it's
+ * still not a valid URL — instead of a cryptic ERR_INVALID_URL at first fetch.
+ */
+function normalizeRegistryUrl(raw: string): string {
+  let url = raw.trim();
+  if (!/^https?:\/\//i.test(url)) url = `http://${url}`;
+  url = url.replace(/\/+$/, "");
+  try {
+    new URL(url);
+  } catch {
+    throw new Error(`invalid REGISTRY_URL: ${JSON.stringify(raw)} (expected e.g. http://host:4000)`);
+  }
+  return url;
+}
+
 export const config = {
-  registryUrl: process.env.REGISTRY_URL ?? "http://localhost:4000",
+  registryUrl: normalizeRegistryUrl(process.env.REGISTRY_URL ?? "http://localhost:4000"),
   privateKeyB64: process.env.AVM_PRIVATE_KEY ?? "",
   label: process.env.NODE_LABEL ?? "tendril-node",
   // Advertised price per HOUR (USD) — industry-standard hourly billing.
