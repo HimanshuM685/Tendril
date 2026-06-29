@@ -107,12 +107,14 @@ export function App() {
           TENDRIL<span className="wm-tld">.ALGO</span>
         </span>
         <div className="mast-right">
-          <WalletBar
-            signedIn={!!session}
-            canSignIn={!!activeAddress}
-            signingIn={signingIn}
-            onSignIn={signIn}
-          />
+          {view !== "landing" && (
+            <WalletBar
+              signedIn={!!session}
+              canSignIn={!!activeAddress}
+              signingIn={signingIn}
+              onSignIn={signIn}
+            />
+          )}
         </div>
       </header>
 

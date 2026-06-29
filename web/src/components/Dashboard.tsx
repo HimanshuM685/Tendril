@@ -1,4 +1,4 @@
-import type { WalletSummary } from "@tendril/shared";
+import type { WalletStats, WalletSummary } from "@tendril/shared";
 import { formatAlgo } from "@tendril/shared";
 
 interface Props {
@@ -23,6 +23,21 @@ function short(addr: string): string {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
 }
 
+/** Use server-side stats when present; otherwise derive from the loaded history
+ *  (so the dashboard still works before the backend is rebuilt). */
+function resolveStats(w: WalletSummary): WalletStats {
+  if (w.stats) return w.stats;
+  const sum = <T,>(arr: T[], pick: (x: T) => number) => arr.reduce((a, x) => a + pick(x), 0);
+  return {
+    totalSpentMicroAlgos: sum(w.charges, (c) => c.amountMicroAlgos),
+    totalToppedUpMicroAlgos: sum(w.topups, (t) => t.amountMicroAlgos),
+    totalLeaseSeconds: sum(w.charges, (c) => c.seconds),
+    leaseCount: w.charges.length,
+    totalEarnedMicroAlgos: sum(w.payouts ?? [], (p) => p.amountMicroAlgos),
+    payoutCount: (w.payouts ?? []).length,
+  };
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat">
@@ -44,20 +59,23 @@ export function Dashboard({ wallet, address, signedIn }: Props) {
 
       {!signedIn || !address ? (
         <p className="muted dash-note">Connect your wallet and sign in to view your dashboard.</p>
-      ) : !wallet?.stats ? (
+      ) : !wallet ? (
         <p className="muted dash-note">Loading your account…</p>
       ) : (
+        (() => {
+          const stats = resolveStats(wallet);
+          return (
         <>
           <p className="dash-addr">{address}</p>
 
           <div className="stat-grid">
             <Stat label="Balance" value={formatAlgo(wallet.balanceMicroAlgos)} />
-            <Stat label="Total spent" value={formatAlgo(wallet.stats.totalSpentMicroAlgos)} />
-            <Stat label="Total topped up" value={formatAlgo(wallet.stats.totalToppedUpMicroAlgos)} />
-            <Stat label="Lease time" value={fmtDuration(wallet.stats.totalLeaseSeconds)} />
-            <Stat label="Leases taken" value={String(wallet.stats.leaseCount)} />
-            {wallet.stats.payoutCount > 0 && (
-              <Stat label="Earned (contributor)" value={formatAlgo(wallet.stats.totalEarnedMicroAlgos)} />
+            <Stat label="Total spent" value={formatAlgo(stats.totalSpentMicroAlgos)} />
+            <Stat label="Total topped up" value={formatAlgo(stats.totalToppedUpMicroAlgos)} />
+            <Stat label="Lease time" value={fmtDuration(stats.totalLeaseSeconds)} />
+            <Stat label="Leases taken" value={String(stats.leaseCount)} />
+            {stats.payoutCount > 0 && (
+              <Stat label="Earned (contributor)" value={formatAlgo(stats.totalEarnedMicroAlgos)} />
             )}
           </div>
 
@@ -117,6 +135,8 @@ export function Dashboard({ wallet, address, signedIn }: Props) {
             </div>
           </div>
         </>
+          );
+        })()
       )}
     </section>
   );
