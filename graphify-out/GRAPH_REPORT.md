@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-06-29)
+# Graph Report - Tendril  (2026-06-29)
 
 ## Corpus Check
-- 2 files · ~18,978 words
+- 51 files · ~31,757 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 423 nodes · 609 edges · 28 communities (23 shown, 5 thin omitted)
+- 454 nodes · 668 edges · 29 communities (24 shown, 5 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `b66ebb6b`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Contributor Agent & WS Protocol|Contributor Agent & WS Protocol]]
@@ -37,56 +42,57 @@
 - [[_COMMUNITY_Module 24|Module 24]]
 - [[_COMMUNITY_Module 25|Module 25]]
 - [[_COMMUNITY_Module 26|Module 26]]
+- [[_COMMUNITY_Community 28|Community 28]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `compilerOptions` - 15 edges
 2. `compilerOptions` - 13 edges
-3. `startSandbox()` - 9 edges
-4. `Backend / Registry` - 9 edges
-5. `endLeaseAndBill()` - 8 edges
-6. `scripts` - 8 edges
-7. `WalletSummary` - 8 edges
-8. `Shared Package` - 8 edges
-9. `formatAlgo()` - 7 edges
-10. `ActiveLease` - 6 edges
+3. `WalletSummary` - 11 edges
+4. `🌿 Tendril` - 11 edges
+5. `startSandbox()` - 9 edges
+6. `formatAlgo()` - 9 edges
+7. `Backend / Registry` - 9 edges
+8. `endLeaseAndBill()` - 8 edges
+9. `scripts` - 8 edges
+10. `ActiveLease` - 8 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Backend / Registry` --conceptually_related_to--> `WebSocket Proxy (nginx)`  [INFERRED]
   README.md → DEPLOY.md
+- `main()` --calls--> `formatAlgo()`  [EXTRACTED]
+  example-buyer/src/index.ts → shared/src/index.ts
+- `Props` --references--> `WalletSummary`  [EXTRACTED]
+  web/src/components/Dashboard.tsx → shared/src/index.ts
 - `Props` --references--> `WalletSummary`  [EXTRACTED]
   web/src/components/WalletPanel.tsx → shared/src/index.ts
-- `Docker Backend Service` --implements--> `Backend / Registry`  [INFERRED]
-  docker-compose.yml → README.md
-- `Docker Contributor Service` --implements--> `Contributor Agent`  [INFERRED]
-  docker-compose.yml → README.md
-- `Docker Buyer Service` --implements--> `Example Buyer / Autonomous Agent`  [INFERRED]
-  docker-compose.yml → README.md
+- `BalanceChart()` --calls--> `formatAlgo()`  [EXTRACTED]
+  web/src/components/BalanceChart.tsx → shared/src/index.ts
 
 ## Import Cycles
 - 1-file cycle: `contributor/src/index.ts -> contributor/src/index.ts`
 - 1-file cycle: `example-buyer/src/index.ts -> example-buyer/src/index.ts`
 
-## Communities (28 total, 5 thin omitted)
+## Communities (29 total, 5 thin omitted)
 
 ### Community 0 - "Contributor Agent & WS Protocol"
 Cohesion: 0.08
-Nodes (35): main(), verifyAgentHello(), activeLeases, { address, signNonce }, AgentHelloMsg, ContainerFailedMsg, ContainerReadyMsg, DestroyContainerMsg (+27 more)
+Nodes (39): main(), containerName(), ensureImage(), execFileP, getFreePort(), runInSandbox(), SandboxEndpoint, startSandbox() (+31 more)
 
 ### Community 1 - "Backend DB & Wallet Ledger"
-Cohesion: 0.08
-Nodes (34): main(), creditWallet(), debitWallet(), getBalance(), getWallet(), initDb(), pool, q() (+26 more)
+Cohesion: 0.09
+Nodes (33): main(), BalanceChart(), Props, Pt, creditWallet(), debitWallet(), getBalance(), getWallet() (+25 more)
 
 ### Community 2 - "Web Pages & Components"
-Cohesion: 0.09
-Nodes (26): About(), ArchDiagram(), Contribute(), Docs(), Explore(), Props, LeasePanel(), Props (+18 more)
+Cohesion: 0.07
+Nodes (36): About(), ArchDiagram(), Contribute(), Dashboard(), Props, Docs(), Explore(), Props (+28 more)
 
 ### Community 3 - "Wallet Dashboard UI"
-Cohesion: 0.08
-Nodes (27): Dashboard(), Props, PRESETS, Props, SignTransactions, WalletPanel(), main(), balanceOf() (+19 more)
+Cohesion: 0.14
+Nodes (18): main(), balanceOf(), LEASE_MINUTES, MIN_RAM_MB, PlatformInfo, postJson(), repoRoot, RunResponse (+10 more)
 
 ### Community 4 - "Auth & Wallet Signing"
-Cohesion: 0.10
-Nodes (29): algod, addressFromSession(), issueLeaseToken(), issueNonce(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), NonceEntry (+21 more)
+Cohesion: 0.09
+Nodes (35): addressFromSession(), issueLeaseToken(), issueNonce(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), NonceEntry, nonces (+27 more)
 
 ### Community 5 - "Backend Dependencies"
 Cohesion: 0.08
@@ -97,8 +103,8 @@ Cohesion: 0.12
 Nodes (25): @tendril/shared, Docker Backend Service, Docker Buyer Service, Docker Contributor Service, Production Deployment, Sibling Container Pattern, WebSocket Proxy (nginx), Agentic Endpoints (+17 more)
 
 ### Community 7 - "Web Dependencies"
-Cohesion: 0.09
-Nodes (22): dependencies, algosdk, @blockshake/defly-connect, @perawallet/connect, react, react-dom, @txnlab/use-wallet-react, devDependencies (+14 more)
+Cohesion: 0.08
+Nodes (23): dependencies, algosdk, @blockshake/defly-connect, @perawallet/connect, react, react-dom, react-router-dom, @txnlab/use-wallet-react (+15 more)
 
 ### Community 8 - "Contributor Dependencies"
 Cohesion: 0.11
@@ -117,8 +123,8 @@ Cohesion: 0.13
 Nodes (14): dependencies, algosdk, dotenv, @tendril/shared, tsx, devDependencies, @types/node, typescript (+6 more)
 
 ### Community 12 - "Sandbox Docker Control"
-Cohesion: 0.26
-Nodes (13): containerName(), ensureImage(), execFileP, getFreePort(), runInSandbox(), SandboxEndpoint, startSandbox(), stopSandbox() (+5 more)
+Cohesion: 0.08
+Nodes (23): 1. Prerequisites, 2. Local setup, 3. Production deployment, 3a. Backend / registry (central API), 3b. Web app (static SPA), 3c. Contributor agent (on each contributor's machine), 3d. Autonomous consumer agent, 4. Production checklist (+15 more)
 
 ### Community 13 - "Base TS Config"
 Cohesion: 0.14
@@ -156,25 +162,29 @@ Nodes (4): Tendril Brand Green (#0B5D3A), Tendril Brand Identity, Tendril Favico
 Cohesion: 0.50
 Nodes (4): main.tsx Module Entry Point, Prepaid Compute Metered in ALGO, Tendril Web App HTML Entry, React Root Mount Node (#root)
 
+### Community 28 - "Community 28"
+Cohesion: 0.43
+Nodes (6): algod, decodeSigned(), noteText(), SettledTopUp, settleTopUp(), verifyLoginSignature()
+
 ## Knowledge Gaps
-- **187 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+182 more)
+- **204 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+199 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `WalletSummary` connect `Wallet Dashboard UI` to `Contributor Agent & WS Protocol`, `Backend DB & Wallet Ledger`, `Web Pages & Components`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
 - **Why does `Shared Package` connect `Architecture & Deployment` to `Contributor Dependencies`, `Buyer Dependencies`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `WalletSummary` connect `Web Pages & Components` to `Contributor Agent & WS Protocol`, `Backend DB & Wallet Ledger`, `Wallet Dashboard UI`?**
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `Backend Dependencies` to `Architecture & Deployment`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `Backend / Registry` (e.g. with `Docker Backend Service` and `WebSocket Proxy (nginx)`) actually correct?**
-  _`Backend / Registry` has 2 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **What connects `name`, `version`, `private` to the rest of the system?**
-  _190 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _207 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Contributor Agent & WS Protocol` be split into smaller, more focused modules?**
-  _Cohesion score 0.07926829268292683 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0797979797979798 - nodes in this community are weakly interconnected._
 - **Should `Backend DB & Wallet Ledger` be split into smaller, more focused modules?**
-  _Cohesion score 0.08232118758434548 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08636977058029689 - nodes in this community are weakly interconnected._
+- **Should `Web Pages & Components` be split into smaller, more focused modules?**
+  _Cohesion score 0.07197763801537387 - nodes in this community are weakly interconnected._
