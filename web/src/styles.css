@@ -37,7 +37,7 @@ body {
 a { color: inherit; text-decoration: none; }
 ::selection { background: var(--cream); color: var(--green); }
 
-/* global CRT scanline wash */
+/* global CRT scanline wash — slowly drifts + faintly flickers for a live-tube feel */
 .scanlines {
   position: fixed;
   inset: 0;
@@ -50,7 +50,10 @@ a { color: inherit; text-decoration: none; }
     transparent 1px,
     transparent 3px
   );
+  animation: scan-drift 8s linear infinite, scan-flicker 4s steps(2) infinite;
 }
+@keyframes scan-drift { to { background-position: 0 120px; } }
+@keyframes scan-flicker { 0%, 96% { opacity: 1; } 97% { opacity: 0.72; } 98% { opacity: 1; } }
 
 /* ---- shared display / labels ------------------------------------------- */
 .display {
@@ -90,6 +93,7 @@ a { color: inherit; text-decoration: none; }
 
 .mast-left button,
 .mast-left a {
+  position: relative;
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.14em;
@@ -97,19 +101,33 @@ a { color: inherit; text-decoration: none; }
   color: var(--cream);
   background: transparent;
   border: none;
-  padding: 4px 0;
+  padding: 4px 0 7px;
   cursor: pointer;
   opacity: 0.62;
+  transition: opacity 0.18s ease;
+}
+/* underline bar that wipes in from the left on hover, and stays for active */
+.mast-left button::after,
+.mast-left a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--cream);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s ease;
 }
 .mast-left button:hover,
 .mast-left a:hover { opacity: 1; }
+.mast-left button:hover::after,
+.mast-left a:hover::after,
+.mast-left button.active::after,
+.mast-left a.active::after { transform: scaleX(1); }
 .mast-left button.active,
-.mast-left a.active {
-  opacity: 1;
-  text-decoration: underline;
-  text-underline-offset: 5px;
-  text-decoration-thickness: 2px;
-}
+.mast-left a.active { opacity: 1; }
 
 .wordmark {
   font-family: var(--mono);
@@ -120,7 +138,15 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
   cursor: pointer;
 }
-.wordmark:hover { text-decoration: underline; text-underline-offset: 4px; }
+.wordmark:hover { animation: glitch 0.32s steps(2) 2; }
+.wm-tld { opacity: 0.55; }
+@keyframes glitch {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5px, 1px) skewX(-4deg); }
+  50% { transform: translate(1.5px, -1px) skewX(4deg); }
+  75% { transform: translate(-1px, 0) skewX(-2deg); }
+  100% { transform: translate(0, 0); }
+}
 
 /* ---- hero (encryption / hashing landing) -------------------------------- */
 .hero {
@@ -706,6 +732,59 @@ main { display: block; }
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+
+/* ---- motion: entrances, reveals & micro-interactions -------------------- */
+/* Each route remounts on navigation, so these one-shot entrances replay per page. */
+.hero,
+.index,
+.page { animation: enter 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* big Didone titles wipe in behind a left-to-right clip */
+.section-title { animation: wipe 0.7s 0.08s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes wipe {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+
+/* divider rules draw across from the left */
+.rule { transform: scaleX(0); transform-origin: left; animation: draw 0.6s 0.1s ease both; }
+@keyframes draw { to { transform: scaleX(1); } }
+
+/* staggered entrance + hover lift for stat cards and node cards.
+   `backwards` (not `both`) fill so the finished animation doesn't pin
+   `transform`, leaving the hover lift free to apply. */
+.stat { animation: rise 0.45s backwards; }
+.card { animation-fill-mode: backwards; }
+.stat:nth-child(2) { animation-delay: 0.06s; }
+.stat:nth-child(3) { animation-delay: 0.12s; }
+.stat:nth-child(4) { animation-delay: 0.18s; }
+.stat:nth-child(5) { animation-delay: 0.24s; }
+.stat:nth-child(6) { animation-delay: 0.3s; }
+.card:nth-child(2) { animation-delay: 0.08s; }
+.card:nth-child(3) { animation-delay: 0.16s; }
+.card:nth-child(4) { animation-delay: 0.24s; }
+.card:nth-child(5) { animation-delay: 0.32s; }
+.card:nth-child(6) { animation-delay: 0.4s; }
+.card,
+.stat { transition: transform 0.18s ease; }
+.card:hover,
+.stat:hover { transform: translateY(-3px); }
+
+/* tactile press on buttons */
+.btn:active { transform: translateY(1px); }
+
+/* hero CTAs rise in one after another under the decrypting title */
+.hero-cta .btn { animation: rise 0.5s 0.3s backwards; }
+.hero-cta .btn:nth-child(2) { animation-delay: 0.42s; }
+.hero-cta .btn:nth-child(3) { animation-delay: 0.54s; }
+
+/* live pulse on the online badge so the marketplace feels alive */
+.badge.online { animation: pulse 2.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.62; } }
 
 /* ---- responsive --------------------------------------------------------- */
 @media (max-width: 900px) {
