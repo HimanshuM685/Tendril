@@ -13,35 +13,74 @@ import { fetchWallet, type ActiveLease } from "./api";
 
 export type Session = { token: string; address: string };
 
+// The session token is a 7-day JWT, so persist it and restore on reload — a
+// refresh shouldn't force the user to re-sign (and re-sign each time).
+const SESSION_KEY = "tendril.session";
+
+function loadSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Session;
+    return s && s.token && s.address ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeSession(s: Session | null) {
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* storage unavailable (private mode) — session just won't persist */
+  }
+}
+
 export function App() {
-  const { activeAddress, signTransactions } = useWallet();
+  const { activeAddress, signTransactions, isReady } = useWallet();
   const location = useLocation();
   const navigate = useNavigate();
   const [lease, setLease] = useState<ActiveLease | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<Session | null>(loadSession);
   const [wallet, setWallet] = useState<WalletSummary | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep localStorage in lockstep with the session so reloads stay signed in.
+  const setSession = useCallback((s: Session | null) => {
+    storeSession(s);
+    setSessionState(s);
+    if (!s) setWallet(null);
+  }, []);
 
   const path = location.pathname;
   const isLanding = path === "/";
   const inApp = path === "/explore" || path === "/contribute";
 
-  // Drop the session if the wallet disconnects or switches accounts.
+  // Drop the session only on a real disconnect / account switch — and only once
+  // the wallet has finished resuming, so a transient reconnect on reload (when
+  // activeAddress is briefly null) doesn't wrongly clear a valid session.
   useEffect(() => {
+    if (!isReady) return;
     if (!activeAddress || (session && session.address !== activeAddress)) {
       setSession(null);
-      setWallet(null);
     }
-  }, [activeAddress, session]);
+  }, [isReady, activeAddress, session, setSession]);
 
-  const refreshWallet = useCallback(async (token: string) => {
-    try {
-      setWallet(await fetchWallet(token));
-    } catch {
-      /* transient */
-    }
-  }, []);
+  const refreshWallet = useCallback(
+    async (token: string) => {
+      try {
+        setWallet(await fetchWallet(token));
+      } catch (e) {
+        // A 401 means the stored token expired/was revoked — clear it so the UI
+        // falls back to a fresh sign-in instead of polling forever.
+        if (/\b401\b/.test((e as Error).message)) setSession(null);
+        /* other errors are transient — keep the session */
+      }
+    },
+    [setSession],
+  );
 
   // While signed in, poll the balance so it visibly drains as compute is metered.
   useEffect(() => {
