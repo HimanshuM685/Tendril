@@ -12,6 +12,7 @@ interface Props {
 
 export function Explore({ session, balanceMicroAlgos, onLeased }: Props) {
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
   const [algoUsdPrice, setAlgoUsdPrice] = useState<number | null>(null);
@@ -22,17 +23,37 @@ export function Explore({ session, balanceMicroAlgos, onLeased }: Props) {
       .catch(() => {});
   }, []);
 
+  // Poll the node list, pausing while the tab is hidden — same pattern as the
+  // balance poll in App. A stale "can't reach backend" error clears itself on
+  // the next successful load.
   useEffect(() => {
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then((n) => alive && setNodes(n))
-        .catch((e) => alive && setError(e.message));
-    load();
-    const t = setInterval(load, 4000);
+        .then((n) => {
+          if (!alive) return;
+          setNodes(n);
+          setError((prev) => (prev && /explorer failed/.test(prev) ? null : prev));
+        })
+        .catch((e) => alive && setError((e as Error).message))
+        .finally(() => alive && setLoading(false));
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      if (timer) return;
+      load();
+      timer = setInterval(load, 4000);
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       alive = false;
-      clearInterval(t);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -80,7 +101,10 @@ export function Explore({ session, balanceMicroAlgos, onLeased }: Props) {
       {!session && (
         <p className="muted">Connect your wallet and sign in to load a balance and rent.</p>
       )}
-      {nodes.length === 0 && <p className="muted">No nodes online. Start a contributor agent.</p>}
+      {loading && nodes.length === 0 && <p className="muted">Scanning for nodes…</p>}
+      {!loading && nodes.length === 0 && (
+        <p className="muted">No nodes online. Start a contributor agent.</p>
+      )}
       <div className="grid">
         {nodes.map((n) => (
           <div className="card" key={n.id}>
@@ -99,7 +123,7 @@ export function Explore({ session, balanceMicroAlgos, onLeased }: Props) {
             )}
             <button
               className="btn"
-              disabled={!session || renting === n.id}
+              disabled={!session || renting !== null}
               title={session ? "" : "Sign in to rent"}
               onClick={() => rent(n)}
             >

@@ -4,7 +4,7 @@ import type {
   WalletLoginResponse,
   WalletNonceResponse,
 } from "@tendril/shared";
-import { REGISTRY_URL } from "./api";
+import { REGISTRY_URL, apiError } from "./api";
 
 /** use-wallet's signTransactions signature (encoded txns + optional indexes). */
 type SignTransactions = (
@@ -49,7 +49,7 @@ export async function loginWithWallet(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ address, nonce, payment: toB64(signed) }),
   });
-  if (!res.ok) throw new Error(`sign-in failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw await apiError(res, "sign-in");
   return res.json();
 }
 
@@ -81,6 +81,6 @@ export async function topUp(
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify({ payment: toB64(signed) }),
   });
-  if (!res.ok) throw new Error(`top-up failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw await apiError(res, "top-up");
   return res.json();
 }

@@ -17,4 +17,18 @@ export default defineConfig({
     port: 5173,
     fs: { allow: [resolve(__dirname, "..")] },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the big, rarely-changing vendors out of the app chunk so an app
+        // edit doesn't re-download algosdk (~1MB) — browsers keep the cached copy.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("algosdk")) return "algosdk";
+          if (/node_modules\/(react|react-dom|react-router|scheduler)\//.test(id)) return "react";
+          return undefined;
+        },
+      },
+    },
+  },
 });

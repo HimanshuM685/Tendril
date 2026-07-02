@@ -23,9 +23,10 @@ const PRESETS = [0.5, 1, 5];
 export function WalletPanel({ wallet, address, token, signTransactions, onChanged, onError }: Props) {
   const [amount, setAmount] = useState(1);
   const [busy, setBusy] = useState(false);
+  const amountOk = Number.isFinite(amount) && amount > 0;
 
   async function deposit() {
-    if (!(amount > 0)) return;
+    if (!amountOk) return;
     setBusy(true);
     try {
       await topUp(token, address, signTransactions, amount);
@@ -60,11 +61,18 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
           type="number"
           min={0}
           step={0.1}
+          inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
           className="topup-amount"
+          aria-label="Top-up amount in ALGO"
         />
-        <button className="btn" disabled={busy} onClick={deposit}>
+        <button
+          className="btn"
+          disabled={busy || !amountOk}
+          title={amountOk ? "" : "Enter an amount above 0"}
+          onClick={deposit}
+        >
           {busy ? "Topping up…" : "Top up"}
         </button>
       </div>

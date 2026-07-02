@@ -763,6 +763,22 @@ main { display: block; }
   border: 1px solid var(--cream);
   font-weight: 700;
   letter-spacing: 0.04em;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
 }
 
 /* ---- footer ------------------------------------------------------------- */

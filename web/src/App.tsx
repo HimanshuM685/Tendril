@@ -58,6 +58,19 @@ export function App() {
   const isLanding = path === "/";
   const inApp = path === "/explore" || path === "/contribute";
 
+  // Keep the tab title in step with the route so multiple tabs are tellable apart.
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      "/explore": "EXPLORE",
+      "/contribute": "CONTRIBUTE",
+      "/dashboard": "DASHBOARD",
+      "/docs": "DOCS",
+      "/about": "ABOUT",
+    };
+    const page = titles[path];
+    document.title = page ? `TENDRIL — ${page}` : "TENDRIL";
+  }, [path]);
+
   // Drop the session only on a real disconnect / account switch — and only once
   // the wallet has finished resuming, so a transient reconnect on reload (when
   // activeAddress is briefly null) doesn't wrongly clear a valid session.
@@ -174,7 +187,18 @@ export function App() {
       <div className="rule rule-heavy"></div>
 
       <main>
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error">
+            <span>{error}</span>
+            <button
+              className="error-dismiss"
+              aria-label="Dismiss error"
+              onClick={() => setError(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <Routes>
           <Route
