@@ -8,8 +8,10 @@ import {
   type RunRequest,
   type RunResponse,
   type SandboxLimits,
+  type TopUpResponse,
   type WalletLoginResponse,
 } from "@tendril/shared";
+import { sendPaymentReceipt, sendPaymentRequired } from "./x402.js";
 import {
   addressFromSession,
   issueLeaseToken,
@@ -95,15 +97,29 @@ router.get("/wallet", async (req: Request, res: Response) => {
   res.json(await walletSummary(address));
 });
 
+// x402: no X-PAYMENT → 402 challenge; with X-PAYMENT → settle + credit.
 router.post("/wallet/topup", async (req: Request, res: Response) => {
   const address = requireSession(req, res);
   if (!address) return;
-  const payment = (req.body as { payment?: string })?.payment;
-  if (!payment) return res.status(400).json({ error: "payment (signed txn) required" });
+
+  const payment = req.header("x-payment");
+  if (!payment) {
+    if (!config.platformPayTo) {
+      return res.status(503).json({ error: "PLATFORM_PAYTO is not configured on the server" });
+    }
+    const amount = Number((req.body as { amountMicroAlgos?: number })?.amountMicroAlgos);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: "amountMicroAlgos (> 0) required" });
+    }
+    return sendPaymentRequired(res, Math.round(amount), "Top up your Tendril balance");
+  }
+
   try {
     const { txid, amountMicroAlgos } = await settleTopUp(address, payment);
     const balanceMicroAlgos = await creditWallet(address, amountMicroAlgos, txid);
-    res.json({ txid, balanceMicroAlgos });
+    sendPaymentReceipt(res, txid);
+    const body: TopUpResponse = { txid, balanceMicroAlgos };
+    res.json(body);
   } catch (err) {
     res.status(502).json({ error: `top-up failed: ${(err as Error).message}` });
   }

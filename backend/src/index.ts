@@ -18,7 +18,13 @@ process.on("uncaughtException", (err) => {
 const corsOrigin = config.corsOrigin === "*" ? "*" : config.corsOrigin.split(",").map((s) => s.trim());
 
 const app = express();
-app.use(cors({ origin: corsOrigin }));
+// exposedHeaders: without these the browser cannot read the x402 challenge/receipt.
+app.use(
+  cors({
+    origin: corsOrigin,
+    exposedHeaders: ["PAYMENT-REQUIRED", "X-PAYMENT-RESPONSE"],
+  }),
+);
 app.use(express.json());
 app.use(router);
 

@@ -22,8 +22,10 @@ loadEnv({ path: resolve(repoRoot, ".env") });
 import {
   formatAlgo,
   type ExplorerNode,
+  type PaymentRequired,
   type PlatformInfo,
   type RunResponse,
+  type TopUpResponse,
   type SandboxAccess,
   type WalletLoginResponse,
   type WalletNonceResponse,
@@ -91,22 +93,36 @@ async function main() {
   const auth = { authorization: `Bearer ${login.token}` };
   console.log(`[agent] signed in; balance ${formatAlgo(login.balanceMicroAlgos)}`);
 
-  // 2. Top up if the balance is low.
+  // 2. Top up if the balance is low — over x402, with no human in the loop.
   if (login.balanceMicroAlgos < TOPUP_ALGO * 1e6) {
     console.log(`[agent] topping up ${TOPUP_ALGO} ALGO → ${platform.payTo} ...`);
+
+    // 2a. Ask for the bill: expect HTTP 402 + a payment challenge.
+    const challengeRes = await fetch(`${REGISTRY}/wallet/topup`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...auth },
+      body: JSON.stringify({ amountMicroAlgos: Math.round(TOPUP_ALGO * 1e6) }),
+    });
+    if (challengeRes.status !== 402) {
+      throw new Error(`expected 402 challenge, got ${challengeRes.status}`);
+    }
+    const { accepts } = (await challengeRes.json()) as PaymentRequired;
+    const option = accepts[0];
+    console.log(`[agent] 402: pay ${formatAlgo(Number(option.amount))} to ${option.payTo}`);
+
+    // 2b. Pay it: sign exactly what the challenge asked for and retry.
     const sp2 = await algod.getTransactionParams().do();
     const topTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       sender: address,
-      receiver: platform.payTo,
-      amount: BigInt(Math.round(TOPUP_ALGO * 1e6)),
+      receiver: option.payTo,
+      amount: BigInt(option.amount),
       suggestedParams: sp2,
     });
-    const top = (await postJson(
-      `${REGISTRY}/wallet/topup`,
-      { payment: Buffer.from(topTxn.signTxn(sk)).toString("base64") },
-      auth,
-    )) as { balanceMicroAlgos: number };
-    console.log(`[agent] balance now ${formatAlgo(top.balanceMicroAlgos)}`);
+    const top = (await postJson(`${REGISTRY}/wallet/topup`, undefined, {
+      ...auth,
+      "x-payment": Buffer.from(topTxn.signTxn(sk)).toString("base64"),
+    })) as TopUpResponse;
+    console.log(`[agent] paid ${top.txid}; balance now ${formatAlgo(top.balanceMicroAlgos)}`);
   }
 
   // 3. Discover.

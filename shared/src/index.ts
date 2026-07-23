@@ -288,9 +288,11 @@ export interface RunResponse {
 }
 
 // ───────────────────────── Wallet auth + top-up DTOs ─────────────────────────
-// Native ALGO, no x402. The user proves control of their address by signing a
-// login challenge, then tops up a custodial balance by signing a `pay` txn to
-// the platform address. Both use the wallet's existing signTransactions.
+// Native ALGO. The user proves control of their address by signing a login
+// challenge, then tops up a custodial balance over x402: POST /wallet/topup
+// answers HTTP 402 with a challenge, the client signs a `pay` txn to the
+// platform address and retries with `X-PAYMENT`. Both use the wallet's existing
+// signTransactions — no ASA, no opt-in, no facilitator.
 
 /** GET /auth/nonce → a short-lived challenge to sign for wallet login. */
 export interface WalletNonceResponse {
@@ -322,10 +324,44 @@ export interface PlatformInfo {
   algoUsdPrice: number;
 }
 
-/** POST /wallet/topup → credit the caller's balance with a confirmed deposit. */
+/**
+ * POST /wallet/topup, step 1 → ask for a challenge for `amountMicroAlgos`.
+ * Answered with HTTP 402 + a `PaymentRequired` challenge.
+ */
 export interface TopUpRequest {
-  /** Base64 signed `pay` txn sending ALGO from the user to the platform address. */
-  payment: string;
+  amountMicroAlgos: number;
+}
+
+/** One way to pay a 402 challenge. Tendril only offers native ALGO. */
+export interface PaymentOption {
+  scheme: "exact";
+  /** CAIP-2 network id (see ALGORAND_TESTNET_CAIP2). */
+  network: string;
+  /** Algorand address the payment must go to. */
+  payTo: string;
+  /** Amount in microALGO, as a string (x402 sends amounts as strings). */
+  amount: string;
+  /** Native ALGO — no ASA, no opt-in. */
+  asset: "ALGO";
+  description: string;
+  maxTimeoutSeconds: number;
+}
+
+/** Body (and base64 `PAYMENT-REQUIRED` header) of an HTTP 402 response. */
+export interface PaymentRequired {
+  x402Version: 2;
+  error: string;
+  accepts: PaymentOption[];
+}
+
+/**
+ * POST /wallet/topup, step 2 → retry with header
+ * `X-PAYMENT: <base64 signed pay txn>` matching the challenge. On success the
+ * deposit is confirmed on-chain and credited (idempotently, keyed by txid).
+ */
+export interface TopUpResponse {
+  txid: string;
+  balanceMicroAlgos: number;
 }
 
 /** Convert a USD amount to microALGO at `algoUsdPrice` (USD per 1 ALGO). */
