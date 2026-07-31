@@ -12,6 +12,13 @@ import type {
 export const REGISTRY_URL =
   (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000";
 
+/** Block explorer for txn/account links — testnet unless overridden at build time. */
+const EXPLORER_URL =
+  (import.meta.env.VITE_EXPLORER_URL as string | undefined) ?? "https://lora.algokit.io/testnet";
+
+export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;
+export const explorerAddrUrl = (address: string) => `${EXPLORER_URL}/account/${address}`;
+
 export type ActiveLease = {
   leaseId: string;
   access: SandboxAccess;

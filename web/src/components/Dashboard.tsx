@@ -5,7 +5,7 @@ import { formatAlgo, formatAlgoExact } from "@tendril/shared";
 import { BalanceChart } from "./BalanceChart";
 import { LeasePanel } from "./LeasePanel";
 import { TopUpControl } from "./TopUpControl";
-import type { ActiveLease } from "../api";
+import { explorerAddrUrl, explorerTxUrl, type ActiveLease } from "../api";
 
 type SignTransactions = (
   txnGroup: Uint8Array[],
@@ -38,6 +38,16 @@ function fmtDuration(seconds: number): string {
 
 function short(addr: string): string {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
+}
+
+/** Truncated id that opens the block explorer; full value on hover. */
+function ExplorerLink({ id, href }: { id: string; href: string }) {
+  if (!id) return <>—</>;
+  return (
+    <a className="ext-link" href={href} title={id} target="_blank" rel="noreferrer">
+      {short(id)}
+    </a>
+  );
 }
 
 /** Use server-side stats when present; otherwise derive from the loaded history
@@ -111,7 +121,11 @@ export function Dashboard({
           const stats = resolveStats(wallet);
           return (
         <>
-          <p className="dash-addr">{address}</p>
+          <p className="dash-addr">
+            <a className="ext-link" href={explorerAddrUrl(address)} target="_blank" rel="noreferrer">
+              {address}
+            </a>
+          </p>
 
           {/* Same panel Explore shows — countdown, SSH command, release. Only one
               route is mounted at a time, so the poll never runs twice. */}
@@ -168,7 +182,9 @@ export function Dashboard({
                       <tr key={c.id}>
                         <td className="num">−{formatAlgoExact(c.amountMicroAlgos)}</td>
                         <td className="num">{fmtDuration(c.seconds)}</td>
-                        <td title={c.payToAddr}>{short(c.payToAddr)}</td>
+                        <td>
+                          <ExplorerLink id={c.payToAddr} href={explorerAddrUrl(c.payToAddr)} />
+                        </td>
                         <td>{new Date(c.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
@@ -194,7 +210,9 @@ export function Dashboard({
                     {wallet.topups.map((t) => (
                       <tr key={t.txid}>
                         <td className="num">+{formatAlgoExact(t.amountMicroAlgos)}</td>
-                        <td title={t.txid}>{short(t.txid)}</td>
+                        <td>
+                          <ExplorerLink id={t.txid} href={explorerTxUrl(t.txid)} />
+                        </td>
                         <td>{new Date(t.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
