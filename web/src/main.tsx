@@ -10,10 +10,15 @@ import {
 import { App } from "./App";
 import "./styles.css";
 
-// Pera + Defly on Algorand testnet. Connecting a wallet is the auth layer;
-// the same wallet signs the native ALGO payments — one chain, one signature.
+// Lute (browser wallet, no WalletConnect relay → fastest connect) + Pera + Defly
+// on Algorand testnet. Connecting a wallet is the auth layer; the same wallet
+// signs the native ALGO payments — one chain, one signature.
 const walletManager = new WalletManager({
-  wallets: [WalletId.PERA, WalletId.DEFLY],
+  wallets: [
+    { id: WalletId.LUTE, options: { siteName: "Tendril" } },
+    WalletId.PERA,
+    WalletId.DEFLY,
+  ],
   defaultNetwork: NetworkId.TESTNET,
 });
 

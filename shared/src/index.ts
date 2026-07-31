@@ -163,6 +163,31 @@ export interface Job {
   status: "pending" | "running" | "done" | "error";
 }
 
+// ───────────────────────── Platform metrics (GET /metrics) ─────────────────────────
+
+/** One point of a cumulative daily growth series. */
+export interface MetricPoint {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+/** One leaderboard row: an address and its ranked value (units are per-board). */
+export interface RankRow {
+  address: string;
+  value: number; // microALGO, or seconds, or a count — depends on the board
+}
+
+export interface Metrics {
+  usersOverTime: MetricPoint[];
+  activeOverTime: MetricPoint[];
+  totalUsers: number;
+  totalActive: number;
+  /** Renter leaderboards. topup=microALGO, leaseTime=seconds, leaseSpan=lease count. */
+  topUsers: { topup: RankRow[]; leaseTime: RankRow[]; leaseSpan: RankRow[] };
+  /** Contributor leaderboards. timeServed=seconds, timesServed=lease count. */
+  topContributors: { timeServed: RankRow[]; timesServed: RankRow[] };
+}
+
 // ───────────────────────── WebSocket contract ─────────────────────────
 // The contributor agent connects to the registry over socket.io. These are
 // the message names + payloads exchanged on that channel.

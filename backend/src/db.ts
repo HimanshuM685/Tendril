@@ -1,5 +1,13 @@
 import pg from "pg";
-import type { Charge, Payout, TopUp, Wallet, WalletStats, WalletSummary } from "@tendril/shared";
+import type {
+  Charge,
+  Metrics,
+  Payout,
+  TopUp,
+  Wallet,
+  WalletStats,
+  WalletSummary,
+} from "@tendril/shared";
 import { config } from "./config.js";
 
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
@@ -253,6 +261,59 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     payoutCount: payoutAgg[0]?.pcnt ?? 0,
   };
   return { address, balanceMicroAlgos: wallet.balanceMicroAlgos, topups, charges, payouts, stats };
+}
+
+// ─────────────────────────────── platform metrics ───────────────────────────────
+
+/** Bucket first-seen timestamps into a cumulative daily user count. */
+function cumulativeByDay(firsts: number[]): { date: string; count: number }[] {
+  const perDay = new Map<string, number>();
+  for (const ms of firsts) {
+    const day = new Date(ms).toISOString().slice(0, 10); // YYYY-MM-DD
+    perDay.set(day, (perDay.get(day) ?? 0) + 1);
+  }
+  let running = 0;
+  return [...perDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, n]) => ({ date, count: (running += n) }));
+}
+
+/**
+ * Platform-wide leaderboards + growth series, all derived from topups/charges.
+ * Public (no PII beyond the addresses users already broadcast on-chain).
+ */
+export async function metrics(): Promise<Metrics> {
+  const [userFirsts, activeFirsts, topup, leaseTime, leaseSpan, timeServed, timesServed] =
+    await Promise.all([
+      q<{ first: number }>("SELECT MIN(created_at)::bigint AS first FROM topups GROUP BY address"),
+      q<{ first: number }>("SELECT MIN(created_at)::bigint AS first FROM charges GROUP BY address"),
+      q<{ address: string; value: number }>(
+        "SELECT address, SUM(amount_micro)::bigint AS value FROM topups GROUP BY address ORDER BY value DESC LIMIT 20",
+      ),
+      q<{ address: string; value: number }>(
+        "SELECT address, SUM(seconds)::bigint AS value FROM charges GROUP BY address ORDER BY value DESC LIMIT 20",
+      ),
+      q<{ address: string; value: number }>(
+        "SELECT address, COUNT(DISTINCT lease_id)::bigint AS value FROM charges GROUP BY address ORDER BY value DESC LIMIT 20",
+      ),
+      q<{ address: string; value: number }>(
+        "SELECT pay_to AS address, SUM(seconds)::bigint AS value FROM charges WHERE pay_to <> '' GROUP BY pay_to ORDER BY value DESC LIMIT 20",
+      ),
+      q<{ address: string; value: number }>(
+        "SELECT pay_to AS address, COUNT(DISTINCT lease_id)::bigint AS value FROM charges WHERE pay_to <> '' GROUP BY pay_to ORDER BY value DESC LIMIT 20",
+      ),
+    ]);
+
+  const usersOverTime = cumulativeByDay(userFirsts.map((r) => r.first));
+  const activeOverTime = cumulativeByDay(activeFirsts.map((r) => r.first));
+  return {
+    usersOverTime,
+    activeOverTime,
+    totalUsers: usersOverTime.at(-1)?.count ?? 0,
+    totalActive: activeOverTime.at(-1)?.count ?? 0,
+    topUsers: { topup, leaseTime, leaseSpan },
+    topContributors: { timeServed, timesServed },
+  };
 }
 
 export default pool;

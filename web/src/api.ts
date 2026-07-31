@@ -2,6 +2,7 @@ import type {
   ComputeNode,
   ExplorerNode,
   Lease,
+  Metrics,
   PlatformInfo,
   RunResponse,
   SandboxAccess,
@@ -52,6 +53,12 @@ export async function fetchExplorer(): Promise<ExplorerNode[]> {
 export async function fetchPlatform(): Promise<PlatformInfo> {
   const res = await fetch(`${REGISTRY_URL}/platform`);
   if (!res.ok) throw await apiError(res, "platform");
+  return res.json();
+}
+
+export async function fetchMetrics(): Promise<Metrics> {
+  const res = await fetch(`${REGISTRY_URL}/metrics`);
+  if (!res.ok) throw await apiError(res, "metrics");
   return res.json();
 }
 

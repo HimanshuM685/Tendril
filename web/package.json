@@ -13,6 +13,7 @@
     "@perawallet/connect": "^1.5.2",
     "@txnlab/use-wallet-react": "^4.0.0",
     "algosdk": "^3.0.0",
+    "lute-connect": "^2.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.0"

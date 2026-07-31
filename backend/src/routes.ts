@@ -21,7 +21,7 @@ import {
   leaseIdFromAuthHeader,
   verifyWalletNonce,
 } from "./auth.js";
-import { creditWallet, getBalance, walletSummary } from "./db.js";
+import { creditWallet, getBalance, metrics, walletSummary } from "./db.js";
 import { getNode, listNodesByOwner, listOnlineNodes } from "./registry.js";
 import { createLease, endLeaseAndBill, getLease, setLeaseStatus } from "./leases.js";
 import { settleTopUp, verifyLoginSignature } from "./wallet.js";
@@ -82,6 +82,15 @@ router.post("/auth/wallet-login", async (req: Request, res: Response) => {
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", (_req, res) => {
   res.json({ nodes: listOnlineNodes() });
+});
+
+// Public platform metrics — growth series + leaderboards.
+router.get("/metrics", async (_req, res) => {
+  try {
+    res.json(await metrics());
+  } catch (err) {
+    res.status(500).json({ error: `metrics failed: ${(err as Error).message}` });
+  }
 });
 
 router.get("/nodes", (req: Request, res: Response) => {
