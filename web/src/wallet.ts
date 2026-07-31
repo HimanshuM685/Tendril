@@ -1,6 +1,7 @@
 import algosdk from "algosdk";
 import type {
-  PlatformInfo,
+  PaymentRequired,
+  TopUpResponse,
   WalletLoginResponse,
   WalletNonceResponse,
 } from "@tendril/shared";
@@ -62,15 +63,26 @@ export async function topUp(
   address: string,
   sign: SignTransactions,
   amountAlgo: number,
-): Promise<{ txid: string; balanceMicroAlgos: number }> {
-  const platform = (await (await fetch(`${REGISTRY_URL}/platform`)).json()) as PlatformInfo;
-  if (!platform.payTo) throw new Error("platform deposit address is not configured on the server");
+): Promise<TopUpResponse> {
+  const auth = { authorization: `Bearer ${token}` };
 
+  // x402 step 1 — ask for the bill; expect HTTP 402 + a payment challenge.
+  const challengeRes = await fetch(`${REGISTRY_URL}/wallet/topup`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...auth },
+    body: JSON.stringify({ amountMicroAlgos: Math.round(amountAlgo * 1e6) }),
+  });
+  if (challengeRes.status !== 402) throw await apiError(challengeRes, "top-up");
+  const { accepts } = (await challengeRes.json()) as PaymentRequired;
+  const option = accepts[0];
+  if (!option?.payTo) throw new Error("platform deposit address is not configured on the server");
+
+  // x402 step 2 — sign exactly what the challenge asked for and retry.
   const suggestedParams = await algod.getTransactionParams().do();
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     sender: address,
-    receiver: platform.payTo,
-    amount: BigInt(Math.round(amountAlgo * 1e6)),
+    receiver: option.payTo,
+    amount: BigInt(option.amount),
     suggestedParams,
   });
   const [signed] = await sign([txn.toByte()]);
@@ -78,8 +90,7 @@ export async function topUp(
 
   const res = await fetch(`${REGISTRY_URL}/wallet/topup`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify({ payment: toB64(signed) }),
+    headers: { ...auth, "x-payment": toB64(signed) },
   });
   if (!res.ok) throw await apiError(res, "top-up");
   return res.json();
