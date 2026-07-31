@@ -870,7 +870,12 @@ main { display: block; }
 }
 
 /* ─────────────────────────── metrics page ─────────────────────────── */
-.metrics { display: block; }
+.metrics {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 40px var(--gutter) 56px;
+}
+.metrics .balance-chart svg { max-height: 300px; }
 .metrics-title {
   font-family: var(--display);
   font-size: clamp(48px, 9vw, 132px);

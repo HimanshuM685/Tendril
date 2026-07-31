@@ -76,9 +76,10 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
 
   const pts = series.map((p, i) => ({ x: i, v: p.count }));
   const vMax = Math.max(...pts.map((p) => p.v), 1);
+  const top = vMax * 1.15; // headroom so the line doesn't glue to the top edge
   const iMax = Math.max(pts.length - 1, 1);
   const x = (i: number) => pad.l + (i / iMax) * (W - pad.l - pad.r);
-  const y = (v: number) => H - pad.b - (v / vMax) * (H - pad.t - pad.b);
+  const y = (v: number) => H - pad.b - (v / top) * (H - pad.t - pad.b);
 
   // Hold a flat line across the width for a single point so it still reads.
   const xy = pts.length === 1 ? [pts[0], { x: 1, v: pts[0].v }] : pts;
