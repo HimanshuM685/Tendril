@@ -102,7 +102,9 @@ npm run backend                 # …or:  cd backend     && npm run dev
 # 2. Contributor agent — generate + fund a key first
 npm run keygen                  # prints Address + AVM_PRIVATE_KEY  (cd contributor && npm run keygen)
 AVM_PRIVATE_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd contributor && npm run dev
-#   tip: the SSH sandbox image builds locally on the first rent (cached after)
+#   tip: the SSH sandbox image builds locally on the FIRST rent, then is cached.
+#        that build compiles `bore` from source for your CPU arch (~30s), so the
+#        tunnel works on both x86_64 and arm64 (bore ships no arm64-linux binary).
 #   tip: same machine as the consumer? add TUNNEL_MODE=local
 
 # 3a. Web UI                                      # http://localhost:5173
@@ -130,9 +132,13 @@ docker compose up --build contributor    # share THIS machine's compute
 docker compose run  --rm   buyer         # one-shot autonomous buyer
 ```
 
+> Use `docker-compose` (with the hyphen) if you're on Compose **v1** — `docker compose` is v2.
+
 The contributor **doesn't run a Docker of its own**: it mounts the host Docker socket and launches
 each rented sandbox as a sibling container on the host daemon, so there's nothing extra to install
 or start. Just set `REGISTRY_URL` in `.env` (e.g. `http://YOUR_SERVER_IP:4000`) and bring it up.
+The first rent then builds the SSH sandbox image on the host (compiles `bore` for the host arch,
+~30s) and caches it — later rents are instant.
 
 - **backend** keeps only money state in **Neon** (`DATABASE_URL`) — no local volume; set
   `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` too.
