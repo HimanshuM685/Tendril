@@ -22,6 +22,12 @@ const walletManager = new WalletManager({
   defaultNetwork: NetworkId.TESTNET,
 });
 
+// Warm up lute-connect so use-wallet's lazy import is already cached when the
+// user clicks: Lute opens a popup via window.open, and a cold `await import()`
+// inside the click handler loses the user-gesture → the browser blocks the popup
+// (the "sometimes it doesn't open" bug). Pre-fetching removes that await.
+void import("lute-connect");
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <WalletProvider manager={walletManager}>
