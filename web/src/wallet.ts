@@ -54,15 +54,21 @@ export async function loginWithWallet(
   return res.json();
 }
 
+/** Where a top-up currently is, so the UI can say more than "working…". */
+export type TopUpStage = "signing" | "confirming";
+
 /**
  * Top up: send `amountAlgo` ALGO from the wallet to the platform custodial
  * address. The backend confirms it on-chain and credits the balance.
+ * `onStage` fires as it moves between waiting on the wallet and waiting on the
+ * chain — confirmation takes seconds, and silence reads as failure.
  */
 export async function topUp(
   token: string,
   address: string,
   sign: SignTransactions,
   amountAlgo: number,
+  onStage?: (stage: TopUpStage) => void,
 ): Promise<TopUpResponse> {
   const auth = { authorization: `Bearer ${token}` };
 
@@ -85,9 +91,11 @@ export async function topUp(
     amount: BigInt(option.amount),
     suggestedParams,
   });
+  onStage?.("signing");
   const [signed] = await sign([txn.toByte()]);
   if (!signed) throw new Error("top-up was not signed");
 
+  onStage?.("confirming");
   const res = await fetch(`${REGISTRY_URL}/wallet/topup`, {
     method: "POST",
     headers: { ...auth, "x-payment": toB64(signed) },

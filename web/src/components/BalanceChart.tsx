@@ -1,5 +1,5 @@
 import type { Charge, TopUp } from "@tendril/shared";
-import { formatAlgo } from "@tendril/shared";
+import { formatAlgo, formatAlgoExact } from "@tendril/shared";
 
 interface Props {
   topups: TopUp[];
@@ -87,7 +87,9 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
     <div className="panel chart-card">
       <div className="chart-head">
         <h3>Balance over time</h3>
-        <span className="chart-now">{formatAlgo(currentBalance)}</span>
+        <span className="chart-now" title={formatAlgoExact(currentBalance)}>
+          {formatAlgo(currentBalance)}
+        </span>
       </div>
       <figure className="balance-chart">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Historical balance">

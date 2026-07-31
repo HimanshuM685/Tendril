@@ -177,14 +177,14 @@ export function App() {
           TENDRIL<span className="wm-tld">.ALGO</span>
         </span>
         <div className="mast-right">
-          {!isLanding && (
-            <WalletBar
-              signedIn={!!session}
-              canSignIn={!!activeAddress}
-              signingIn={signingIn}
-              onSignIn={signIn}
-            />
-          )}
+          {/* Shown on the landing page too — connecting is the first thing to do. */}
+          <WalletBar
+            signedIn={!!session}
+            canSignIn={!!activeAddress}
+            signingIn={signingIn}
+            onSignIn={signIn}
+            balanceMicroAlgos={wallet?.balanceMicroAlgos ?? null}
+          />
         </div>
       </header>
 
@@ -250,7 +250,17 @@ export function App() {
           <Route
             path="/dashboard"
             element={
-              <Dashboard wallet={wallet} address={session?.address ?? null} signedIn={!!session} />
+              <Dashboard
+                wallet={wallet}
+                address={session?.address ?? null}
+                signedIn={!!session}
+                token={session?.token ?? null}
+                signTransactions={signTransactions}
+                onWalletChanged={onWalletChanged}
+                onError={setError}
+                lease={lease}
+                onLeaseEnded={() => setLease(null)}
+              />
             }
           />
           <Route path="/metrics" element={<Metrics />} />

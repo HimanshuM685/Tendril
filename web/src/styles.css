@@ -462,6 +462,7 @@ main { display: block; }
 
 /* Buttons sitting on a CREAM surface need inverted (green) styling. */
 .card .btn,
+.panel .btn,
 .wallet-panel .btn,
 .lease-panel .btn {
   color: var(--cream);
@@ -469,18 +470,22 @@ main { display: block; }
   border-color: var(--green);
 }
 .card .btn:hover,
+.panel .btn:hover,
 .wallet-panel .btn:hover,
 .lease-panel .btn:hover { background: var(--cream); color: var(--green); }
 .card .btn.ghost,
+.panel .btn.ghost,
 .wallet-panel .btn.ghost,
 .lease-panel .btn.ghost { background: transparent; color: var(--green); border-color: var(--green); }
 .card .btn.ghost:hover,
+.panel .btn.ghost:hover,
 .wallet-panel .btn.ghost:hover,
 .lease-panel .btn.ghost:hover { background: var(--green); color: var(--cream); }
+.panel .btn.ghost.active,
 .wallet-panel .btn.ghost.active { background: var(--green); color: var(--cream); }
 
 /* ---- wallet bar (on the green field) ------------------------------------ */
-.wallet-bar { display: flex; gap: 10px; align-items: center; }
+.wallet-bar { display: flex; gap: 10px; align-items: center; position: relative; }
 .addr {
   font-family: var(--mono);
   font-size: 12px;
@@ -488,6 +493,46 @@ main { display: block; }
   border: 1px solid var(--cream);
   padding: 7px 11px;
 }
+.addr-btn { background: none; color: inherit; cursor: pointer; }
+.addr-btn:hover, .addr-btn[aria-expanded="true"] { background: var(--cream); color: var(--green); }
+
+/* ---- account menu ------------------------------------------------------- */
+.wallet-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+  color: var(--green);
+  border: 3px solid var(--cream);
+  outline: 1px solid var(--green);
+  outline-offset: -4px;
+}
+.wm-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(8, 46, 29, 0.2);
+}
+.wm-balance strong { font-family: var(--mono); font-size: 15px; }
+.wm-label { padding: 10px 14px 2px; border-top: 1px solid rgba(8, 46, 29, 0.2); }
+.wm-item {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+.wm-item:hover { background: var(--green); color: var(--cream); }
+.wm-danger { border-top: 1px solid rgba(8, 46, 29, 0.2); }
 
 /* ---- wallet picker modal ------------------------------------------------ */
 .modal-backdrop {
@@ -557,6 +602,9 @@ main { display: block; }
   letter-spacing: 0.04em;
   opacity: 0.7;
 }
+.modal-body { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 8px; }
+.modal-body p { margin: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px 16px; }
 
 /* ---- wallet panel (cream card) ------------------------------------------ */
 .wallet-panel {

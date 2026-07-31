@@ -404,9 +404,23 @@ export function proratedCost(rateMicroAlgosPerHour: number, seconds: number): nu
   return Math.round((seconds / 3600) * rateMicroAlgosPerHour);
 }
 
-/** Format microALGO for display, e.g. 100000 -> "0.1000 ALGO". */
-export function formatAlgo(microAlgos: number): string {
+/** Full microALGO precision, e.g. 100000 -> "0.1000 ALGO". Ledgers and tooltips. */
+export function formatAlgoExact(microAlgos: number): string {
   return `${(microAlgos / 1e6).toFixed(4)} ALGO`;
+}
+
+/**
+ * Compact display: 60000000 -> "60 ALGO", 10384700 -> "10.38 ALGO".
+ * Sub-1 amounts keep 4dp — a prorated charge of 0.0042 must not read "0.00".
+ * Use `formatAlgoExact` where the exact figure matters (ledger rows, tooltips).
+ */
+export function formatAlgo(microAlgos: number): string {
+  const algo = microAlgos / 1e6;
+  const fixed = Math.abs(algo) < 1 ? algo.toFixed(4) : algo.toFixed(2);
+  const trimmed = fixed.replace(/\.?0+$/, "");
+  // A few microALGO still rounds to "0" at 4dp — never print a real amount as zero.
+  if (trimmed === "0" && microAlgos !== 0) return `${microAlgos < 0 ? "-" : ""}<0.0001 ALGO`;
+  return `${trimmed} ALGO`;
 }
 
 /** A node is online if it has beat within the timeout window. */

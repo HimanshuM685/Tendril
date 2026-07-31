@@ -1,7 +1,6 @@
-import { useState } from "react";
 import type { WalletSummary } from "@tendril/shared";
-import { formatAlgo } from "@tendril/shared";
-import { topUp } from "../wallet";
+import { formatAlgo, formatAlgoExact } from "@tendril/shared";
+import { TopUpControl } from "./TopUpControl";
 
 type SignTransactions = (
   txnGroup: Uint8Array[],
@@ -17,65 +16,24 @@ interface Props {
   onError: (msg: string) => void;
 }
 
-const PRESETS = [0.5, 1, 5];
-
 /** Prepaid balance + a top-up control + deposit/spend history. */
 export function WalletPanel({ wallet, address, token, signTransactions, onChanged, onError }: Props) {
-  const [amount, setAmount] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const amountOk = Number.isFinite(amount) && amount > 0;
-
-  async function deposit() {
-    if (!amountOk) return;
-    setBusy(true);
-    try {
-      await topUp(token, address, signTransactions, amount);
-      onChanged();
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const balance = wallet?.balanceMicroAlgos ?? 0;
 
   return (
     <section className="wallet-panel">
       <div className="wallet-balance">
         <span className="muted small">Prepaid balance</span>
-        <strong className="balance">{formatAlgo(balance)}</strong>
+        <strong className="balance" title={formatAlgoExact(balance)}>{formatAlgo(balance)}</strong>
       </div>
 
-      <div className="topup">
-        {PRESETS.map((p) => (
-          <button
-            key={p}
-            className={`btn ghost${amount === p ? " active" : ""}`}
-            onClick={() => setAmount(p)}
-          >
-            {p} ALGO
-          </button>
-        ))}
-        <input
-          type="number"
-          min={0}
-          step={0.1}
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-          className="topup-amount"
-          aria-label="Top-up amount in ALGO"
-        />
-        <button
-          className="btn"
-          disabled={busy || !amountOk}
-          title={amountOk ? "" : "Enter an amount above 0"}
-          onClick={deposit}
-        >
-          {busy ? "Topping up…" : "Top up"}
-        </button>
-      </div>
+      <TopUpControl
+        address={address}
+        token={token}
+        signTransactions={signTransactions}
+        onChanged={onChanged}
+        onError={onError}
+      />
 
       {wallet && (wallet.topups.length > 0 || wallet.charges.length > 0) && (
         <details className="history">
@@ -86,7 +44,7 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
               <ul>
                 {wallet.topups.slice(0, 8).map((t) => (
                   <li key={t.txid}>
-                    +{formatAlgo(t.amountMicroAlgos)}{" "}
+                    +{formatAlgoExact(t.amountMicroAlgos)}{" "}
                     <span className="muted small">{new Date(t.createdAt).toLocaleTimeString()}</span>
                   </li>
                 ))}
@@ -97,7 +55,7 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
               <ul>
                 {wallet.charges.slice(0, 8).map((c) => (
                   <li key={c.id}>
-                    −{formatAlgo(c.amountMicroAlgos)}{" "}
+                    −{formatAlgoExact(c.amountMicroAlgos)}{" "}
                     <span className="muted small">
                       {c.seconds}s
                       {c.payToAddr && (

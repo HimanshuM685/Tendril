@@ -25,6 +25,7 @@ export function LeasePanel({ lease, onRelease }: Props) {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const ended = status === "ended" || status === "failed";
 
@@ -79,7 +80,16 @@ export function LeasePanel({ lease, onRelease }: Props) {
     });
   }
 
+  // Escape closes the confirm — releasing is destructive, so make backing out easy.
+  useEffect(() => {
+    if (!confirming) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setConfirming(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirming]);
+
   async function release() {
+    setConfirming(false);
     setBusy(true);
     setError(null);
     try {
@@ -108,11 +118,47 @@ export function LeasePanel({ lease, onRelease }: Props) {
           {fmtCountdown(remainingMs)}
         </div>
         <div className="lease-actions">
-          <button className="btn ghost" disabled={busy || ended} onClick={release}>
+          <button className="btn ghost" disabled={busy || ended} onClick={() => setConfirming(true)}>
             {busy ? "Releasing…" : "Release"}
           </button>
         </div>
       </div>
+
+      {confirming && (
+        <div className="modal-backdrop" onClick={() => setConfirming(false)}>
+          <div
+            className="modal"
+            role="alertdialog"
+            aria-label="Confirm release"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <span>// END LEASE</span>
+              <button className="modal-close" aria-label="Close" onClick={() => setConfirming(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                End lease and destroy sandbox <code>{lease.label}</code>?
+              </p>
+              <p className="muted small">
+                The container and everything in it is destroyed — anything not pushed or copied out
+                is gone. You're charged for the time used so far. This can't be undone.
+              </p>
+            </div>
+            <div className="modal-actions">
+              {/* Cancel takes focus so a stray Enter can't destroy the session. */}
+              <button className="btn ghost" autoFocus onClick={() => setConfirming(false)}>
+                Keep running
+              </button>
+              <button className="btn" onClick={release}>
+                End lease
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {error && <div className="error">{error}</div>}
       {!ended ? (
         <div className="ssh-access">

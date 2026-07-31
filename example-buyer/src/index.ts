@@ -20,7 +20,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 loadEnv();
 loadEnv({ path: resolve(repoRoot, ".env") });
 import {
-  formatAlgo,
+  formatAlgoExact,
   type ExplorerNode,
   type PaymentRequired,
   type PlatformInfo,
@@ -91,7 +91,7 @@ async function main() {
     payment: Buffer.from(loginTxn.signTxn(sk)).toString("base64"),
   })) as WalletLoginResponse;
   const auth = { authorization: `Bearer ${login.token}` };
-  console.log(`[agent] signed in; balance ${formatAlgo(login.balanceMicroAlgos)}`);
+  console.log(`[agent] signed in; balance ${formatAlgoExact(login.balanceMicroAlgos)}`);
 
   // 2. Top up if the balance is low — over x402, with no human in the loop.
   if (login.balanceMicroAlgos < TOPUP_ALGO * 1e6) {
@@ -108,7 +108,7 @@ async function main() {
     }
     const { accepts } = (await challengeRes.json()) as PaymentRequired;
     const option = accepts[0];
-    console.log(`[agent] 402: pay ${formatAlgo(Number(option.amount))} to ${option.payTo}`);
+    console.log(`[agent] 402: pay ${formatAlgoExact(Number(option.amount))} to ${option.payTo}`);
 
     // 2b. Pay it: sign exactly what the challenge asked for and retry.
     const sp2 = await algod.getTransactionParams().do();
@@ -122,7 +122,7 @@ async function main() {
       ...auth,
       "x-payment": Buffer.from(topTxn.signTxn(sk)).toString("base64"),
     })) as TopUpResponse;
-    console.log(`[agent] paid ${top.txid}; balance now ${formatAlgo(top.balanceMicroAlgos)}`);
+    console.log(`[agent] paid ${top.txid}; balance now ${formatAlgoExact(top.balanceMicroAlgos)}`);
   }
 
   // 3. Discover.
@@ -143,7 +143,7 @@ async function main() {
     rateMicroAlgosPerHour: number;
   };
   console.log(
-    `[agent] lease ${lease.leaseId} active at ${formatAlgo(lease.rateMicroAlgosPerHour)}/hr; ` +
+    `[agent] lease ${lease.leaseId} active at ${formatAlgoExact(lease.rateMicroAlgosPerHour)}/hr; ` +
       `ssh ${lease.access.command}`,
   );
 
@@ -164,7 +164,7 @@ async function main() {
     authorization: `Bearer ${lease.leaseToken}`,
   });
   const after = await balanceOf(auth);
-  console.log(`[agent] released. balance ${formatAlgo(after)} (drew ~${formatAlgo(Math.max(0, before - after))})`);
+  console.log(`[agent] released. balance ${formatAlgoExact(after)} (drew ~${formatAlgoExact(Math.max(0, before - after))})`);
 }
 
 async function balanceOf(auth: Record<string, string>): Promise<number> {
