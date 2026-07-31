@@ -45,6 +45,9 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
   }
 
   // ── geometry ──────────────────────────────────────────────────────────
+  // X is the change index, not wall-clock time: every balance change gets the
+  // same width, so a burst of activity in one hour reads as clearly as a month
+  // of idling. Tick labels carry the real timestamps.
   const W = 760;
   const H = 220;
   const pad = { l: 10, r: 10, t: 16, b: 26 };
@@ -53,18 +56,32 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
   const vMax = Math.max(...pts.map((p) => p.v));
   const vMin = Math.min(...pts.map((p) => p.v), 0);
   const span = vMax - vMin || 1;
-  const tSpan = tMax - tMin || 1;
-
-  const x = (t: number) => pad.l + ((t - tMin) / tSpan) * (W - pad.l - pad.r);
-  const y = (v: number) => H - pad.b - ((v - vMin) / span) * (H - pad.t - pad.b);
 
   // Single-event series: hold a flat line across the width so it still reads.
-  const xy = pts.length === 1 ? [pts[0], { ...pts[0], t: tMax + 1 }] : pts;
-  const line = xy.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
-  const area = `${line} L${x(xy[xy.length - 1].t).toFixed(1)},${(H - pad.b).toFixed(1)} L${x(xy[0].t).toFixed(1)},${(H - pad.b).toFixed(1)} Z`;
+  const xy = pts.length === 1 ? [pts[0], pts[0]] : pts;
+  const iMax = xy.length - 1 || 1;
+  const x = (i: number) => pad.l + (i / iMax) * (W - pad.l - pad.r);
+  const y = (v: number) => H - pad.b - ((v - vMin) / span) * (H - pad.t - pad.b);
+
+  const line = xy.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(iMax).toFixed(1)},${(H - pad.b).toFixed(1)} L${x(0).toFixed(1)},${(H - pad.b).toFixed(1)} Z`;
   const last = pts[pts.length - 1];
 
-  const fmtDate = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // Label granularity follows the span the changes cover: hours, days, months.
+  const hours = (tMax - tMin) / 3_600_000;
+  const tickOpts: Intl.DateTimeFormatOptions =
+    hours < 36
+      ? { hour: "2-digit", minute: "2-digit" }
+      : hours < 24 * 365
+        ? { month: "short", day: "numeric" }
+        : { month: "short", year: "numeric" };
+  const fmtDate = (ms: number) => new Date(ms).toLocaleString(undefined, tickOpts);
+
+  // Up to 4 evenly-spaced ticks over the change indices.
+  const tickCount = Math.min(4, xy.length);
+  const ticks = Array.from(new Set(
+    Array.from({ length: tickCount }, (_, k) => Math.round((k * iMax) / Math.max(1, tickCount - 1))),
+  ));
 
   return (
     <div className="panel chart-card">
@@ -81,21 +98,30 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
           <path className="bc-area" d={area} />
           <path className="bc-line" d={line} />
 
-          {/* point markers */}
-          {pts.map((p, i) => (
-            <circle key={i} className="bc-dot" cx={x(p.t)} cy={y(p.v)} r={2.6} />
+          {/* point markers — one per balance change */}
+          {xy.map((p, i) => (
+            <circle key={i} className="bc-dot" cx={x(i)} cy={y(p.v)} r={2.6} />
           ))}
           {/* highlight the live balance */}
-          <circle className="bc-dot bc-dot-now" cx={x(last.t)} cy={y(last.v)} r={4.5} />
+          <circle className="bc-dot bc-dot-now" cx={x(iMax)} cy={y(last.v)} r={4.5} />
 
           {/* value labels */}
           <text className="bc-vlabel" x={pad.l} y={y(vMax) - 6}>{formatAlgo(vMax)}</text>
           {vMin !== vMax && (
             <text className="bc-vlabel" x={pad.l} y={y(vMin) - 6}>{formatAlgo(vMin)}</text>
           )}
-          {/* date range */}
-          <text className="bc-tlabel" x={pad.l} y={H - 8} textAnchor="start">{fmtDate(tMin)}</text>
-          <text className="bc-tlabel" x={W - pad.r} y={H - 8} textAnchor="end">{fmtDate(tMax)}</text>
+          {/* time labels at the change positions */}
+          {ticks.map((i) => (
+            <text
+              key={i}
+              className="bc-tlabel"
+              x={x(i)}
+              y={H - 8}
+              textAnchor={i === 0 ? "start" : i === iMax ? "end" : "middle"}
+            >
+              {fmtDate(xy[i].t)}
+            </text>
+          ))}
         </svg>
       </figure>
     </div>
