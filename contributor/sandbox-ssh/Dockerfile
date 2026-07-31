@@ -10,18 +10,21 @@
 FROM python:3.12-slim
 
 ARG BORE_VERSION=0.5.1
-ARG TARGETARCH
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-server curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Static bore client, matched to the build arch (amd64 / arm64).
+# Static bore client, matched to the image arch. Use `uname -m` (the real arch of
+# the image being built) rather than TARGETARCH — a plain `docker build` on the
+# legacy builder never sets TARGETARCH, so the old amd64 fallback shipped an
+# x86_64 binary into arm64 images → "exec format error" → the container died
+# before bore could announce its endpoint.
 RUN set -eux; \
-    case "${TARGETARCH:-amd64}" in \
-      amd64) BARCH=x86_64 ;; \
-      arm64) BARCH=aarch64 ;; \
-      *)     BARCH=x86_64 ;; \
+    case "$(uname -m)" in \
+      x86_64)        BARCH=x86_64 ;; \
+      aarch64|arm64) BARCH=aarch64 ;; \
+      *)             BARCH=x86_64 ;; \
     esac; \
     curl -fsSL "https://github.com/ekzhang/bore/releases/download/v${BORE_VERSION}/bore-v${BORE_VERSION}-${BARCH}-unknown-linux-musl.tar.gz" \
       | tar -xz -C /usr/local/bin bore; \
