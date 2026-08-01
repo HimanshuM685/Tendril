@@ -1,35 +1,29 @@
 import type { WalletSummary } from "@tendril/shared";
-import { formatAlgo, formatAlgoExact } from "@tendril/shared";
+import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 import { TopUpControl } from "./TopUpControl";
-
-type SignTransactions = (
-  txnGroup: Uint8Array[],
-  indexesToSign?: number[],
-) => Promise<(Uint8Array | null)[]>;
+import type { SignTransactions } from "../lib/x402Client";
 
 interface Props {
   wallet: WalletSummary | null;
   address: string;
-  token: string;
   signTransactions: SignTransactions;
   onChanged: () => void;
   onError: (msg: string) => void;
 }
 
 /** Prepaid balance + a top-up control + deposit/spend history. */
-export function WalletPanel({ wallet, address, token, signTransactions, onChanged, onError }: Props) {
-  const balance = wallet?.balanceMicroAlgos ?? 0;
+export function WalletPanel({ wallet, address, signTransactions, onChanged, onError }: Props) {
+  const balance = wallet?.balanceAtomic ?? 0;
 
   return (
     <section className="wallet-panel">
       <div className="wallet-balance">
         <span className="muted small">Prepaid balance</span>
-        <strong className="balance" title={formatAlgoExact(balance)}>{formatAlgo(balance)}</strong>
+        <strong className="balance" title={formatUsdcExact(balance)}>{formatUsdc(balance)}</strong>
       </div>
 
       <TopUpControl
         address={address}
-        token={token}
         signTransactions={signTransactions}
         onChanged={onChanged}
         onError={onError}
@@ -44,7 +38,7 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
               <ul>
                 {wallet.topups.slice(0, 8).map((t) => (
                   <li key={t.txid}>
-                    +{formatAlgoExact(t.amountMicroAlgos)}{" "}
+                    +{formatUsdcExact(t.amountAtomic)}{" "}
                     <span className="muted small">{new Date(t.createdAt).toLocaleTimeString()}</span>
                   </li>
                 ))}
@@ -55,7 +49,7 @@ export function WalletPanel({ wallet, address, token, signTransactions, onChange
               <ul>
                 {wallet.charges.slice(0, 8).map((c) => (
                   <li key={c.id}>
-                    −{formatAlgoExact(c.amountMicroAlgos)}{" "}
+                    −{formatUsdcExact(c.amountAtomic)}{" "}
                     <span className="muted small">
                       {c.seconds}s
                       {c.payToAddr && (

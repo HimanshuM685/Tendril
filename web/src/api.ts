@@ -2,12 +2,16 @@ import type {
   ComputeNode,
   ExplorerNode,
   Lease,
+  LeaseBilling,
+  LeaseCloseResponse,
   Metrics,
   PlatformInfo,
   RunResponse,
   SandboxAccess,
   WalletSummary,
+  X402RentResponse,
 } from "@tendril/shared";
+import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Client";
 
 export const REGISTRY_URL =
   (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000";
@@ -21,10 +25,15 @@ export const explorerAddrUrl = (address: string) => `${EXPLORER_URL}/account/${a
 
 export type ActiveLease = {
   leaseId: string;
-  access: SandboxAccess;
-  expiresAt: number;
-  rateMicroAlgosPerHour: number;
   leaseToken: string;
+  access: SandboxAccess;
+  /** Unix ms the paid block runs out (`paidUntil`, parsed). */
+  expiresAt: number;
+  rateAtomicPerHour: number;
+  /** Seconds of runtime bought up front. */
+  paidSeconds: number;
+  /** What the block cost and how much of it came out of credit. */
+  billing: LeaseBilling;
   nodeId: string;
   label: string;
 };
@@ -84,18 +93,51 @@ export async function fetchWallet(token: string): Promise<WalletSummary> {
   return res.json();
 }
 
-/** Rent a node — spends the prepaid balance, no per-rent signing. */
+/**
+ * Rent a node over x402: `POST /x402/rent/:nodeId?seconds=<n>`.
+ *
+ * One path covers both cases. When credit already covers the block the server
+ * never sends a 402, so the wallet is never opened; when it doesn't, the 402
+ * asks only for the shortfall and `payingFetch` settles it. The session token
+ * is what lets the server apply the caller's credit — without it the discount
+ * is floored and the caller always pays something on-chain.
+ */
 export async function rentNode(
-  token: string,
+  token: string | null,
+  address: string,
+  sign: SignTransactions,
   nodeId: string,
-): Promise<Omit<ActiveLease, "nodeId" | "label">> {
-  const res = await fetch(`${REGISTRY_URL}/rent/${nodeId}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify({}),
-  });
+  seconds: number,
+  onStage?: (stage: PayStage) => void,
+): Promise<X402RentResponse> {
+  const res = await payingFetch(address, sign, onStage)(
+    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({}),
+    },
+  );
   if (!res.ok) throw await apiError(res, "rent");
   return res.json();
+}
+
+/** Map a rent response into the shape the lease panel renders. */
+export function toActiveLease(r: X402RentResponse, label: string): ActiveLease {
+  return {
+    leaseId: r.leaseId,
+    leaseToken: r.leaseToken,
+    access: r.ssh,
+    expiresAt: Date.parse(r.paidUntil),
+    rateAtomicPerHour: Math.round(r.node.pricePerHourUsd * 1e6),
+    paidSeconds: r.paidSeconds,
+    billing: r.billing,
+    nodeId: r.node.id,
+    label,
+  };
 }
 
 /** Poll a lease to refresh its projected expiry + status as the meter bills it. */
@@ -107,12 +149,20 @@ export async function fetchLease(leaseId: string, leaseToken: string): Promise<L
   return (await res.json()).lease as Lease;
 }
 
+/**
+ * Execute one job in the sandbox: `POST /lease/:id/run`. Flat-priced per call,
+ * so this answers 402 and `payingFetch` settles it — one wallet approval per
+ * run. The job runs before the payment settles: a job that fails costs nothing.
+ */
 export async function runJob(
   leaseId: string,
   leaseToken: string,
   payload: string,
+  address: string,
+  sign: SignTransactions,
+  onStage?: (stage: PayStage) => void,
 ): Promise<RunResponse> {
-  const res = await fetch(`${REGISTRY_URL}/lease/${leaseId}/run`, {
+  const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/lease/${leaseId}/run`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${leaseToken}` },
     body: JSON.stringify({ payload }),
@@ -121,12 +171,22 @@ export async function runJob(
   return res.json();
 }
 
-export async function releaseLease(leaseId: string, leaseToken: string): Promise<void> {
-  const res = await fetch(`${REGISTRY_URL}/lease/${leaseId}/release`, {
-    method: "POST",
+/**
+ * Close a lease early: `DELETE /x402/leases/:leaseId`. Unused seconds come back
+ * as credit on the payer's address, which is what makes their next 402 smaller.
+ * Returns null when the lease was already gone server-side (nothing to refund).
+ */
+export async function releaseLease(
+  leaseId: string,
+  leaseToken: string,
+): Promise<LeaseCloseResponse | null> {
+  const res = await fetch(`${REGISTRY_URL}/x402/leases/${leaseId}`, {
+    method: "DELETE",
     headers: { authorization: `Bearer ${leaseToken}` },
   });
   // 404/410 = the lease is already gone server-side — that's the state the user
   // wanted, so only a live failure (5xx, auth) should block closing the panel.
-  if (!res.ok && res.status !== 404 && res.status !== 410) throw await apiError(res, "release");
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw await apiError(res, "release");
+  return res.json();
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { formatAlgo, formatAlgoExact } from "@tendril/shared";
+import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 
 interface Props {
   signedIn: boolean;
@@ -9,7 +9,7 @@ interface Props {
   signingIn: boolean;
   onSignIn: () => void;
   /** Prepaid balance in microALGO, or null when not signed in / not loaded. */
-  balanceMicroAlgos: number | null;
+  balanceAtomic: number | null;
 }
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -20,7 +20,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
  * Once connected the address is a menu: balance, top up, history, account
  * switching, disconnect.
  */
-export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn, balanceMicroAlgos }: Props) {
+export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn, balanceAtomic }: Props) {
   const { wallets, activeAddress, activeWallet, activeWalletAccounts } = useWallet();
   const navigate = useNavigate();
   const [picking, setPicking] = useState(false);
@@ -75,7 +75,7 @@ export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn, balanceMic
   }
 
   const others = (activeWalletAccounts ?? []).filter((a) => a.address !== activeAddress);
-  const hasBalance = signedIn && balanceMicroAlgos !== null;
+  const hasBalance = signedIn && balanceAtomic !== null;
 
   const picker = picking && (
     <div className="modal-backdrop" onClick={() => setPicking(false)}>
@@ -134,8 +134,8 @@ export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn, balanceMic
           <div className="wallet-menu" role="menu">
             <div className="wm-balance">
               <span className="muted small">Prepaid balance</span>
-              <strong title={hasBalance ? formatAlgoExact(balanceMicroAlgos) : undefined}>
-                {hasBalance ? formatAlgo(balanceMicroAlgos) : "—"}
+              <strong title={hasBalance ? formatUsdcExact(balanceAtomic) : undefined}>
+                {hasBalance ? formatUsdc(balanceAtomic) : "—"}
               </strong>
             </div>
             <button className="wm-item" role="menuitem" onClick={() => go("/dashboard")}>

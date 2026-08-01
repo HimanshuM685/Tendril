@@ -12,8 +12,14 @@ export interface ComputeNode {
   id: string;
   /** Algorand address of the node owner (used for auth + display). */
   ownerAddr: string;
-  /** Algorand address that receives ALGO payments for this node. */
+  /** Algorand address that receives USDC payouts for this node. */
   payToAddr: string;
+  /**
+   * True when `payToAddr` has not opted into the payment ASA, so on-chain
+   * payouts for this node cannot land. The node still runs and still earns —
+   * payouts are recorded unpaid until the address opts in.
+   */
+  payoutBlocked: boolean;
   label: string;
   cpuCores: number;
   ramMb: number;
@@ -39,6 +45,7 @@ export type ExplorerNode = Pick<
   | "gpu"
   | "pricePerHourUsd"
   | "status"
+  | "payoutBlocked"
 >;
 
 export type LeaseStatus = "starting" | "active" | "ended" | "failed";
@@ -50,46 +57,63 @@ export interface SandboxAccess {
   host: string;
   port: number;
   username: string;
-  /** SSH password — set to the renter's own Algorand address. */
-  password: string;
+  /**
+   * `"publickey"` when the renter supplied an `sshPubKey` — the only option
+   * that works without a session, since there is no address to use as a
+   * password. `"password"` is the signed-in web flow.
+   */
+  authMethod: "password" | "publickey";
+  /** SSH password (the renter's address), or null under `"publickey"`. */
+  password: string | null;
   /** Ready-to-copy connect command, e.g. "ssh root@bore.pub -p 12345". */
   command: string;
 }
 
-/** A metered session on a node, billed from the renter's prepaid wallet. */
+/**
+ * A prepaid block of time on a node. The renter buys `paidSeconds` up front;
+ * at lease end the unused remainder comes back as credit (see `proratedCost`).
+ */
 export interface Lease {
   id: string;
   nodeId: string;
-  /** Algorand address of the renter (whose wallet balance is billed). */
+  /** Algorand address of the renter (the sandbox user). */
   renterAddr: string;
+  /**
+   * Address the block was paid from and any refund goes back to — the sender
+   * of the settled payment, or the session address when credit covered it all.
+   */
+  payerAddr: string;
   /** Algorand address the contributor is paid out to on lease end. */
   payToAddr: string;
   /** SSH access details, once the container is ready. */
   access: SandboxAccess | null;
   status: LeaseStatus;
-  /** Billing rate snapshotted at lease start, in microALGO per hour. */
-  rateMicroAlgosPerHour: number;
+  /** Billing rate snapshotted at lease start, in atomic units per hour. */
+  rateAtomicPerHour: number;
+  /** Seconds of runtime bought up front. */
+  paidSeconds: number;
+  /** Full prepaid price of the block, in atomic units. */
+  quoteAtomic: number;
+  /** Portion of `quoteAtomic` taken from existing credit rather than paid on-chain. */
+  creditAppliedAtomic: number;
+  /** Settled payment txid, or null when credit covered the whole quote. */
+  paymentTxid: string | null;
   /** Unix ms the sandbox went active (start of the billable window). */
   startedAt: number;
-  /**
-   * Projected Unix ms when the wallet runs dry at the current rate, computed
-   * once at lease start from the affordable time. The lease ends when the
-   * balance is used up; usage is billed once, at the end. Used by the UI to
-   * show "time left".
-   */
+  /** Unix ms the paid block runs out; the watchdog kills the sandbox here. */
   expiresAt: number;
   createdAt: number;
 }
 
-// ───────────────────────────── Prepaid wallet ─────────────────────────────
-// Users top up a custodial ALGO balance once, then renting a node meters time
-// and debits that balance. Top-ups (deposits) and charges (metered usage) are
-// both recorded so the user has a full history.
+// ───────────────────────────── Credit ledger ─────────────────────────────
+// Credit enters only two ways: POST /x402/topup, and the refund of unused time
+// when a lease closes. It leaves only by paying for a lease. Top-ups and
+// charges are both recorded so an address has a full history.
 
-/** A user's prepaid balance, keyed by their Algorand address. */
+/** An address's credit balance. */
 export interface Wallet {
   address: string;
-  balanceMicroAlgos: number;
+  balanceAtomic: number;
   updatedAt: number;
 }
 
@@ -97,7 +121,7 @@ export interface Wallet {
 export interface TopUp {
   txid: string;
   address: string;
-  amountMicroAlgos: number;
+  amountAtomic: number;
   createdAt: number;
 }
 
@@ -109,7 +133,7 @@ export interface Charge {
   leaseId: string;
   /** Contributor / compute-owner address this usage was paid for. */
   payToAddr: string;
-  amountMicroAlgos: number;
+  amountAtomic: number;
   /** Seconds of usage this charge covers (the billed duration). */
   seconds: number;
   createdAt: number;
@@ -121,7 +145,7 @@ export interface Payout {
   /** Contributor address that received the payout. */
   toAddr: string;
   leaseId: string;
-  amountMicroAlgos: number;
+  amountAtomic: number;
   /** On-chain transaction id of the payout, or null if it failed/skipped. */
   txid: string | null;
   createdAt: number;
@@ -129,16 +153,16 @@ export interface Payout {
 
 /** Lifetime aggregates for an address (computed server-side, not capped). */
 export interface WalletStats {
-  /** Total ALGO ever spent on compute. */
-  totalSpentMicroAlgos: number;
-  /** Total ALGO ever deposited. */
-  totalToppedUpMicroAlgos: number;
+  /** Total ever spent on compute, in atomic units. */
+  totalSpentAtomic: number;
+  /** Total ever topped up, in atomic units. */
+  totalToppedUpAtomic: number;
   /** Total billed compute time across all leases, in seconds. */
   totalLeaseSeconds: number;
   /** Number of leases that were billed. */
   leaseCount: number;
-  /** Total ALGO earned as a contributor (payouts received). */
-  totalEarnedMicroAlgos: number;
+  /** Total earned as a contributor (payouts received), in atomic units. */
+  totalEarnedAtomic: number;
   /** Number of payouts received as a contributor. */
   payoutCount: number;
 }
@@ -146,7 +170,7 @@ export interface WalletStats {
 /** Wallet + its deposit/spend history, contributor earnings, and lifetime stats. */
 export interface WalletSummary {
   address: string;
-  balanceMicroAlgos: number;
+  balanceAtomic: number;
   topups: TopUp[];
   charges: Charge[];
   /** Payouts received as a contributor (earnings history). */
@@ -174,7 +198,7 @@ export interface MetricPoint {
 /** One leaderboard row: an address and its ranked value (units are per-board). */
 export interface RankRow {
   address: string;
-  value: number; // microALGO, or seconds, or a count — depends on the board
+  value: number; // atomic units, or seconds, or a count — depends on the board
 }
 
 export interface Metrics {
@@ -182,7 +206,7 @@ export interface Metrics {
   activeOverTime: MetricPoint[];
   totalUsers: number;
   totalActive: number;
-  /** Renter leaderboards. topup=microALGO, leaseTime=seconds, leaseSpan=lease count. */
+  /** Renter leaderboards. topup=atomic units, leaseTime=seconds, leaseSpan=lease count. */
   topUsers: { topup: RankRow[]; leaseTime: RankRow[]; leaseSpan: RankRow[] };
   /** Contributor leaderboards. timeServed=seconds, timesServed=lease count. */
   topContributors: { timeServed: RankRow[]; timesServed: RankRow[] };
@@ -230,8 +254,14 @@ export interface StartContainerMsg {
   leaseId: string;
   image: string;
   limits: SandboxLimits;
-  /** SSH password to set inside the sandbox (the renter's address). */
-  sshPassword: string;
+  /** SSH password to set inside the sandbox (the renter's address), or null. */
+  sshPassword: string | null;
+  /**
+   * OpenSSH public key to write to the sandbox's `authorized_keys`. Takes
+   * precedence over `sshPassword` and is the only option that works for a
+   * renter with no session (nothing to use as a password).
+   */
+  sshPubKey: string | null;
 }
 
 /** agent -> registry: the sandbox is up and reachable for SSH at host:port. */
@@ -293,15 +323,6 @@ export interface RegisterNodeRequest {
   pricePerHourUsd: number;
 }
 
-/** POST /rent/:nodeId response: SSH access + the hourly rate + lease token. */
-export interface RentResponse {
-  leaseId: string;
-  access: SandboxAccess;
-  expiresAt: number;
-  rateMicroAlgosPerHour: number;
-  leaseToken: string;
-}
-
 export interface RunRequest {
   payload: string;
 }
@@ -312,12 +333,9 @@ export interface RunResponse {
   result: string;
 }
 
-// ───────────────────────── Wallet auth + top-up DTOs ─────────────────────────
-// Native ALGO. The user proves control of their address by signing a login
-// challenge, then tops up a custodial balance over x402: POST /wallet/topup
-// answers HTTP 402 with a challenge, the client signs a `pay` txn to the
-// platform address and retries with `X-PAYMENT`. Both use the wallet's existing
-// signTransactions — no ASA, no opt-in, no facilitator.
+// ───────────────────────── Wallet auth DTOs ─────────────────────────
+// Signing in proves address control so an existing credit balance can be read
+// and spent. It is NOT how money gets in — that is x402 only (see below).
 
 /** GET /auth/nonce → a short-lived challenge to sign for wallet login. */
 export interface WalletNonceResponse {
@@ -336,91 +354,169 @@ export interface WalletLoginRequest {
 export interface WalletLoginResponse {
   token: string;
   address: string;
-  balanceMicroAlgos: number;
+  balanceAtomic: number;
 }
 
-/** The platform address top-ups are sent to (GET /platform). */
+/** What the platform charges in, and where (GET /platform). */
 export interface PlatformInfo {
-  /** Algorand address that receives custodial top-ups. */
+  /** Algorand address that receives x402 payments. */
   payTo: string;
   /** CAIP-2 network id (see ALGORAND_TESTNET_CAIP2). */
   network: string;
-  /** USD per 1 ALGO, for showing prices in ALGO. */
-  algoUsdPrice: number;
+  /** The ASA every price is denominated in. */
+  asset: AssetInfo;
+  /** Facilitator that verifies + settles payments (and sponsors the fee). */
+  facilitatorUrl: string;
+  /** Top-up bounds, in atomic units, enforced by POST /x402/topup. */
+  minTopUpAtomic: number;
+  maxTopUpAtomic: number;
 }
 
-/**
- * POST /wallet/topup, step 1 → ask for a challenge for `amountMicroAlgos`.
- * Answered with HTTP 402 + a `PaymentRequired` challenge.
- */
-export interface TopUpRequest {
-  amountMicroAlgos: number;
+// ───────────────────────── x402 endpoint DTOs ─────────────────────────
+// The only two ways money enters Tendril. Both speak x402 V2 / `exact` / AVM:
+// an unpaid request gets HTTP 402 + `PaymentRequired`, the client builds and
+// signs the payment group and retries with `PAYMENT-SIGNATURE`. The browser
+// and a headless agent run the same code path.
+
+/** The ASA an amount is denominated in. */
+export interface AssetInfo {
+  /** ASA id as a string, e.g. "10458941" (testnet USDC). */
+  id: string;
+  decimals: number;
+  symbol: string;
 }
 
-/** One way to pay a 402 challenge. Tendril only offers native ALGO. */
-export interface PaymentOption {
-  scheme: "exact";
-  /** CAIP-2 network id (see ALGORAND_TESTNET_CAIP2). */
-  network: string;
-  /** Algorand address the payment must go to. */
-  payTo: string;
-  /** Amount in microALGO, as a string (x402 sends amounts as strings). */
-  amount: string;
-  /** Native ALGO — no ASA, no opt-in. */
-  asset: "ALGO";
-  description: string;
-  maxTimeoutSeconds: number;
-}
-
-/** Body (and base64 `PAYMENT-REQUIRED` header) of an HTTP 402 response. */
-export interface PaymentRequired {
-  x402Version: 2;
-  error: string;
-  accepts: PaymentOption[];
-}
-
-/**
- * POST /wallet/topup, step 2 → retry with header
- * `X-PAYMENT: <base64 signed pay txn>` matching the challenge. On success the
- * deposit is confirmed on-chain and credited (idempotently, keyed by txid).
- */
-export interface TopUpResponse {
+/** Settled-payment receipt echoed in successful x402 responses. */
+export interface PaymentReceipt {
   txid: string;
-  balanceMicroAlgos: number;
+  /** CAIP-2 network the payment settled on. */
+  network: string;
 }
 
-/** Convert a USD amount to microALGO at `algoUsdPrice` (USD per 1 ALGO). */
-export function usdToMicroAlgos(usdAmount: number, algoUsdPrice: number): number {
-  return Math.round((usdAmount / algoUsdPrice) * 1e6);
+/** POST /x402/topup?amount=<atomic> → credit the *paying* address. */
+export interface X402TopUpResponse {
+  /** The payer, taken from the settled transaction — never from the request. */
+  address: string;
+  /** Atomic units credited by this payment (string: amounts cross the wire as strings). */
+  credited: string;
+  /** The address's credit balance after crediting. */
+  balance: string;
+  asset: AssetInfo;
+  payment: PaymentReceipt;
 }
 
-/** A node's per-hour rate in microALGO (its USD price converted at `algoUsdPrice`). */
-export function microAlgosPerHour(pricePerHourUsd: number, algoUsdPrice: number): number {
-  return usdToMicroAlgos(pricePerHourUsd, algoUsdPrice);
+/** What a lease cost and how it was paid for. */
+export interface LeaseBilling {
+  /** Full prepaid price of the block. */
+  quoteAtomic: string;
+  /** Portion covered by existing credit. */
+  creditApplied: string;
+  /** Portion paid on-chain now (`quote - creditApplied`). */
+  paidAtomic: string;
+  asset: AssetInfo;
 }
 
-/** Prorated cost in microALGO for `seconds` of usage at a per-hour rate. */
-export function proratedCost(rateMicroAlgosPerHour: number, seconds: number): number {
-  return Math.round((seconds / 3600) * rateMicroAlgosPerHour);
+/** POST /x402/rent/:nodeId?seconds=<n> → a running, prepaid sandbox. */
+export interface X402RentResponse {
+  leaseId: string;
+  /** Opaque bearer token required by /run, /release and /extend. */
+  leaseToken: string;
+  node: {
+    id: string;
+    cpu: number;
+    memoryGb: number;
+    gpu: string | null;
+    pricePerHourUsd: number;
+  };
+  ssh: SandboxAccess;
+  paidSeconds: number;
+  /** ISO 8601. */
+  startedAt: string;
+  /** ISO 8601 — when the watchdog kills the sandbox unless extended. */
+  paidUntil: string;
+  billing: LeaseBilling;
+  /** Absent when the whole quote was covered by credit (no on-chain payment). */
+  payment: PaymentReceipt | null;
 }
 
-/** Full microALGO precision, e.g. 100000 -> "0.1000 ALGO". Ledgers and tooltips. */
-export function formatAlgoExact(microAlgos: number): string {
-  return `${(microAlgos / 1e6).toFixed(4)} ALGO`;
+/** DELETE /x402/leases/:leaseId → early close, unused time refunded as credit. */
+export interface LeaseCloseResponse {
+  leaseId: string;
+  usedSeconds: number;
+  /** Atomic units actually consumed. */
+  usedAtomic: string;
+  /** Atomic units returned to the payer's credit balance. */
+  refundedAtomic: string;
+  /** The payer's credit balance after the refund. */
+  balance: string;
+  asset: AssetInfo;
+}
+
+// ───────────────────────── Money (USDC atomic units) ─────────────────────────
+// Every amount in Tendril is an integer count of USDC atomic units (6 decimals).
+// USD prices convert with a fixed 1e6 — USDC is a dollar, so there is no
+// exchange rate to set anywhere and nothing to keep up to date.
+
+/** USDC has 6 decimals: 1 USDC = 1_000_000 atomic units. */
+export const USDC_DECIMALS = 6;
+export const USDC_UNIT = 1_000_000;
+
+/** Convert a USD amount to USDC atomic units. */
+export function usdToAtomic(usdAmount: number): number {
+  return Math.round(usdAmount * USDC_UNIT);
+}
+
+/** A node's per-hour rate in USDC atomic units. */
+export function atomicPerHour(pricePerHourUsd: number): number {
+  return usdToAtomic(pricePerHourUsd);
 }
 
 /**
- * Compact display: 60000000 -> "60 ALGO", 10384700 -> "10.38 ALGO".
- * Sub-1 amounts keep 4dp — a prorated charge of 0.0042 must not read "0.00".
- * Use `formatAlgoExact` where the exact figure matters (ledger rows, tooltips).
+ * Prorated cost for `seconds` at a per-hour rate, rounded **up**.
+ * Always rounding up keeps the platform from ever undercharging by a
+ * sub-unit, and keeps `quote - used` a non-negative refund.
  */
-export function formatAlgo(microAlgos: number): string {
-  const algo = microAlgos / 1e6;
-  const fixed = Math.abs(algo) < 1 ? algo.toFixed(4) : algo.toFixed(2);
+export function proratedCost(rateAtomicPerHour: number, seconds: number): number {
+  return Math.ceil((seconds / 3600) * rateAtomicPerHour);
+}
+
+/**
+ * How much of an address's credit may be applied to a quote.
+ *
+ * With a session the answer is "all of it" — the token proves the address.
+ * Without one, the payer is only a hint on the URL, so the discount is clamped
+ * to leave at least `minPayableAtomic` to pay on-chain: settling that payment
+ * from the hinted address is what proves control of it. Drop the floor and
+ * `?payer=<victim>` becomes a way to spend a stranger's balance for free.
+ */
+export function applicableCredit(
+  quoteAtomic: number,
+  creditAtomic: number,
+  opts: { authenticated: boolean; minPayableAtomic: number },
+): number {
+  const ceiling = opts.authenticated
+    ? quoteAtomic
+    : Math.max(0, quoteAtomic - opts.minPayableAtomic);
+  return Math.max(0, Math.min(creditAtomic, ceiling));
+}
+
+/** Full USDC precision, e.g. 100000 -> "0.100000 USDC". Ledgers and tooltips. */
+export function formatUsdcExact(atomic: number): string {
+  return `${(atomic / USDC_UNIT).toFixed(USDC_DECIMALS)} USDC`;
+}
+
+/**
+ * Compact display: 60000000 -> "60 USDC", 10384700 -> "10.38 USDC".
+ * Sub-1 amounts keep 4dp — a prorated charge of 0.0042 must not read "0.00".
+ * Use `formatUsdcExact` where the exact figure matters (ledger rows, tooltips).
+ */
+export function formatUsdc(atomic: number): string {
+  const usdc = atomic / USDC_UNIT;
+  const fixed = Math.abs(usdc) < 1 ? usdc.toFixed(4) : usdc.toFixed(2);
   const trimmed = fixed.replace(/\.?0+$/, "");
-  // A few microALGO still rounds to "0" at 4dp — never print a real amount as zero.
-  if (trimmed === "0" && microAlgos !== 0) return `${microAlgos < 0 ? "-" : ""}<0.0001 ALGO`;
-  return `${trimmed} ALGO`;
+  // A few atomic units still round to "0" at 4dp — never print a real amount as zero.
+  if (trimmed === "0" && atomic !== 0) return `${atomic < 0 ? "-" : ""}<0.0001 USDC`;
+  return `${trimmed} USDC`;
 }
 
 /** A node is online if it has beat within the timeout window. */

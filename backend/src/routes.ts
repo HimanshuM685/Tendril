@@ -1,17 +1,36 @@
 import { Router, type Request, type Response } from "express";
 import { nanoid } from "nanoid";
 import {
-  ALGORAND_TESTNET_CAIP2,
-  microAlgosPerHour,
+  applicableCredit,
+  atomicPerHour,
+  formatUsdc,
+  proratedCost,
+  type LeaseCloseResponse,
   type PlatformInfo,
-  type RentResponse,
   type RunRequest,
   type RunResponse,
   type SandboxLimits,
-  type TopUpResponse,
   type WalletLoginResponse,
+  type X402RentResponse,
+  type X402TopUpResponse,
 } from "@tendril/shared";
-import { sendPaymentReceipt, sendPaymentRequired } from "./x402.js";
+import {
+  asset,
+  challenge,
+  facilitator,
+  fail,
+  findPayment,
+  markFailed,
+  markPending,
+  markSettled,
+  paymentFacts,
+  readPayment,
+  requirements,
+  sendReceipt,
+  type PaymentFacts,
+} from "./x402/server.js";
+import { requirePayment, type PaidRequest } from "./x402/paywall.js";
+import { creditBalance, creditTopUp, debitForLease } from "./x402/credit.js";
 import {
   addressFromSession,
   issueLeaseToken,
@@ -21,10 +40,10 @@ import {
   leaseIdFromAuthHeader,
   verifyWalletNonce,
 } from "./auth.js";
-import { creditWallet, getBalance, metrics, walletSummary } from "./db.js";
+import { metrics, walletSummary } from "./db.js";
 import { getNode, listNodesByOwner, listOnlineNodes } from "./registry.js";
-import { createLease, endLeaseAndBill, getLease, setLeaseStatus } from "./leases.js";
-import { settleTopUp, verifyLoginSignature } from "./wallet.js";
+import { abandonLease, closeLease, createLease, getLease, nodeBusy } from "./leases.js";
+import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected, runJob, startContainer } from "./ws.js";
 import { config } from "./config.js";
 
@@ -32,12 +51,16 @@ export const router = Router();
 
 router.get("/health", (_req, res) => res.json({ ok: true }));
 
-// Where to send top-ups + the rate used to show prices in ALGO.
+// What we charge in and where. No exchange rate: prices are USD, the asset is a
+// dollar stablecoin, so `pricePerHourUsd * 1e6` is the atomic amount.
 router.get("/platform", (_req, res) => {
   const info: PlatformInfo = {
     payTo: config.platformPayTo,
-    network: ALGORAND_TESTNET_CAIP2,
-    algoUsdPrice: config.algoUsdPrice,
+    network: config.x402Network,
+    asset,
+    facilitatorUrl: config.facilitatorUrl,
+    minTopUpAtomic: config.minTopUpAtomic,
+    maxTopUpAtomic: config.maxTopUpAtomic,
   };
   res.json(info);
 });
@@ -50,6 +73,7 @@ router.get("/auth/nonce", (req: Request, res: Response) => {
 });
 
 // ─────────────────────── wallet login (web users) ───────────────────────
+// Signing in reads and spends an existing balance. It is NOT how money gets in.
 router.get("/auth/wallet-nonce", (req: Request, res: Response) => {
   const address = String(req.query.address ?? "");
   if (!address) return res.status(400).json({ error: "address required" });
@@ -74,7 +98,7 @@ router.post("/auth/wallet-login", async (req: Request, res: Response) => {
   const body: WalletLoginResponse = {
     token: issueSession(address),
     address,
-    balanceMicroAlgos: await getBalance(address),
+    balanceAtomic: await creditBalance(address),
   };
   res.json(body);
 });
@@ -99,66 +123,311 @@ router.get("/nodes", (req: Request, res: Response) => {
   res.json({ nodes: listNodesByOwner(owner) });
 });
 
-// ─────────────────────── prepaid wallet (session-gated) ───────────────────────
+// ─────────────────────── credit balance (session-gated) ───────────────────────
 router.get("/wallet", async (req: Request, res: Response) => {
   const address = requireSession(req, res);
   if (!address) return;
   res.json(await walletSummary(address));
 });
 
-// x402: no X-PAYMENT → 402 challenge; with X-PAYMENT → settle + credit.
-router.post("/wallet/topup", async (req: Request, res: Response) => {
-  const address = requireSession(req, res);
-  if (!address) return;
-
-  const payment = req.header("x-payment");
-  if (!payment) {
-    if (!config.platformPayTo) {
-      return res.status(503).json({ error: "PLATFORM_PAYTO is not configured on the server" });
-    }
-    const amount = Number((req.body as { amountMicroAlgos?: number })?.amountMicroAlgos);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ error: "amountMicroAlgos (> 0) required" });
-    }
-    return sendPaymentRequired(res, Math.round(amount), "Top up your Tendril balance");
+// ═══════════════════════ POST /topup?amount=<atomic> ═══════════════════════
+//
+// The only way money enters Tendril. No auth: the payment proves who is paying,
+// and the credit is keyed to the *sender of the settled transaction* — so a
+// fresh address with no history can top up, then sign in later to spend it.
+//
+// The caller names the amount: 4 USDC, 400, 609, anything between
+// MIN_TOPUP_ATOMIC and MAX_TOPUP_ATOMIC. It goes in the URL rather than the body
+// because `PaymentRequirements.amount` is a fixed number — "pay what you want"
+// cannot be expressed in a 402, so the URL is what makes the challenge concrete.
+//
+// On settlement: one `topups` row for the payment, and the address's `credits`
+// balance goes up by the same amount, in a single transaction.
+async function topUp(req: Request, res: Response) {
+  // Omitting `?amount=` falls back to a house default, so a caller that just
+  // wants some credit does not have to pick a number.
+  const raw =
+    req.query.amount === undefined ? String(config.defaultTopUpAtomic) : String(req.query.amount);
+  if (!/^\d+$/.test(raw)) {
+    return res
+      .status(400)
+      .json({ error: "invalid_amount", detail: "?amount= must be a whole number of atomic units" });
+  }
+  const amount = Number(raw);
+  if (amount < config.minTopUpAtomic) {
+    return res
+      .status(400)
+      .json({ error: "amount_below_minimum", minimum: String(config.minTopUpAtomic) });
+  }
+  if (amount > config.maxTopUpAtomic) {
+    return res
+      .status(400)
+      .json({ error: "amount_above_maximum", maximum: String(config.maxTopUpAtomic) });
   }
 
+  let payload;
   try {
-    const { txid, amountMicroAlgos } = await settleTopUp(address, payment);
-    const balanceMicroAlgos = await creditWallet(address, amountMicroAlgos, txid);
-    sendPaymentReceipt(res, txid);
-    const body: TopUpResponse = { txid, balanceMicroAlgos };
-    res.json(body);
+    payload = readPayment(req);
+  } catch {
+    return res.status(400).json({ error: "malformed_payment" });
+  }
+
+  if (!payload) {
+    // The warning is load-bearing: paying from an address the user does not
+    // control (an exchange withdrawal, say) creates a balance nobody can spend.
+    return challenge(
+      req,
+      res,
+      amount,
+      `Credit ${formatUsdc(amount)} to the paying address. Pay from a wallet you control: ` +
+        `the balance is keyed to the sender and can only be spent by signing from that address.`,
+    ).catch((err) => fail(res, err));
+  }
+
+  let facts: PaymentFacts;
+  try {
+    facts = paymentFacts(payload);
+  } catch {
+    return res.status(400).json({ error: "malformed_payment" });
+  }
+
+  // Idempotency: the same payment replayed returns the original receipt and
+  // credits nothing twice.
+  const seen = await findPayment(facts.intentHash);
+  if (seen?.status === "settled") {
+    return res.json(await topUpBody(seen.payer, seen.amount_atomic, seen.txid));
+  }
+
+  let reqs;
+  let verified;
+  try {
+    // `reqs` is rebuilt from the URL right now, so a payment for the wrong
+    // amount, asset or recipient fails here — before anything is submitted.
+    reqs = await requirements(amount);
+    verified = await facilitator.verify(payload, reqs);
   } catch (err) {
-    res.status(502).json({ error: `top-up failed: ${(err as Error).message}` });
+    return fail(res, err);
   }
-});
+  if (!verified.isValid) {
+    return challenge(
+      req,
+      res,
+      amount,
+      "Payment did not verify",
+      verified.invalidReason ?? "invalid_payment",
+    ).catch((err) => fail(res, err));
+  }
 
-// ─────────────────────── rent (spends the prepaid balance) ───────────────────────
-router.post("/rent/:nodeId", async (req: Request, res: Response) => {
-  const address = requireSession(req, res);
-  if (!address) return;
+  await markPending(facts, "topup", amount);
+  const settlement = await facilitator.settle(payload, reqs);
+  if (!settlement.success) {
+    await markFailed(facts.txid);
+    return res.status(402).json({ error: "settlement_failed", detail: settlement.errorReason });
+  }
 
+  await creditTopUp(facts.payer, amount, facts.txid);
+  await markSettled(facts.txid);
+  sendReceipt(res, settlement);
+  res.json(await topUpBody(facts.payer, amount, facts.txid));
+}
+
+router.post("/x402/topup", topUp);
+// Short alias, so "just top me up" is one obvious path.
+router.post("/topup", topUp);
+
+async function topUpBody(payer: string, credited: number, txid: string): Promise<X402TopUpResponse> {
+  return {
+    address: payer,
+    credited: String(credited),
+    balance: String(await creditBalance(payer)),
+    asset,
+    payment: { txid, network: config.x402Network },
+  };
+}
+
+// ═══════════════════════ x402: POST /x402/rent/:nodeId ═══════════════════════
+//
+// Buy a prepaid block of time on a node. The price is a pure function of the URL
+// and live state — recomputed when the payment arrives, so there is no quote
+// table and nothing to keep in sync.
+//
+// Ordering is the whole design: verify, provision, *then* settle. If the sandbox
+// does not come up, the caller gets a 503 and has paid nothing.
+router.post("/x402/rent/:nodeId", async (req: Request, res: Response) => {
   const node = getNode(req.params.nodeId);
-  if (!node) return res.status(404).json({ error: "node not found" });
+  if (!node) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
-    return res.status(503).json({ error: "node is offline" });
+    return res.status(409).json({ error: "node_unavailable" });
   }
 
-  const rate = microAlgosPerHour(node.pricePerHourUsd, config.algoUsdPrice);
-  const balance = await getBalance(address);
-  if (balance <= 0) {
-    return res.status(402).json({
-      error: "insufficient balance — top up your wallet",
-      balanceMicroAlgos: balance,
-      rateMicroAlgosPerHour: rate,
+  const seconds = Number(String(req.query.seconds ?? ""));
+  if (
+    !Number.isInteger(seconds) ||
+    seconds < config.minLeaseSeconds ||
+    seconds > config.maxLeaseSeconds ||
+    seconds % config.leaseSecondsGranularity !== 0
+  ) {
+    return res.status(400).json({
+      error: "invalid_duration",
+      detail:
+        `seconds must be a multiple of ${config.leaseSecondsGranularity}, ` +
+        `between ${config.minLeaseSeconds} and ${config.maxLeaseSeconds}`,
     });
   }
 
-  // No upfront debit: usage is billed once, at lease end. expiresAt is just the
-  // projected "wallet runs dry" time the watchdog enforces.
-  const expiresAt = Date.now() + (rate > 0 ? (balance / rate) * 3_600_000 : 0);
-  const lease = createLease(node.id, address, node.payToAddr, rate, expiresAt);
+  const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
+  if (sshPubKey !== null && (typeof sshPubKey !== "string" || !isOpenSshPubKey(sshPubKey))) {
+    return res.status(400).json({ error: "invalid_ssh_key" });
+  }
+
+  const rate = atomicPerHour(node.pricePerHourUsd);
+  const quote = proratedCost(rate, seconds);
+
+  // Who to price against: a session proves the address; `?payer=` is a hint and
+  // nothing more. An agent can drain its own balance without ever signing in.
+  const sessionAddr = addressFromSession(req.header("authorization"));
+  const hinted = typeof req.query.payer === "string" ? req.query.payer : null;
+  const payerAddress = sessionAddr ?? hinted;
+  const credit = payerAddress ? await creditBalance(payerAddress) : 0;
+
+  // Unauthenticated requests are floored: paying at least `minPayableAtomic`
+  // proves control of the hinted address.
+  const creditApplied = applicableCredit(quote, credit, {
+    authenticated: sessionAddr !== null,
+    minPayableAtomic: config.minPayableAtomic,
+  });
+  const owed = quote - creditApplied;
+
+  // Path B — something is owed and no payment came with it: `requirePayment`
+  // answers 402 and returns null. No reservation is held while the caller is
+  // away paying; if someone else takes the node meanwhile, the retry 409s below
+  // and nothing has settled.
+  const covered =
+    creditApplied > 0 ? ` ${formatUsdc(creditApplied)} covered by existing credit.` : "";
+  const paid =
+    owed > 0
+      ? await requirePayment(
+          req,
+          res,
+          "rent",
+          owed,
+          `${seconds}s lease on ${node.id} (${node.cpuCores} vCPU, ` +
+            `${Math.round(node.ramMb / 1024)}GB) at ${formatUsdc(rate)}/hr.${covered}`,
+        )
+      : null;
+  if (owed > 0 && !paid) return; // 402/400/409 already sent
+
+  if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
+
+  // Path A — credit covers the lot: no 402, no wallet popup. Only a session can
+  // do this; an unauthenticated caller was floored to a payable amount above.
+  if (!paid && !sessionAddr) return res.status(401).json({ error: "sign in to spend credit" });
+
+  // Path C — the discount was priced against `payerAddress`, so the money has to
+  // come from there too, or the hint is a way to spend someone else's credit.
+  if (paid && payerAddress && paid.facts.payer !== payerAddress) {
+    return res
+      .status(402)
+      .json({ error: "payer_mismatch", expected: payerAddress, got: paid.facts.payer });
+  }
+
+  const renter = paid?.facts.payer ?? sessionAddr!;
+  return provision(res, {
+    node,
+    seconds,
+    rate,
+    quote,
+    creditApplied,
+    renterAddr: renter,
+    payerAddr: renter,
+    sshPubKey,
+    paid,
+  });
+});
+
+// ═══════════════════ flat price: POST /rent/:nodeId ═══════════════════
+//
+// The simple way to buy. One fixed price, whatever the node costs per hour and
+// however long the block is: pay `FLAT_RENT_ATOMIC`, get a sandbox. No quote
+// arithmetic, no credit, no session, no `?seconds=` — just a 402 and then the
+// ordinary rent flow. /x402/rent is still there for callers who want prorating.
+router.post("/rent/:nodeId", async (req: Request, res: Response) => {
+  const node = getNode(req.params.nodeId);
+  if (!node) return res.status(404).json({ error: "node_not_found" });
+  if (node.status !== "online" || !isNodeConnected(node.id)) {
+    return res.status(409).json({ error: "node_unavailable" });
+  }
+
+  const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
+  if (sshPubKey !== null && (typeof sshPubKey !== "string" || !isOpenSshPubKey(sshPubKey))) {
+    return res.status(400).json({ error: "invalid_ssh_key" });
+  }
+
+  const seconds = config.flatRentSeconds;
+  const quote = config.flatRentAtomic;
+  const paid = await requirePayment(
+    req,
+    res,
+    "rent",
+    quote,
+    `${seconds}s sandbox on ${node.id} (${node.cpuCores} vCPU, ` +
+      `${Math.round(node.ramMb / 1024)}GB) for a flat ${formatUsdc(quote)}.`,
+  );
+  if (!paid) return;
+
+  if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
+
+  // The lease still needs an hourly rate, for the refund on early close and for
+  // the contributor's cut. Derive it from what was actually paid rather than the
+  // node's list price, so the money in and the money out stay equal.
+  const rate = Math.ceil((quote * 3600) / seconds);
+  return provision(res, {
+    node,
+    seconds,
+    rate,
+    quote,
+    creditApplied: 0,
+    renterAddr: paid.facts.payer,
+    payerAddr: paid.facts.payer,
+    sshPubKey,
+    paid,
+  });
+});
+
+interface ProvisionArgs {
+  node: NonNullable<ReturnType<typeof getNode>>;
+  seconds: number;
+  rate: number;
+  quote: number;
+  creditApplied: number;
+  renterAddr: string;
+  payerAddr: string;
+  sshPubKey: string | null;
+  /** A verified payment, settled only once the sandbox is confirmed up. */
+  paid: PaidRequest | null;
+}
+
+/**
+ * Bring the sandbox up, and only then take the money. A provisioning failure
+ * releases the node and returns 503 with nothing settled, so the caller loses
+ * nothing. A settlement failure after the container is up costs us one wasted
+ * container start — the cheaper of the two mistakes.
+ */
+async function provision(res: Response, args: ProvisionArgs): Promise<void> {
+  const { node, seconds, rate, quote, creditApplied, renterAddr, payerAddr, sshPubKey, paid } =
+    args;
+
+  const lease = createLease({
+    nodeId: node.id,
+    renterAddr,
+    payerAddr,
+    payToAddr: node.payToAddr,
+    rateAtomicPerHour: rate,
+    paidSeconds: seconds,
+    quoteAtomic: quote,
+    creditAppliedAtomic: creditApplied,
+    paymentTxid: paid?.facts.txid ?? null,
+  });
 
   const limits: SandboxLimits = {
     memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
@@ -166,30 +435,96 @@ router.post("/rent/:nodeId", async (req: Request, res: Response) => {
     gpus: node.gpu ? "all" : "",
   };
 
+  let access;
   try {
-    // The renter's own address doubles as the sandbox SSH password.
-    const access = await startContainer(
-      node.id,
-      lease.id,
-      process.env.DEFAULT_SANDBOX_IMAGE ?? "",
-      limits,
-      address,
-    );
-    const body: RentResponse = {
+    access = await startContainer({
+      nodeId: node.id,
       leaseId: lease.id,
-      access,
-      expiresAt,
-      rateMicroAlgosPerHour: rate,
-      leaseToken: issueLeaseToken(lease.id),
-    };
-    res.json(body);
+      image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+      limits,
+      // A key beats a password, and is the only option without a session:
+      // there is no wallet address to use as one.
+      sshPassword: sshPubKey ? null : renterAddr,
+      sshPubKey,
+    });
   } catch (err) {
-    setLeaseStatus(lease.id, "failed");
-    res.status(502).json({ error: `sandbox failed to start: ${(err as Error).message}` });
+    abandonLease(lease.id);
+    res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
+    return;
   }
-});
 
-// ─────────────────────── lease-token-gated: run / release / status ───────────────────────
+  // The sandbox is up, so now take the money. If settlement fails the money
+  // never moved, and the sandbox shouldn't stay up either: tear it down and free
+  // the node. Abandon rather than close — a close would refund a payment that
+  // never happened.
+  if (paid && !(await paid.settle(res))) {
+    abandonLease(lease.id);
+    return;
+  }
+
+  // One charge row for the whole prepaid block; the credit portion comes out of
+  // the ledger, the rest already arrived on chain.
+  await debitForLease({
+    address: payerAddr,
+    leaseId: lease.id,
+    payToAddr: node.payToAddr,
+    quoteAtomic: quote,
+    creditAppliedAtomic: creditApplied,
+    seconds,
+  });
+
+  const body: X402RentResponse = {
+    leaseId: lease.id,
+    leaseToken: issueLeaseToken(lease.id),
+    node: {
+      id: node.id,
+      cpu: node.cpuCores,
+      memoryGb: Math.round(node.ramMb / 1024),
+      gpu: node.gpu,
+      pricePerHourUsd: node.pricePerHourUsd,
+    },
+    ssh: access,
+    paidSeconds: seconds,
+    startedAt: new Date(lease.startedAt).toISOString(),
+    paidUntil: new Date(lease.expiresAt).toISOString(),
+    billing: {
+      quoteAtomic: String(quote),
+      creditApplied: String(creditApplied),
+      paidAtomic: String(quote - creditApplied),
+      asset,
+    },
+    payment: paid ? { txid: paid.facts.txid, network: config.x402Network } : null,
+  };
+  res.json(body);
+}
+
+/**
+ * Close a lease early. The unused time goes back to the payer as credit, which
+ * is exactly what makes their next 402 smaller.
+ */
+async function releaseLease(req: Request, res: Response): Promise<void> {
+  const lease = requireLease(req, res);
+  if (!lease) return;
+  const settled = await closeLease(lease.id, "released");
+  const body: LeaseCloseResponse = {
+    leaseId: lease.id,
+    usedSeconds: settled?.usedSeconds ?? 0,
+    usedAtomic: String(settled?.usedAtomic ?? 0),
+    refundedAtomic: String(settled?.refundAtomic ?? 0),
+    balance: String(settled?.balance ?? (await creditBalance(lease.payerAddr))),
+    asset,
+  };
+  res.json(body);
+}
+
+router.delete("/x402/leases/:id", releaseLease);
+router.post("/lease/:id/release", releaseLease);
+
+// ─────────────────────── lease-token-gated: run / status ───────────────────────
+// Pay a flat `FLAT_RUN_ATOMIC` to execute one job, then the ordinary flow: ship
+// the payload to the contributor over the websocket and return what it printed.
+// The job runs BEFORE the payment settles, so a job that never ran is never paid
+// for.
 router.post("/lease/:id/run", async (req: Request, res: Response) => {
   const lease = requireLease(req, res);
   if (!lease) return;
@@ -200,22 +535,28 @@ router.post("/lease/:id/run", async (req: Request, res: Response) => {
   if (typeof payload !== "string") {
     return res.status(400).json({ error: "payload (string) required" });
   }
-  const jobId = nanoid(10);
-  try {
-    const result = await runJob(lease.nodeId, lease.id, jobId, payload);
-    const body: RunResponse = { jobId, ok: result.ok, result: result.result };
-    res.json(body);
-  } catch (err) {
-    res.status(502).json({ error: (err as Error).message });
-  }
-});
 
-router.post("/lease/:id/release", async (req: Request, res: Response) => {
-  const lease = requireLease(req, res);
-  if (!lease) return;
-  // Bill the actual usage once, pay the contributor, and tear down the sandbox.
-  await endLeaseAndBill(lease.id, "released");
-  res.json({ ok: true });
+  const paid = await requirePayment(
+    req,
+    res,
+    "run",
+    config.flatRunAtomic,
+    `Execute one job on lease ${lease.id} for a flat ${formatUsdc(config.flatRunAtomic)}.`,
+  );
+  if (!paid) return;
+
+  const jobId = nanoid(10);
+  let result;
+  try {
+    result = await runJob(lease.nodeId, lease.id, jobId, payload);
+  } catch (err) {
+    // Nothing ran, so nothing settles.
+    return res.status(502).json({ error: (err as Error).message });
+  }
+  if (!(await paid.settle(res))) return;
+
+  const body: RunResponse = { jobId, ok: result.ok, result: result.result };
+  res.json(body);
 });
 
 router.get("/lease/:id", (req: Request, res: Response) => {
@@ -249,4 +590,12 @@ function requireLease(req: Request, res: Response) {
     return null;
   }
   return lease;
+}
+
+/** An OpenSSH public key line, as it appears in `authorized_keys`. */
+const SSH_PUBKEY =
+  /^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-nistp(256|384|521)|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh\.com) +[A-Za-z0-9+/]+={0,3}( +\S+)?$/;
+
+function isOpenSshPubKey(value: string): boolean {
+  return SSH_PUBKEY.test(value.trim());
 }

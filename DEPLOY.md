@@ -124,7 +124,13 @@ Registry env vars:
 | `JWT_SECRET` | dev value | **set a strong secret in prod** (signs wallet-session + lease tokens) |
 | `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated |
 | `HEARTBEAT_TIMEOUT_MS` | `30000` | node considered offline after this gap |
-| `ALGO_USD_PRICE` | `0.20` | USD per 1 ALGO — converts the USD price to the microALGO/**hour** rate |
+| `X402_NETWORK` | testnet CAIP-2 | Network every payment must be on; must match the facilitator's `/supported` exactly |
+| `X402_ASSET_ID` | `10458941` | ASA every price is denominated in (testnet USDC; mainnet `31566704`) |
+| `X402_FACILITATOR_URL` | `https://facilitator.goplausible.xyz` | Verifies + settles payments and sponsors the network fee |
+| `MIN_TOPUP_ATOMIC` / `MAX_TOPUP_ATOMIC` | `100000` / `1000000000` | Top-up bounds, in atomic units |
+| `MIN_PAYABLE_ATOMIC` | `10000` | Floor an **unauthenticated** rent must pay on-chain, whatever credit `?payer=` holds |
+| `MIN_LEASE_SECONDS` / `MAX_LEASE_SECONDS` / `LEASE_SECONDS_GRANULARITY` | `60` / `14400` / `60` | Bounds on a prepaid block |
+| `SANDBOX_READY_TIMEOUT_MS` | `45000` | How long to wait for a sandbox before 503 — nothing is settled if it elapses |
 | `METER_INTERVAL_MS` | `10000` | how often the **watchdog** checks active leases for balance exhaustion (no per-tick billing) |
 | `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algod used to confirm top-ups + send payouts |
 
@@ -178,10 +184,10 @@ Runs anywhere (CI, a laptop, a server) with a funded key:
 
 ```bash
 AVM_PRIVATE_KEY=<buyer-key> REGISTRY_URL=https://api.your-tendril-domain.com \
-AGENT_MIN_RAM_MB=2048 AGENT_TOPUP_ALGO=0.5 npm run client
+AGENT_MIN_RAM_MB=2048 AGENT_TOPUP_ATOMIC=500000 npm run client
 ```
 
-It signs in, tops up its prepaid balance if it's below `AGENT_TOPUP_ALGO`, rents the cheapest
+It tops up `AGENT_TOPUP_ATOMIC` over x402 (no sign-in), rents the cheapest
 matching node, runs its job, and releases — reporting how much balance it drew down.
 
 ---
@@ -194,7 +200,8 @@ matching node, runs its job, and releases — reporting how much balance it drew
 - [ ] `CORS_ORIGIN` locked to your web origin.
 - [ ] Registry + web both HTTPS (avoid mixed-content blocking); WebSocket upgrades proxied.
 - [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + payouts) and clients.
-- [ ] `ALGO_USD_PRICE` set to a sane rate (or wired to a price feed); `METER_INTERVAL_MS` reviewed.
+- [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.
+- [ ] `X402_NETWORK` matches the facilitator's `/supported` byte for byte; `METER_INTERVAL_MS` reviewed.
 - [ ] `VITE_REGISTRY_URL` + `VITE_ALGOD_URL` baked into the web build.
 - [ ] Contributors pre-build `SANDBOX_IMAGE` (`docker build -t tendril-ssh-sandbox contributor/sandbox-ssh`);
       agents kept alive (pm2/systemd) with Docker running + outbound network for bore.
@@ -213,7 +220,8 @@ matching node, runs its job, and releases — reporting how much balance it drew
   deliberate — it keeps Postgres out of the heartbeat/watchdog hot path. For HA, persist + externalize.
 - **SSH auth** is a per-lease password (the renter's wallet address) on a throwaway root container —
   fine for ephemeral compute, but use a key-based flow for anything sensitive.
-- `ALGO_USD_PRICE` is a static rate; for production wire it to a price feed so charges track the market.
+- Contributor payout addresses must opt into `X402_ASSET_ID`; a node whose address has not is accepted
+  but flagged `payoutBlocked`, and its payouts are recorded unpaid until it opts in.
 - A single registry instance owns the WebSocket hub *and* the in-memory state; for horizontal scale
   externalize both (e.g. a socket.io Redis adapter + shared store).
 - The public `bore.pub` server is best-effort/rate-limited; run your own `BORE_SERVER` for anything

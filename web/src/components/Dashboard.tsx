@@ -1,22 +1,17 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import type { WalletStats, WalletSummary } from "@tendril/shared";
-import { formatAlgo, formatAlgoExact } from "@tendril/shared";
+import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 import { BalanceChart } from "./BalanceChart";
 import { LeasePanel } from "./LeasePanel";
 import { TopUpControl } from "./TopUpControl";
 import { explorerAddrUrl, explorerTxUrl, type ActiveLease } from "../api";
-
-type SignTransactions = (
-  txnGroup: Uint8Array[],
-  indexesToSign?: number[],
-) => Promise<(Uint8Array | null)[]>;
+import type { SignTransactions } from "../lib/x402Client";
 
 interface Props {
   wallet: WalletSummary | null;
   address: string | null;
   signedIn: boolean;
-  token: string | null;
   signTransactions: SignTransactions;
   onWalletChanged: () => void;
   onError: (msg: string) => void;
@@ -56,21 +51,21 @@ function resolveStats(w: WalletSummary): WalletStats {
   if (w.stats) return w.stats;
   const sum = <T,>(arr: T[], pick: (x: T) => number) => arr.reduce((a, x) => a + pick(x), 0);
   return {
-    totalSpentMicroAlgos: sum(w.charges, (c) => c.amountMicroAlgos),
-    totalToppedUpMicroAlgos: sum(w.topups, (t) => t.amountMicroAlgos),
+    totalSpentAtomic: sum(w.charges, (c) => c.amountAtomic),
+    totalToppedUpAtomic: sum(w.topups, (t) => t.amountAtomic),
     totalLeaseSeconds: sum(w.charges, (c) => c.seconds),
     leaseCount: w.charges.length,
-    totalEarnedMicroAlgos: sum(w.payouts ?? [], (p) => p.amountMicroAlgos),
+    totalEarnedAtomic: sum(w.payouts ?? [], (p) => p.amountAtomic),
     payoutCount: (w.payouts ?? []).length,
   };
 }
 
 /** Compact ALGO figure; the exact one is on hover. */
-function AlgoStat({ label, microAlgos }: { label: string; microAlgos: number }) {
+function AlgoStat({ label, atomic }: { label: string; atomic: number }) {
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div className="stat-value" title={formatAlgoExact(microAlgos)}>{formatAlgo(microAlgos)}</div>
+      <div className="stat-value" title={formatUsdcExact(atomic)}>{formatUsdc(atomic)}</div>
     </div>
   );
 }
@@ -89,7 +84,6 @@ export function Dashboard({
   wallet,
   address,
   signedIn,
-  token,
   signTransactions,
   onWalletChanged,
   onError,
@@ -132,34 +126,31 @@ export function Dashboard({
           {lease && <LeasePanel lease={lease} onRelease={onLeaseEnded} />}
 
           <div className="stat-grid">
-            <AlgoStat label="Balance" microAlgos={wallet.balanceMicroAlgos} />
-            <AlgoStat label="Total spent" microAlgos={stats.totalSpentMicroAlgos} />
-            <AlgoStat label="Total topped up" microAlgos={stats.totalToppedUpMicroAlgos} />
+            <AlgoStat label="Balance" atomic={wallet.balanceAtomic} />
+            <AlgoStat label="Total spent" atomic={stats.totalSpentAtomic} />
+            <AlgoStat label="Total topped up" atomic={stats.totalToppedUpAtomic} />
             <Stat label="Lease time" value={fmtDuration(stats.totalLeaseSeconds)} />
             <Stat label="Leases taken" value={String(stats.leaseCount)} />
             {stats.payoutCount > 0 && (
-              <AlgoStat label="Earned (contributor)" microAlgos={stats.totalEarnedMicroAlgos} />
+              <AlgoStat label="Earned (contributor)" atomic={stats.totalEarnedAtomic} />
             )}
           </div>
 
           {/* Topping up is the most-taken action — don't make it a trip to the wallet panel. */}
-          {token && (
-            <div className="panel">
-              <h3>Top up</h3>
-              <TopUpControl
-                address={address}
-                token={token}
-                signTransactions={signTransactions}
-                onChanged={onWalletChanged}
-                onError={onError}
-              />
-            </div>
-          )}
+          <div className="panel">
+            <h3>Top up</h3>
+            <TopUpControl
+              address={address}
+              signTransactions={signTransactions}
+              onChanged={onWalletChanged}
+              onError={onError}
+            />
+          </div>
 
           <BalanceChart
             topups={wallet.topups}
             charges={wallet.charges}
-            currentBalance={wallet.balanceMicroAlgos}
+            currentBalance={wallet.balanceAtomic}
           />
 
           <div className="dash-cols panel" id="history">
@@ -180,7 +171,7 @@ export function Dashboard({
                   <tbody>
                     {wallet.charges.map((c) => (
                       <tr key={c.id}>
-                        <td className="num">−{formatAlgoExact(c.amountMicroAlgos)}</td>
+                        <td className="num">−{formatUsdcExact(c.amountAtomic)}</td>
                         <td className="num">{fmtDuration(c.seconds)}</td>
                         <td>
                           <ExplorerLink id={c.payToAddr} href={explorerAddrUrl(c.payToAddr)} />
@@ -209,7 +200,7 @@ export function Dashboard({
                   <tbody>
                     {wallet.topups.map((t) => (
                       <tr key={t.txid}>
-                        <td className="num">+{formatAlgoExact(t.amountMicroAlgos)}</td>
+                        <td className="num">+{formatUsdcExact(t.amountAtomic)}</td>
                         <td>
                           <ExplorerLink id={t.txid} href={explorerTxUrl(t.txid)} />
                         </td>

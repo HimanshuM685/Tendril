@@ -32,12 +32,13 @@ export function Marketplace({
 }: Props) {
   return (
     <>
-      {session && (
+      {/* Topping up needs only a connected wallet — the payment proves who is
+          paying, so it is shown before (and without) signing in. */}
+      {activeAddress && (
         <WalletPanel
           wallet={wallet}
-          address={session.address}
+          address={activeAddress}
           signTransactions={signTransactions as never}
-          token={session.token}
           onChanged={onWalletChanged}
           onError={onError}
         />
@@ -55,7 +56,9 @@ export function Marketplace({
         {tab === "explore" ? (
           <Explore
             session={session}
-            balanceMicroAlgos={wallet?.balanceMicroAlgos ?? 0}
+            activeAddress={activeAddress}
+            signTransactions={signTransactions as never}
+            balanceAtomic={wallet?.balanceAtomic ?? 0}
             onLeased={onLeased}
           />
         ) : (

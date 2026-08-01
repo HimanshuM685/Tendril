@@ -1,17 +1,14 @@
 import algosdk from "algosdk";
 import type {
-  PaymentRequired,
-  TopUpResponse,
   WalletLoginResponse,
   WalletNonceResponse,
+  X402TopUpResponse,
 } from "@tendril/shared";
+import { usdToAtomic } from "@tendril/shared";
 import { REGISTRY_URL, apiError } from "./api";
+import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Client";
 
-/** use-wallet's signTransactions signature (encoded txns + optional indexes). */
-type SignTransactions = (
-  txnGroup: Uint8Array[],
-  indexesToSign?: number[],
-) => Promise<(Uint8Array | null)[]>;
+export type { SignTransactions };
 
 const ALGOD_URL =
   (import.meta.env.VITE_ALGOD_URL as string | undefined) ?? "https://testnet-api.algonode.cloud";
@@ -23,8 +20,8 @@ function toB64(bytes: Uint8Array): string {
 
 /**
  * Sign in: prove control of `address` by signing the login nonce as the note of
- * a 0-ALGO self-payment (never broadcast — just verified). Returns a session
- * token + the current balance.
+ * a 0-ALGO self-payment (never broadcast — just verified). This is NOT how money
+ * gets in; it only unlocks reading and spending an existing credit balance.
  */
 export async function loginWithWallet(
   address: string,
@@ -54,52 +51,24 @@ export async function loginWithWallet(
   return res.json();
 }
 
-/** Where a top-up currently is, so the UI can say more than "working…". */
-export type TopUpStage = "signing" | "confirming";
+export type TopUpStage = PayStage;
 
 /**
- * Top up: send `amountAlgo` ALGO from the wallet to the platform custodial
- * address. The backend confirms it on-chain and credits the balance.
- * `onStage` fires as it moves between waiting on the wallet and waiting on the
- * chain — confirmation takes seconds, and silence reads as failure.
+ * Top up over x402: `POST /x402/topup?amount=<atomic>`. The endpoint takes no
+ * session — the payment itself proves who is paying, and the credit lands on
+ * the *sending* address, so this must be signed by a wallet the user controls.
  */
 export async function topUp(
-  token: string,
   address: string,
   sign: SignTransactions,
-  amountAlgo: number,
+  amountUsdc: number,
   onStage?: (stage: TopUpStage) => void,
-): Promise<TopUpResponse> {
-  const auth = { authorization: `Bearer ${token}` };
-
-  // x402 step 1 — ask for the bill; expect HTTP 402 + a payment challenge.
-  const challengeRes = await fetch(`${REGISTRY_URL}/wallet/topup`, {
-    method: "POST",
-    headers: { "content-type": "application/json", ...auth },
-    body: JSON.stringify({ amountMicroAlgos: Math.round(amountAlgo * 1e6) }),
-  });
-  if (challengeRes.status !== 402) throw await apiError(challengeRes, "top-up");
-  const { accepts } = (await challengeRes.json()) as PaymentRequired;
-  const option = accepts[0];
-  if (!option?.payTo) throw new Error("platform deposit address is not configured on the server");
-
-  // x402 step 2 — sign exactly what the challenge asked for and retry.
-  const suggestedParams = await algod.getTransactionParams().do();
-  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    sender: address,
-    receiver: option.payTo,
-    amount: BigInt(option.amount),
-    suggestedParams,
-  });
-  onStage?.("signing");
-  const [signed] = await sign([txn.toByte()]);
-  if (!signed) throw new Error("top-up was not signed");
-
-  onStage?.("confirming");
-  const res = await fetch(`${REGISTRY_URL}/wallet/topup`, {
-    method: "POST",
-    headers: { ...auth, "x-payment": toB64(signed) },
-  });
+): Promise<X402TopUpResponse> {
+  const amount = usdToAtomic(amountUsdc);
+  const res = await payingFetch(address, sign, onStage)(
+    `${REGISTRY_URL}/x402/topup?amount=${amount}`,
+    { method: "POST" },
+  );
   if (!res.ok) throw await apiError(res, "top-up");
   return res.json();
 }

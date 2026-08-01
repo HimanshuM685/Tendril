@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { LeaseStatus } from "@tendril/shared";
+import { formatUsdc } from "@tendril/shared";
 import { type ActiveLease, fetchLease, releaseLease } from "../api";
 import { writeClipboard } from "../clipboard";
 
@@ -103,7 +104,7 @@ export function LeasePanel({ lease, onRelease }: Props) {
     }
   }
 
-  const { command, password } = lease.access;
+  const { command, password, authMethod } = lease.access;
 
   return (
     <div className="lease-panel">
@@ -111,7 +112,11 @@ export function LeasePanel({ lease, onRelease }: Props) {
         <div>
           <strong>Active session</strong> on <code>{lease.label}</code>
           <div className="muted small">
-            lease {lease.leaseId} · {(lease.rateMicroAlgosPerHour / 1e6).toFixed(4)} ALGO/hr
+            lease {lease.leaseId} · {formatUsdc(lease.rateAtomicPerHour)}/hr ·{" "}
+            {formatUsdc(Number(lease.billing.quoteAtomic))} prepaid
+            {Number(lease.billing.creditApplied) > 0 && (
+              <> ({formatUsdc(Number(lease.billing.creditApplied))} from credit)</>
+            )}
           </div>
         </div>
         <div className="timer" data-expiring={remainingMs < 60_000} title="time left at current balance">
@@ -144,7 +149,8 @@ export function LeasePanel({ lease, onRelease }: Props) {
               </p>
               <p className="muted small">
                 The container and everything in it is destroyed — anything not pushed or copied out
-                is gone. You're charged for the time used so far. This can't be undone.
+                is gone. You're charged for the time used so far and the unused remainder of your
+                prepaid block comes back as credit. This can't be undone.
               </p>
             </div>
             <div className="modal-actions">
@@ -162,22 +168,29 @@ export function LeasePanel({ lease, onRelease }: Props) {
       {error && <div className="error">{error}</div>}
       {!ended ? (
         <div className="ssh-access">
-          <p className="muted small">Connect over SSH — your wallet address is the password:</p>
+          <p className="muted small">
+            {authMethod === "publickey"
+              ? "Connect over SSH — your key is already authorized:"
+              : "Connect over SSH — your wallet address is the password:"}
+          </p>
           <div className="ssh-row">
             <code className="ssh-code">{command}</code>
             <button className="btn ghost" onClick={() => copy("cmd", command)}>
               {copied === "cmd" ? "Copied!" : "Copy"}
             </button>
           </div>
-          <div className="ssh-row">
-            <span className="muted small">password</span>
-            <code className="ssh-code">{password}</code>
-            <button className="btn ghost" onClick={() => copy("pw", password)}>
-              {copied === "pw" ? "Copied!" : "Copy"}
-            </button>
-          </div>
+          {password && (
+            <div className="ssh-row">
+              <span className="muted small">password</span>
+              <code className="ssh-code">{password}</code>
+              <button className="btn ghost" onClick={() => copy("pw", password)}>
+                {copied === "pw" ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          )}
           <p className="muted small">
-            Billed by the hour, prorated — you're charged for the exact time used when you release.
+            {Math.round(lease.paidSeconds / 60)} minutes prepaid — release early and the unused
+            time is refunded to your credit balance.
           </p>
         </div>
       ) : (

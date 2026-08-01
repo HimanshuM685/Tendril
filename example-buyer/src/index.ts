@@ -1,14 +1,18 @@
 /**
- * Tendril autonomous consumer agent (prepaid wallet model).
+ * Tendril autonomous consumer agent.
  *
- * A headless "training agent" that, with zero human clicks:
- *   1. signs in with its wallet (proves address control to the registry),
- *   2. tops up its prepaid ALGO balance if it's running low,
- *   3. discovers live compute via the free GET /explorer endpoint,
- *   4. picks the cheapest node meeting its RAM requirement and rents it
- *      (no per-rent payment — the registry meters time against the balance),
- *   5. streams a training script into the sandbox via /run,
- *   6. releases the lease and reports the balance drawn down.
+ * A headless "training agent" that, with zero human clicks and no sign-in:
+ *   1. tops up its credit over x402 (POST /x402/topup) — the payment itself is
+ *      the identity, so a brand-new address works on its first request,
+ *   2. discovers live compute via the free GET /explorer endpoint,
+ *   3. picks the cheapest node meeting its RAM requirement and rents a prepaid
+ *      block over x402 (POST /x402/rent/:nodeId), spending the credit it just
+ *      bought and paying on-chain only for the remainder,
+ *   4. streams a training script into the sandbox via /run,
+ *   5. closes the lease early, and the unused time comes back as credit.
+ *
+ * This is the same code path the browser runs (see web/src/lib/x402Client.ts) —
+ * only the signer differs: a private key here, a wallet extension there.
  */
 import { config as loadEnv } from "dotenv";
 import { dirname, resolve } from "node:path";
@@ -19,24 +23,24 @@ import algosdk from "algosdk";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 loadEnv();
 loadEnv({ path: resolve(repoRoot, ".env") });
+import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { ExactAvmScheme } from "@x402/avm/exact/client";
+import type { ClientAvmSigner } from "@x402/avm";
+import type { Network } from "@x402/core/types";
 import {
-  formatAlgoExact,
+  formatUsdcExact,
   type ExplorerNode,
-  type PaymentRequired,
+  type LeaseCloseResponse,
   type PlatformInfo,
   type RunResponse,
-  type TopUpResponse,
-  type SandboxAccess,
-  type WalletLoginResponse,
-  type WalletNonceResponse,
-  type WalletSummary,
+  type X402RentResponse,
+  type X402TopUpResponse,
 } from "@tendril/shared";
 
 const REGISTRY = process.env.REGISTRY_URL ?? "http://localhost:4000";
-const ALGOD_URL = process.env.ALGOD_TESTNET_URL ?? "https://testnet-api.algonode.cloud";
 const MIN_RAM_MB = Number(process.env.AGENT_MIN_RAM_MB ?? 1024);
-const LEASE_MINUTES = Number(process.env.AGENT_LEASE_MINUTES ?? 1);
-const TOPUP_ALGO = Number(process.env.AGENT_TOPUP_ALGO ?? 0.5); // ALGO to deposit when low
+const LEASE_SECONDS = Number(process.env.AGENT_LEASE_SECONDS ?? 300);
+const TOPUP_ATOMIC = Number(process.env.AGENT_TOPUP_ATOMIC ?? 500_000); // 0.50 USDC
 const PRIVATE_KEY = process.env.AVM_PRIVATE_KEY ?? "";
 
 const TRAINING_SCRIPT = `
@@ -62,125 +66,119 @@ print(f"DONE  learned w={w:.3f} (~3)  b={b:.3f} (~2)")
 async function main() {
   if (!PRIVATE_KEY) {
     throw new Error(
-      "AVM_PRIVATE_KEY is required (funded testnet account with ALGO). Generate one with: npm run keygen",
+      "AVM_PRIVATE_KEY is required (a testnet account holding the payment asset). Generate one with: npm run keygen",
     );
   }
 
   const sk = new Uint8Array(Buffer.from(PRIVATE_KEY, "base64"));
   const address = algosdk.encodeAddress(sk.slice(32));
-  const algod = new algosdk.Algodv2("", ALGOD_URL, "");
   console.log(`[agent] wallet: ${address}`);
 
   const platform = (await (await fetch(`${REGISTRY}/platform`)).json()) as PlatformInfo;
+  console.log(
+    `[agent] paying in ${platform.asset.symbol} (asa ${platform.asset.id}) on ${platform.network}`,
+  );
 
-  // 1. Sign in: sign the login nonce as the note of a 0-ALGO self-payment.
-  const { nonce } = (await (
-    await fetch(`${REGISTRY}/auth/wallet-nonce?address=${address}`)
-  ).json()) as WalletNonceResponse;
-  const sp = await algod.getTransactionParams().do();
-  const loginTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    sender: address,
-    receiver: address,
-    amount: 0n,
-    note: new TextEncoder().encode(nonce),
-    suggestedParams: sp,
-  });
-  const login = (await postJson(`${REGISTRY}/auth/wallet-login`, {
-    address,
-    nonce,
-    payment: Buffer.from(loginTxn.signTxn(sk)).toString("base64"),
-  })) as WalletLoginResponse;
-  const auth = { authorization: `Bearer ${login.token}` };
-  console.log(`[agent] signed in; balance ${formatAlgoExact(login.balanceMicroAlgos)}`);
+  // One payment-aware fetch for everything. On a 402 it reads the challenge,
+  // builds the atomic group (this agent's transfer plus the facilitator's
+  // unsigned fee transaction), signs only its own, and retries — so the agent
+  // needs no ALGO for fees and never has to handle a 402 itself.
+  const client = new x402Client().register(
+    platform.network as Network,
+    new ExactAvmScheme(signer(address, sk)),
+  );
+  const pay = wrapFetchWithPayment(fetch, client);
 
-  // 2. Top up if the balance is low — over x402, with no human in the loop.
-  if (login.balanceMicroAlgos < TOPUP_ALGO * 1e6) {
-    console.log(`[agent] topping up ${TOPUP_ALGO} ALGO → ${platform.payTo} ...`);
+  // 1. Top up. No sign-in anywhere: the sender of the settled transaction is
+  //    the address that gets the credit.
+  console.log(`[agent] topping up ${formatUsdcExact(TOPUP_ATOMIC)} ...`);
+  const top = (await postJson(
+    pay,
+    `${REGISTRY}/x402/topup?amount=${TOPUP_ATOMIC}`,
+  )) as X402TopUpResponse;
+  console.log(
+    `[agent] credited ${formatUsdcExact(Number(top.credited))} (txid ${top.payment.txid}); ` +
+      `balance ${formatUsdcExact(Number(top.balance))}`,
+  );
 
-    // 2a. Ask for the bill: expect HTTP 402 + a payment challenge.
-    const challengeRes = await fetch(`${REGISTRY}/wallet/topup`, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...auth },
-      body: JSON.stringify({ amountMicroAlgos: Math.round(TOPUP_ALGO * 1e6) }),
-    });
-    if (challengeRes.status !== 402) {
-      throw new Error(`expected 402 challenge, got ${challengeRes.status}`);
-    }
-    const { accepts } = (await challengeRes.json()) as PaymentRequired;
-    const option = accepts[0];
-    console.log(`[agent] 402: pay ${formatAlgoExact(Number(option.amount))} to ${option.payTo}`);
-
-    // 2b. Pay it: sign exactly what the challenge asked for and retry.
-    const sp2 = await algod.getTransactionParams().do();
-    const topTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      sender: address,
-      receiver: option.payTo,
-      amount: BigInt(option.amount),
-      suggestedParams: sp2,
-    });
-    const top = (await postJson(`${REGISTRY}/wallet/topup`, undefined, {
-      ...auth,
-      "x-payment": Buffer.from(topTxn.signTxn(sk)).toString("base64"),
-    })) as TopUpResponse;
-    console.log(`[agent] paid ${top.txid}; balance now ${formatAlgoExact(top.balanceMicroAlgos)}`);
-  }
-
-  // 3. Discover.
+  // 2. Discover.
   const { nodes } = (await (await fetch(`${REGISTRY}/explorer`)).json()) as { nodes: ExplorerNode[] };
   console.log(`[agent] ${nodes.length} live node(s) found`);
 
-  // 4. Choose: cheapest node meeting the RAM requirement, then rent it.
+  // 3. Choose: cheapest node meeting the RAM requirement, then rent a block.
   const node = nodes
     .filter((n) => n.ramMb >= MIN_RAM_MB)
     .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
   if (!node) throw new Error(`no online node with >= ${MIN_RAM_MB}MB RAM`);
-  console.log(`[agent] picked ${node.label} (${node.id}) @ $${node.pricePerHourUsd}/hr — renting ...`);
-
-  const lease = (await postJson(`${REGISTRY}/rent/${node.id}`, {}, auth)) as {
-    leaseId: string;
-    access: SandboxAccess;
-    leaseToken: string;
-    rateMicroAlgosPerHour: number;
-  };
   console.log(
-    `[agent] lease ${lease.leaseId} active at ${formatAlgoExact(lease.rateMicroAlgosPerHour)}/hr; ` +
-      `ssh ${lease.access.command}`,
+    `[agent] picked ${node.label} (${node.id}) @ $${node.pricePerHourUsd}/hr — renting ${LEASE_SECONDS}s ...`,
   );
 
-  // 5. Run the training job inside the rented sandbox.
-  const before = await balanceOf(auth);
-  console.log(`[agent] running training script (metering ~${LEASE_MINUTES} min) ...`);
-  const run = (await postJson(
-    `${REGISTRY}/lease/${lease.leaseId}/run`,
-    { payload: TRAINING_SCRIPT },
-    { authorization: `Bearer ${lease.leaseToken}` },
-  )) as RunResponse;
+  // `payer` is only a hint, letting the server discount the quote by the credit
+  // this address already holds. The payment still has to come from it.
+  const lease = (await postJson(
+    pay,
+    `${REGISTRY}/x402/rent/${node.id}?seconds=${LEASE_SECONDS}&payer=${address}`,
+  )) as X402RentResponse;
+  console.log(
+    `[agent] lease ${lease.leaseId} until ${lease.paidUntil} — ` +
+      `quote ${formatUsdcExact(Number(lease.billing.quoteAtomic))}, ` +
+      `credit ${formatUsdcExact(Number(lease.billing.creditApplied))}, ` +
+      `paid ${formatUsdcExact(Number(lease.billing.paidAtomic))}`,
+  );
+  console.log(`[agent] ssh: ${lease.ssh.command}`);
+
+  // 4. Run the training job inside the rented sandbox. Execution is flat-priced
+  //    per call, so this is another 402 the wrapper answers on its own.
+  console.log("[agent] running training script ...");
+  const run = (await postJson(pay, `${REGISTRY}/lease/${lease.leaseId}/run`, {
+    headers: { authorization: `Bearer ${lease.leaseToken}` },
+    body: JSON.stringify({ payload: TRAINING_SCRIPT }),
+  })) as RunResponse;
   console.log("──────── remote job output ────────");
   console.log(run.result);
   console.log("───────────────────────────────────");
 
-  // 6. Release.
-  await postJson(`${REGISTRY}/lease/${lease.leaseId}/release`, {}, {
-    authorization: `Bearer ${lease.leaseToken}`,
-  });
-  const after = await balanceOf(auth);
-  console.log(`[agent] released. balance ${formatAlgoExact(after)} (drew ~${formatAlgoExact(Math.max(0, before - after))})`);
+  // 5. Close early — the time bought but not used comes straight back as
+  //    credit, which is what makes the next rent cheaper.
+  const closed = (await request(fetch, `${REGISTRY}/x402/leases/${lease.leaseId}`, {
+    method: "DELETE",
+    headers: { authorization: `Bearer ${lease.leaseToken}` },
+  })) as LeaseCloseResponse;
+  console.log(
+    `[agent] released after ${closed.usedSeconds}s: used ${formatUsdcExact(Number(closed.usedAtomic))}, ` +
+      `refunded ${formatUsdcExact(Number(closed.refundedAtomic))}, ` +
+      `balance ${formatUsdcExact(Number(closed.balance))}`,
+  );
 }
 
-async function balanceOf(auth: Record<string, string>): Promise<number> {
-  const w = (await (await fetch(`${REGISTRY}/wallet`, { headers: auth })).json()) as WalletSummary;
-  return w.balanceMicroAlgos;
+/**
+ * Sign with a raw private key. `indexesToSign` is what makes fee abstraction
+ * work: the agent signs its own transfer and leaves the fee-payer transaction
+ * unsigned for the facilitator.
+ */
+function signer(address: string, sk: Uint8Array): ClientAvmSigner {
+  return {
+    address,
+    async signTransactions(txns, indexesToSign) {
+      const wanted = indexesToSign ?? txns.map((_, i) => i);
+      return txns.map((bytes, i) =>
+        wanted.includes(i) ? algosdk.decodeUnsignedTransaction(bytes).signTxn(sk) : null,
+      );
+    },
+  };
 }
 
-async function postJson(
-  url: string,
-  body: unknown,
-  extraHeaders: Record<string, string> = {},
-): Promise<unknown> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", ...extraHeaders },
-    body: JSON.stringify(body),
+type Fetch = typeof globalThis.fetch;
+
+async function postJson(f: Fetch, url: string, init: RequestInit = {}): Promise<unknown> {
+  return request(f, url, { method: "POST", ...init });
+}
+
+async function request(f: Fetch, url: string, init: RequestInit): Promise<unknown> {
+  const res = await f(url, {
+    ...init,
+    headers: { "content-type": "application/json", ...(init.headers ?? {}) },
   });
   if (!res.ok) throw new Error(`${url} → ${res.status} ${await res.text()}`);
   return res.json();

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MetricPoint, Metrics as MetricsData, RankRow } from "@tendril/shared";
-import { formatAlgo } from "@tendril/shared";
+import { formatUsdc } from "@tendril/shared";
 import { fetchMetrics } from "../api";
 
 const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
@@ -37,7 +37,7 @@ export function Metrics() {
       <Board
         title="Top users"
         tabs={[
-          { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatAlgo(v) },
+          { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatUsdc(v) },
           { label: "Lease time", rows: data.topUsers.leaseTime, fmt: fmtDur },
           { label: "Lease span", rows: data.topUsers.leaseSpan, fmt: (v) => `${v} leases` },
         ]}

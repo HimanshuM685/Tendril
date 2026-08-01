@@ -29,43 +29,87 @@ Tendril just makes it prepaid and individual-scale.
 
 ```
    Contributor PC                Registry + API                 Consumer / Agent
- ┌──────────────────┐  WebSocket ┌──────────────────────┐      ┌────────────────────┐
- │ contributor agent│◄──────────►│ GET  /explorer (free)│◄────►│ browser (Explore UI)│
- │  docker run ...  │            │ POST /wallet/topup   │      │   or                │
- │  (nodes/leases   │            │ POST /rent/:id       │      │ autonomous agent    │
- │   in memory)     │            │ watchdog + payout    │      └────────────────────┘
- └──────────────────┘            └──────────┬───────────┘   sign in + sign top-up txn
-        │ bore tunnel (SSH)        ┌─────────┴────────┐
-        ▼                          │                  │
-  sandboxed SSH shell        Neon (Postgres)   Algorand (Algod: confirm top-ups,
-                       wallets·topups·charges·payouts        pay contributors)
+ ┌──────────────────┐  WebSocket ┌────────────────────────┐    ┌────────────────────┐
+ │ contributor agent│◄──────────►│ GET  /explorer   (free)│◄──►│ browser (Explore UI)│
+ │  docker run ...  │            │ POST /x402/topup       │    │   or                │
+ │  (nodes/leases   │            │ POST /x402/rent/:id    │    │ autonomous agent    │
+ │   in memory)     │            │ watchdog + payout      │    └────────────────────┘
+ └──────────────────┘            └──────────┬─────────────┘   both are x402 clients
+        │ bore tunnel (SSH)        ┌─────────┴────────┬──────────────┐
+        ▼                          │                  │              │
+  sandboxed SSH shell     Neon (Postgres)      x402 facilitator   Algorand
+                    credits·payments·charges  (verify/settle,   (contributor
+                          ·payouts             sponsors fees)     payouts)
 ```
 
 | Folder | What it is |
 |---|---|
-| `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, wallet sign-in + `/wallet/topup` (confirms ALGO deposits on-chain), `/rent/:id` (spends the prepaid balance), lease tokens for `/run` & `/release`, a **watchdog** that ends a lease when its balance runs out, and **on-chain payout** to the contributor when the lease ends. Only money state hits the DB. |
+| `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /rent/:id`, `POST /lease/:id/run` and `POST /topup`, the metered `POST /x402/topup` and `POST /x402/rent/:id`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, and **on-chain USDC payout** to the contributor when the lease ends. Only money state hits the DB. |
 | `contributor/` | **The contributor script.** The daemon a contributor runs. Proves node ownership by signing a nonce, heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
 | `web/` | **The website.** Vite + React + `@txnlab/use-wallet` (Pera/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
-| `example-buyer/` | A headless autonomous "training agent": signs in → tops up if low → discovers → rents → runs a script → releases, with zero clicks. |
+| `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
 
-How money flows: a user **signs in** with their wallet (a signed nonce proves address control), then
-**tops up** by signing a native ALGO `pay` txn to the platform's custodial address — the registry
-**confirms it on-chain via Algod** and credits an off-chain balance in Neon. Renting checks that
-balance (no signing). The registry tracks the active session in memory; when the lease ends (release,
-balance exhausted, or the node going away) it **bills once** — `prorated(elapsed) × hourly rate`,
-debited in a single `charges` row — and **pays the contributor on-chain** (minus `PLATFORM_FEE_PCT`),
-recording a `payouts` row. Nodes are *priced* in USD per hour (`PRICE_PER_HOUR_USD`), converted to a
-microALGO/hour rate at a configurable `ALGO_USD_PRICE`. Deposits (`topups`), charges, and payouts are
-all stored as history.
+How money flows: **x402 is the only door.** An unpaid request to any payable endpoint gets back
+HTTP 402 naming an exact amount in **USDC**; the client builds an Algorand atomic group (its own
+asset transfer plus the facilitator's unsigned fee transaction), signs only its own, and retries. The
+facilitator **verifies** the group by simulation, the backend **provisions**, and only then does the
+facilitator **settle** it on-chain — so a sandbox that fails to come up costs the caller nothing. The
+credit is keyed to the **sender of the settled transaction**, never to anything the client claims
+about itself.
 
-## The two agentic endpoints (and why they're agentic)
+Nodes are priced in USD per hour (`PRICE_PER_HOUR_USD`). USDC is a dollar with 6 decimals, so
+`PRICE_PER_HOUR_USD × 1e6` is the atomic rate — there is no exchange rate to set or keep current.
+Because the facilitator sponsors the network fee, **a client needs USDC and zero ALGO**.
 
-- `GET /explorer` — **free**, so an agent can survey live nodes (specs + price) and choose itself.
-- `POST /rent/:nodeId` — starts an hourly-metered session against the agent's **prepaid balance** (no
-  per-rent signing). Usage is **billed once at release**, prorated, and the session **auto-stops when
-  the balance runs out**, so an agent burns money *only* for the compute it actually used. Top up
-  ahead of time with `POST /wallet/topup`.
+Renting buys a **prepaid block** of seconds. When the lease ends (early release, the block running
+out, or the node going away) the unused time is **refunded as credit** and the contributor is paid
+on-chain in USDC minus `PLATFORM_FEE_PCT`. That refund is what makes the next 402 for that address
+smaller. Signing in still exists, but its job has shrunk to reading and spending an existing balance.
+
+## The payable endpoints
+
+`GET /explorer` is **free**, so an agent can survey live nodes (specs + price) and choose for itself.
+Everything that costs money is x402: an unpaid request gets a 402 naming an exact USDC amount, the
+client pays, the backend then does the ordinary thing.
+
+**Any amount — top up.** `POST /topup?amount=<atomic>` (alias `POST /x402/topup`) credits whatever
+you ask for: 4 USDC, 400, 609, anything between `MIN_TOPUP_ATOMIC` and `MAX_TOPUP_ATOMIC`. **No
+auth** — a brand-new address can pay on its very first request, and the credit lands on the *paying*
+address. On settlement the backend writes one `topups` row and raises that address's `credits`
+balance by the same amount in a single transaction; the response returns both. Replaying the same
+payment returns the original receipt and credits nothing twice. Omit `?amount=` to get
+`DEFAULT_TOPUP_ATOMIC`.
+
+**Flat price — "give me 0.01 USDC and I'll do the thing."** No quote, no credit arithmetic, no
+session. 402, pay, done, normal flow underneath.
+
+| Endpoint | Price | What you get |
+|---|---|---|
+| `POST /rent/:nodeId` | `FLAT_RENT_ATOMIC` (0.01 USDC) | `FLAT_RENT_SECONDS` of sandbox — lease created, container up, SSH + lease token returned |
+| `POST /lease/:id/run` | `FLAT_RUN_ATOMIC` (0.01 USDC) | one job execution — payload shipped to the contributor, output returned |
+
+**Metered — priced from the URL and your balance.**
+
+| Endpoint | Price | Notes |
+|---|---|---|
+| `POST /x402/rent/:nodeId?seconds=<n>[&payer=<addr>]` | `ceil(seconds/3600 x rate)` minus your credit | Existing credit is applied first, so the 402 asks only for the remainder. Cover it all (signed in) and there is no 402 at all. |
+| `DELETE /x402/leases/:id` | free | Closes early; unused time comes back as credit. |
+
+The flat rent price is deliberately independent of the node's hourly rate — that is what makes it
+flat. The contributor is paid a cut of what was actually paid, not of the list price, so money in and
+money out stay equal either way.
+
+Wallet popups, end to end: top up = 1, flat rent = 1, metered rent with enough credit = 0, metered
+rent without = 1, each job execution = 1, and release/SSH = 0.
+
+Full request/response reference, every status code and error string: **[docs/x402-api.md](docs/x402-api.md)**.
+
+**The payable routes are CORS-free.** They answer any origin, so a browser anywhere can pay one —
+the Tendril web app has no privileged access, and the frontend is just another x402 client.
+`CORS_ORIGIN` still guards everything else (sign-in, `/wallet`, `/metrics`, `/explorer`, `/nodes`).
+CORS only ever constrained browsers; a headless agent was never subject to it.
+
 
 ## Prerequisites
 

@@ -2,7 +2,7 @@ import algosdk from "algosdk";
 import nacl from "tweetnacl";
 import { config } from "./config.js";
 
-// Public Algod node — used to broadcast + confirm top-up deposits and payouts.
+// Public Algod node — used to read asset opt-ins and to send contributor payouts.
 export const algod = new algosdk.Algodv2("", config.algodUrl, "");
 
 function decodeSigned(paymentB64: string): { raw: Uint8Array; signed: algosdk.SignedTransaction } {
@@ -40,37 +40,6 @@ export function verifyLoginSignature(address: string, paymentB64: string, nonce:
   }
 }
 
-export interface SettledTopUp {
-  txid: string;
-  amountMicroAlgos: number;
-}
-
-/**
- * Broadcast + confirm a top-up: a `pay` txn from `address` to the platform
- * custodial address. Returns the txid + amount so the caller can credit the
- * wallet (idempotently, keyed by txid). Throws on any mismatch or settle error.
- */
-export async function settleTopUp(address: string, paymentB64: string): Promise<SettledTopUp> {
-  if (!config.platformPayTo) {
-    throw new Error("PLATFORM_PAYTO is not configured on the server");
-  }
-  const { raw, signed } = decodeSigned(paymentB64);
-  const txn = signed.txn;
-
-  if (
-    txn.type !== algosdk.TransactionType.pay ||
-    !txn.payment ||
-    txn.sender.toString() !== address ||
-    txn.payment.receiver.toString() !== config.platformPayTo ||
-    txn.payment.amount <= 0n
-  ) {
-    throw new Error("top-up transaction must pay ALGO from your wallet to the platform address");
-  }
-
-  const txid = txn.txID();
-  // Tolerate "already submitted" on a retry — what matters is that it confirms.
-  await algod.sendRawTransaction(raw).do().catch(() => undefined);
-  await algosdk.waitForConfirmation(algod, txid, 8);
-
-  return { txid, amountMicroAlgos: Number(txn.payment.amount) };
-}
+// Deposits are not confirmed here any more. Money enters only through
+// POST /x402/topup, where the facilitator verifies and settles the payment
+// group; see x402/server.ts.

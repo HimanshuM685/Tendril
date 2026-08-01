@@ -13,8 +13,9 @@ import {
   type StartContainerMsg,
 } from "@tendril/shared";
 import { verifyAgentHello } from "./auth.js";
+import { config } from "./config.js";
 import { markOffline, touchHeartbeat, upsertNode } from "./registry.js";
-import { activateLease, endLeaseAndBill, getLease, leasesForNode, setLeaseStatus } from "./leases.js";
+import { activateLease, closeLease, getLease, leasesForNode, setLeaseStatus } from "./leases.js";
 
 /** nodeId -> the socket of the agent currently hosting that node. */
 const agentSockets = new Map<string, Socket>();
@@ -22,7 +23,12 @@ const agentSockets = new Map<string, Socket>();
 /** Pending promises awaiting a container to come up, keyed by leaseId. */
 const pendingContainers = new Map<
   string,
-  { resolve: (access: SandboxAccess) => void; reject: (err: Error) => void }
+  {
+    resolve: (access: SandboxAccess) => void;
+    reject: (err: Error) => void;
+    /** Set when the renter supplied a key, which decides `access.authMethod`. */
+    sshPubKey: string | null;
+  }
 >();
 
 /** Pending promises awaiting job results, keyed by jobId. */
@@ -37,13 +43,13 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
   io.on("connection", (socket) => {
     let boundNodeId: string | null = null;
 
-    socket.on(WS.hello, (msg: AgentHelloMsg) => {
+    socket.on(WS.hello, async (msg: AgentHelloMsg) => {
       if (!verifyAgentHello(msg.ownerAddr, msg.nonce, msg.signature)) {
         socket.emit("error-message", "hello rejected: bad signature/nonce");
         socket.disconnect(true);
         return;
       }
-      const node = upsertNode({ id: msg.nodeId, ...msg.spec });
+      const node = await upsertNode({ id: msg.nodeId, ...msg.spec });
       boundNodeId = node.id;
       agentSockets.set(node.id, socket);
       const ack: HelloAckMsg = { nodeId: node.id };
@@ -58,13 +64,16 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
     socket.on(WS.containerReady, (msg: ContainerReadyMsg) => {
       const lease = getLease(msg.leaseId);
       if (!lease) return;
-      // Password is the renter's own address; compose a copyable connect command.
+      // A renter who supplied a public key authenticates with it; otherwise the
+      // password is their own address (only possible when they are signed in).
+      const usePubKey = pendingContainers.get(msg.leaseId)?.sshPubKey != null;
       const access: SandboxAccess = {
         kind: "ssh",
         host: msg.host,
         port: msg.port,
         username: "root",
-        password: lease.renterAddr,
+        authMethod: usePubKey ? "publickey" : "password",
+        password: usePubKey ? null : lease.renterAddr,
         command: `ssh root@${msg.host} -p ${msg.port}`,
       };
       // Marks the lease active and starts the billable window.
@@ -88,7 +97,7 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
       if (boundNodeId) {
         // The node's gone — bill + end any leases it was hosting, then mark it offline.
         for (const lease of leasesForNode(boundNodeId)) {
-          void endLeaseAndBill(lease.id, "node-disconnected");
+          void closeLease(lease.id, "node-disconnected");
         }
         markOffline(boundNodeId);
         if (agentSockets.get(boundNodeId) === socket) agentSockets.delete(boundNodeId);
@@ -108,15 +117,19 @@ export function isNodeConnected(nodeId: string): boolean {
  * Ask the agent to start a sandbox; resolves with the SSH access details when
  * the container is up and the bore endpoint is known.
  */
-export function startContainer(
-  nodeId: string,
-  leaseId: string,
-  image: string,
-  limits: SandboxLimits,
-  sshPassword: string,
-  // Generous: the agent may be pulling the sandbox image on first use.
-  timeoutMs = 180_000,
-): Promise<SandboxAccess> {
+export function startContainer(args: {
+  nodeId: string;
+  leaseId: string;
+  image: string;
+  limits: SandboxLimits;
+  /** SSH password (the renter's address), or null under key auth. */
+  sshPassword: string | null;
+  /** OpenSSH public key to install in the sandbox, or null. */
+  sshPubKey: string | null;
+  timeoutMs?: number;
+}): Promise<SandboxAccess> {
+  const { nodeId, leaseId, image, limits, sshPassword, sshPubKey } = args;
+  const timeoutMs = args.timeoutMs ?? config.sandboxReadyTimeoutMs;
   const socket = agentSockets.get(nodeId);
   if (!socket) return Promise.reject(new Error("node not connected"));
 
@@ -127,6 +140,7 @@ export function startContainer(
     }, timeoutMs);
 
     pendingContainers.set(leaseId, {
+      sshPubKey,
       resolve: (access) => {
         clearTimeout(timer);
         resolve(access);
@@ -137,7 +151,7 @@ export function startContainer(
       },
     });
 
-    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword };
+    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword, sshPubKey };
     socket.emit(WS.startContainer, msg);
   });
 }

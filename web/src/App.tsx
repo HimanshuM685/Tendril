@@ -183,7 +183,7 @@ export function App() {
             canSignIn={!!activeAddress}
             signingIn={signingIn}
             onSignIn={signIn}
-            balanceMicroAlgos={wallet?.balanceMicroAlgos ?? null}
+            balanceAtomic={wallet?.balanceAtomic ?? null}
           />
         </div>
       </header>
@@ -254,7 +254,6 @@ export function App() {
                 wallet={wallet}
                 address={session?.address ?? null}
                 signedIn={!!session}
-                token={session?.token ?? null}
                 signTransactions={signTransactions}
                 onWalletChanged={onWalletChanged}
                 onError={setError}

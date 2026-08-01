@@ -82,7 +82,8 @@ export async function startSandbox(
   leaseId: string,
   imageOverride: string,
   limits: SandboxLimits,
-  sshPassword: string,
+  sshPassword: string | null,
+  sshPubKey: string | null,
 ): Promise<SandboxEndpoint> {
   const image = imageOverride || config.sandbox.image;
   await ensureImage(image);
@@ -136,9 +137,15 @@ export async function startSandbox(
     "AUDIT_WRITE",
     "--security-opt",
     "no-new-privileges",
-    "-e",
-    `SSH_PASSWORD=${sshPassword}`,
   ];
+
+  // Exactly one of the two: a key the renter brought, or their address as the
+  // password. The entrypoint locks the root password outright under key auth.
+  if (sshPubKey) {
+    args.push("-e", `SSH_PUBKEY=${sshPubKey}`);
+  } else if (sshPassword) {
+    args.push("-e", `SSH_PASSWORD=${sshPassword}`);
+  }
 
   let hostPort = 0;
   if (local) {

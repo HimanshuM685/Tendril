@@ -89,7 +89,13 @@ async function fetchNonce(): Promise<string> {
 async function handleStart(socket: Socket, msg: StartContainerMsg) {
   try {
     activeLeases.add(msg.leaseId);
-    const { host, port } = await startSandbox(msg.leaseId, msg.image, msg.limits, msg.sshPassword);
+    const { host, port } = await startSandbox(
+      msg.leaseId,
+      msg.image,
+      msg.limits,
+      msg.sshPassword,
+      msg.sshPubKey,
+    );
     const ready: ContainerReadyMsg = { leaseId: msg.leaseId, host, port };
     socket.emit(WS.containerReady, ready);
     console.log(`[agent] lease ${msg.leaseId} ready — ssh root@${host} -p ${port}`);

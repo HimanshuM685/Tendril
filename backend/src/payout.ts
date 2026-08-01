@@ -26,24 +26,47 @@ export function payoutsEnabled(): boolean {
 }
 
 /**
- * Send `amountMicroAlgos` from the platform custodial wallet to a contributor's
- * payout address, on-chain. Returns the confirmed txid. Throws on any failure
- * (the caller logs it and records the payout as failed — usage is still billed).
+ * Send `amountAtomic` of the payment asset from the platform custodial wallet to
+ * a contributor's payout address, on-chain. Returns the confirmed txid. Throws on
+ * any failure (the caller records the payout as unpaid — usage is still billed).
+ *
+ * An ASA transfer only lands if the receiver has opted in, hence `hasOptedIn`
+ * at registration time and `payoutBlocked` on the node.
  */
-export async function payContributor(toAddr: string, amountMicroAlgos: number): Promise<string> {
-  if (amountMicroAlgos <= 0) {
+export async function payContributor(toAddr: string, amountAtomic: number): Promise<string> {
+  if (amountAtomic <= 0) {
     throw new Error("payout amount must be positive");
   }
   const { addr, sk } = loadPlatformKey();
   const suggestedParams = await algod.getTransactionParams().do();
-  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+  const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
     sender: addr,
     receiver: toAddr,
-    amount: amountMicroAlgos,
+    assetIndex: Number(config.assetId),
+    amount: amountAtomic,
     suggestedParams,
   });
   const signed = txn.signTxn(sk);
   const { txid } = await algod.sendRawTransaction(signed).do();
   await algosdk.waitForConfirmation(algod, txid, 8);
   return txid;
+}
+
+/**
+ * Whether `address` can receive the payment asset. Algorand requires an explicit
+ * opt-in, and a transfer to an address that has not opted in fails outright — so
+ * a contributor who skipped it would silently never get paid.
+ *
+ * Network errors resolve to `true`: a node registration should not be downgraded
+ * because algod blipped. A payout that then fails is recorded unpaid anyway.
+ */
+export async function hasOptedIn(address: string): Promise<boolean> {
+  try {
+    await algod.accountAssetInformation(address, Number(config.assetId)).do();
+    return true;
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 404) return false;
+    return true;
+  }
 }

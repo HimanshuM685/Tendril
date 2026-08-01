@@ -1,14 +1,7 @@
 import pg from "pg";
-import type {
-  Charge,
-  Metrics,
-  Payout,
-  TopUp,
-  Wallet,
-  WalletStats,
-  WalletSummary,
-} from "@tendril/shared";
+import type { Charge, Metrics, Payout, TopUp, WalletStats, WalletSummary } from "@tendril/shared";
 import { config } from "./config.js";
+import { creditBalance } from "./x402/credit.js";
 
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
 // Only money state lives here: wallets + their history. Nodes and leases are
@@ -18,12 +11,12 @@ const pool = new pg.Pool({
   ssl: config.databaseUrl.includes("localhost") ? undefined : { rejectUnauthorized: false },
 });
 
-// int8/bigint comes back as a string by default; we store epoch-ms + microALGO
-// (well within Number's safe range here) so parse them to numbers.
+// int8/bigint comes back as a string by default; we store epoch-ms + atomic
+// units (well within Number's safe range here) so parse them to numbers.
 pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 
 type Row = Record<string, unknown>;
-async function q<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
+export async function q<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
   const res = await pool.query(text, params);
   return res.rows as T[];
 }
@@ -34,10 +27,27 @@ export async function initDb(): Promise<void> {
     throw new Error("DATABASE_URL is not set — point it at your Neon Postgres connection string");
   }
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS wallets (
+    -- Prepaid credit, in atomic units of the configured asset. Fed by
+    -- POST /x402/topup and by refunds of unused lease time; spent by renting.
+    CREATE TABLE IF NOT EXISTS credits (
       address       TEXT PRIMARY KEY,
-      balance_micro BIGINT NOT NULL DEFAULT 0,
+      amount_atomic BIGINT NOT NULL DEFAULT 0,
       updated_at    BIGINT NOT NULL
+    );
+
+    -- Every x402 payment we have seen, keyed by its on-chain txid. The row is
+    -- written 'pending' before settle() and flipped to 'settled' after, so a
+    -- crash in between leaves a marker a reconciliation job can pick up.
+    CREATE TABLE IF NOT EXISTS x402_payments (
+      txid          TEXT PRIMARY KEY,
+      intent_hash   TEXT UNIQUE NOT NULL,
+      payer         TEXT NOT NULL,
+      route         TEXT NOT NULL,
+      amount_atomic BIGINT NOT NULL,
+      asset_id      BIGINT NOT NULL,
+      status        TEXT NOT NULL,
+      created_at    BIGINT NOT NULL,
+      settled_at    BIGINT
     );
 
     CREATE TABLE IF NOT EXISTS topups (
@@ -68,136 +78,36 @@ export async function initDb(): Promise<void> {
       created_at   BIGINT NOT NULL
     );
 
+    -- Which asset each historical row is denominated in. Rows written before
+    -- the move to USDC are native ALGO, hence the 0 default (see registry docs).
+    ALTER TABLE topups  ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE charges ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE payouts ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
+
     CREATE INDEX IF NOT EXISTS topups_address_idx ON topups (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS charges_address_idx ON charges (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS payouts_addr_idx ON payouts (to_addr, created_at DESC);
+    CREATE INDEX IF NOT EXISTS x402_payments_payer_idx ON x402_payments (payer, created_at DESC);
   `);
-}
-
-// ─────────────────────────────── wallets ───────────────────────────────
-
-interface WalletRow {
-  address: string;
-  balance_micro: number;
-  updated_at: number;
-}
-
-export async function getWallet(address: string): Promise<Wallet> {
-  const rows = await q<WalletRow>("SELECT * FROM wallets WHERE address = $1", [address]);
-  const r = rows[0];
-  return {
-    address,
-    balanceMicroAlgos: r?.balance_micro ?? 0,
-    updatedAt: r?.updated_at ?? 0,
-  };
-}
-
-export async function getBalance(address: string): Promise<number> {
-  return (await getWallet(address)).balanceMicroAlgos;
-}
-
-/**
- * Credit a wallet from a confirmed on-chain deposit. Idempotent on `txid`: the
- * topups PK means re-submitting the same deposit never double-credits.
- * Returns the new balance.
- */
-export async function creditWallet(
-  address: string,
-  amountMicroAlgos: number,
-  txid: string,
-): Promise<number> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const ins = await client.query(
-      `INSERT INTO topups (txid, address, amount_micro, created_at)
-       VALUES ($1,$2,$3,$4) ON CONFLICT (txid) DO NOTHING RETURNING txid`,
-      [txid, address, amountMicroAlgos, Date.now()],
-    );
-    if (ins.rowCount === 0) {
-      // Already credited — return current balance unchanged.
-      const cur = await client.query("SELECT balance_micro FROM wallets WHERE address = $1", [address]);
-      await client.query("COMMIT");
-      return cur.rows[0]?.balance_micro ?? 0;
-    }
-    const upd = await client.query(
-      `INSERT INTO wallets (address, balance_micro, updated_at)
-       VALUES ($1,$2,$3)
-       ON CONFLICT (address) DO UPDATE SET
-         balance_micro = wallets.balance_micro + $2, updated_at = $3
-       RETURNING balance_micro`,
-      [address, amountMicroAlgos, Date.now()],
-    );
-    await client.query("COMMIT");
-    return Number(upd.rows[0].balance_micro);
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Debit a wallet for metered usage, never below zero. Records ONE charge row.
- * Called once, at lease end (not per tick). Returns the amount actually charged
- * and the remaining balance.
- */
-export async function debitWallet(
-  address: string,
-  requestedMicroAlgos: number,
-  leaseId: string,
-  payToAddr: string,
-  seconds: number,
-): Promise<{ charged: number; balance: number }> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const cur = await client.query(
-      "SELECT balance_micro FROM wallets WHERE address = $1 FOR UPDATE",
-      [address],
-    );
-    const balance = Number(cur.rows[0]?.balance_micro ?? 0);
-    const charged = Math.max(0, Math.min(requestedMicroAlgos, balance));
-    const remaining = balance - charged;
-    if (charged > 0) {
-      await client.query(
-        "UPDATE wallets SET balance_micro = $1, updated_at = $2 WHERE address = $3",
-        [remaining, Date.now(), address],
-      );
-      await client.query(
-        `INSERT INTO charges (address, lease_id, pay_to, amount_micro, seconds, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [address, leaseId, payToAddr, charged, seconds, Date.now()],
-      );
-    }
-    await client.query("COMMIT");
-    return { charged, balance: remaining };
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
 }
 
 /** Record a contributor payout (txid null if the on-chain send failed/skipped). */
 export async function recordPayout(
   toAddr: string,
   leaseId: string,
-  amountMicroAlgos: number,
+  amountAtomic: number,
   txid: string | null,
 ): Promise<void> {
   await q(
-    `INSERT INTO payouts (to_addr, lease_id, amount_micro, txid, created_at)
-     VALUES ($1,$2,$3,$4,$5)`,
-    [toAddr, leaseId, amountMicroAlgos, txid, Date.now()],
+    `INSERT INTO payouts (to_addr, lease_id, amount_micro, asset_id, txid, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [toAddr, leaseId, amountAtomic, Number(config.assetId), txid, Date.now()],
   );
 }
 
 export async function walletSummary(address: string): Promise<WalletSummary> {
-  const [wallet, topupRows, chargeRows, payoutRows, chargeAgg, topupAgg, payoutAgg] = await Promise.all([
-    getWallet(address),
+  const [balance, topupRows, chargeRows, payoutRows, chargeAgg, topupAgg, payoutAgg] = await Promise.all([
+    creditBalance(address),
     q<{ txid: string; address: string; amount_micro: number; created_at: number }>(
       "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
       [address],
@@ -232,7 +142,7 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
   const topups: TopUp[] = topupRows.map((t) => ({
     txid: t.txid,
     address: t.address,
-    amountMicroAlgos: t.amount_micro,
+    amountAtomic: t.amount_micro,
     createdAt: t.created_at,
   }));
   const charges: Charge[] = chargeRows.map((c) => ({
@@ -240,7 +150,7 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     address: c.address,
     leaseId: c.lease_id,
     payToAddr: c.pay_to,
-    amountMicroAlgos: c.amount_micro,
+    amountAtomic: c.amount_micro,
     seconds: c.seconds,
     createdAt: c.created_at,
   }));
@@ -248,19 +158,19 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     id: p.id,
     toAddr: p.to_addr,
     leaseId: p.lease_id,
-    amountMicroAlgos: p.amount_micro,
+    amountAtomic: p.amount_micro,
     txid: p.txid,
     createdAt: p.created_at,
   }));
   const stats: WalletStats = {
-    totalSpentMicroAlgos: chargeAgg[0]?.spent ?? 0,
-    totalToppedUpMicroAlgos: topupAgg[0]?.topped ?? 0,
+    totalSpentAtomic: chargeAgg[0]?.spent ?? 0,
+    totalToppedUpAtomic: topupAgg[0]?.topped ?? 0,
     totalLeaseSeconds: chargeAgg[0]?.secs ?? 0,
     leaseCount: chargeAgg[0]?.cnt ?? 0,
-    totalEarnedMicroAlgos: payoutAgg[0]?.earned ?? 0,
+    totalEarnedAtomic: payoutAgg[0]?.earned ?? 0,
     payoutCount: payoutAgg[0]?.pcnt ?? 0,
   };
-  return { address, balanceMicroAlgos: wallet.balanceMicroAlgos, topups, charges, payouts, stats };
+  return { address, balanceAtomic: balance, topups, charges, payouts, stats };
 }
 
 // ─────────────────────────────── platform metrics ───────────────────────────────

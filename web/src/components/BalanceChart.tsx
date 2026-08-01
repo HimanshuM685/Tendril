@@ -1,5 +1,5 @@
 import type { Charge, TopUp } from "@tendril/shared";
-import { formatAlgo, formatAlgoExact } from "@tendril/shared";
+import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 
 interface Props {
   topups: TopUp[];
@@ -21,8 +21,8 @@ interface Pt {
 export function BalanceChart({ topups, charges, currentBalance }: Props) {
   // Each deposit raises the balance, each charge lowers it.
   const events = [
-    ...topups.map((t) => ({ t: t.createdAt, delta: t.amountMicroAlgos })),
-    ...charges.map((c) => ({ t: c.createdAt, delta: -c.amountMicroAlgos })),
+    ...topups.map((t) => ({ t: t.createdAt, delta: t.amountAtomic })),
+    ...charges.map((c) => ({ t: c.createdAt, delta: -c.amountAtomic })),
   ].sort((a, b) => a.t - b.t);
 
   if (events.length === 0) {
@@ -87,8 +87,8 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
     <div className="panel chart-card">
       <div className="chart-head">
         <h3>Balance over time</h3>
-        <span className="chart-now" title={formatAlgoExact(currentBalance)}>
-          {formatAlgo(currentBalance)}
+        <span className="chart-now" title={formatUsdcExact(currentBalance)}>
+          {formatUsdc(currentBalance)}
         </span>
       </div>
       <figure className="balance-chart">
@@ -108,9 +108,9 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
           <circle className="bc-dot bc-dot-now" cx={x(iMax)} cy={y(last.v)} r={4.5} />
 
           {/* value labels */}
-          <text className="bc-vlabel" x={pad.l} y={y(vMax) - 6}>{formatAlgo(vMax)}</text>
+          <text className="bc-vlabel" x={pad.l} y={y(vMax) - 6}>{formatUsdc(vMax)}</text>
           {vMin !== vMax && (
-            <text className="bc-vlabel" x={pad.l} y={y(vMin) - 6}>{formatAlgo(vMin)}</text>
+            <text className="bc-vlabel" x={pad.l} y={y(vMin) - 6}>{formatUsdc(vMin)}</text>
           )}
           {/* time labels at the change positions */}
           {ticks.map((i) => (

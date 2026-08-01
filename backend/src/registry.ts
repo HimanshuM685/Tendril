@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { ComputeNode, ExplorerNode } from "@tendril/shared";
 import { isOnline } from "@tendril/shared";
 import { config } from "./config.js";
+import { hasOptedIn } from "./payout.js";
 
 /**
  * In-memory node registry. Nodes are ephemeral — a contributor comes online,
@@ -29,8 +30,15 @@ function withStatus(node: ComputeNode): ComputeNode {
   };
 }
 
-/** Register a new node or re-attach to an existing one, refreshing its heartbeat. */
-export function upsertNode(input: UpsertNodeInput): ComputeNode {
+/**
+ * Register a new node or re-attach to an existing one, refreshing its heartbeat.
+ *
+ * A payout address that hasn't opted into the payment asset can't receive an
+ * ASA transfer, so we check once at registration and flag the node rather than
+ * turn it away — it still serves compute and still earns; the payouts are just
+ * recorded unpaid until the contributor opts in.
+ */
+export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   const now = Date.now();
   const id = input.id || nanoid(10);
   const existing = nodes.get(id);
@@ -38,6 +46,7 @@ export function upsertNode(input: UpsertNodeInput): ComputeNode {
     id,
     ownerAddr: input.ownerAddr,
     payToAddr: input.payToAddr,
+    payoutBlocked: !(await hasOptedIn(input.payToAddr)),
     label: input.label,
     cpuCores: input.cpuCores,
     ramMb: input.ramMb,
@@ -48,6 +57,11 @@ export function upsertNode(input: UpsertNodeInput): ComputeNode {
     status: "online",
   };
   nodes.set(id, node);
+  if (node.payoutBlocked) {
+    console.warn(
+      `[registry] node ${id}: ${node.payToAddr} has not opted into asset ${config.assetId} — payouts will be recorded unpaid`,
+    );
+  }
   return node;
 }
 
@@ -79,15 +93,18 @@ export function listOnlineNodes(): ExplorerNode[] {
     .map(withStatus)
     .filter((n) => n.status === "online")
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map(({ id, ownerAddr, payToAddr, label, cpuCores, ramMb, gpu, pricePerHourUsd, status }) => ({
-      id,
-      ownerAddr,
-      payToAddr,
-      label,
-      cpuCores,
-      ramMb,
-      gpu,
-      pricePerHourUsd,
-      status,
-    }));
+    .map(
+      ({ id, ownerAddr, payToAddr, payoutBlocked, label, cpuCores, ramMb, gpu, pricePerHourUsd, status }) => ({
+        id,
+        ownerAddr,
+        payToAddr,
+        payoutBlocked,
+        label,
+        cpuCores,
+        ramMb,
+        gpu,
+        pricePerHourUsd,
+        status,
+      }),
+    );
 }
