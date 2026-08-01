@@ -198,9 +198,9 @@ export interface Job {
 
 // ───────────────────────── Platform metrics (GET /metrics) ─────────────────────────
 
-/** One point of a cumulative daily growth series. */
+/** One step of a cumulative growth series — one point per change, not per day. */
 export interface MetricPoint {
-  date: string; // YYYY-MM-DD
+  t: number; // epoch ms of the change
   count: number;
 }
 

@@ -218,17 +218,14 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
 
 // ─────────────────────────────── platform metrics ───────────────────────────────
 
-/** Bucket first-seen timestamps into a cumulative daily user count. */
-function cumulativeByDay(firsts: number[]): { date: string; count: number }[] {
-  const perDay = new Map<string, number>();
-  for (const ms of firsts) {
-    const day = new Date(ms).toISOString().slice(0, 10); // YYYY-MM-DD
-    perDay.set(day, (perDay.get(day) ?? 0) + 1);
-  }
+/**
+ * Cumulative user count, one point per join rather than one per day. Day
+ * buckets collapse a young platform into a single point (and a flat chart);
+ * a point per change plots the same way whether growth spans hours or years.
+ */
+function cumulativeByChange(firsts: number[]): { t: number; count: number }[] {
   let running = 0;
-  return [...perDay.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, n]) => ({ date, count: (running += n) }));
+  return [...firsts].sort((a, b) => a - b).map((t) => ({ t, count: ++running }));
 }
 
 /**
@@ -257,8 +254,8 @@ export async function metrics(): Promise<Metrics> {
       ),
     ]);
 
-  const usersOverTime = cumulativeByDay(userFirsts.map((r) => r.first));
-  const activeOverTime = cumulativeByDay(activeFirsts.map((r) => r.first));
+  const usersOverTime = cumulativeByChange(userFirsts.map((r) => r.first));
+  const activeOverTime = cumulativeByChange(activeFirsts.map((r) => r.first));
   return {
     usersOverTime,
     activeOverTime,

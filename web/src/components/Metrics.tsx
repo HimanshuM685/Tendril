@@ -74,22 +74,39 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
     );
   }
 
-  const pts = series.map((p, i) => ({ x: i, v: p.count }));
-  const vMax = Math.max(...pts.map((p) => p.v), 1);
+  // X is the change index, not wall-clock time (same as BalanceChart): every
+  // step gets the same width, so a day of signups reads as clearly as a year.
+  // Single point holds a flat line across the width so it still reads.
+  const xy = series.length === 1 ? [series[0], series[0]] : series;
+  const vMax = Math.max(...xy.map((p) => p.count), 1);
   const top = vMax * 1.15; // headroom so the line doesn't glue to the top edge
-  const iMax = Math.max(pts.length - 1, 1);
+  const iMax = xy.length - 1 || 1;
   const x = (i: number) => pad.l + (i / iMax) * (W - pad.l - pad.r);
   const y = (v: number) => H - pad.b - (v / top) * (H - pad.t - pad.b);
 
-  // Hold a flat line across the width for a single point so it still reads.
-  const xy = pts.length === 1 ? [pts[0], { x: 1, v: pts[0].v }] : pts;
-  const xr = (i: number) => pad.l + (i / Math.max(xy.length - 1, 1)) * (W - pad.l - pad.r);
-  const line = xy.map((p, i) => `${i === 0 ? "M" : "L"}${xr(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
-  const area = `${line} L${xr(xy.length - 1).toFixed(1)},${H - pad.b} L${xr(0).toFixed(1)},${H - pad.b} Z`;
+  const line = xy
+    .map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.count).toFixed(1)}`)
+    .join(" ");
+  const area = `${line} L${x(iMax).toFixed(1)},${H - pad.b} L${x(0).toFixed(1)},${H - pad.b} Z`;
   const last = xy[xy.length - 1];
 
-  const fmtDay = (d: string) =>
-    new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // Label granularity follows the span the changes cover: hours, days, months.
+  const hours = (xy[xy.length - 1].t - xy[0].t) / 3_600_000;
+  const tickOpts: Intl.DateTimeFormatOptions =
+    hours < 36
+      ? { hour: "2-digit", minute: "2-digit" }
+      : hours < 24 * 365
+        ? { month: "short", day: "numeric" }
+        : { month: "short", year: "numeric" };
+  const fmtDate = (ms: number) => new Date(ms).toLocaleString(undefined, tickOpts);
+
+  // Up to 4 evenly-spaced ticks over the change indices.
+  const tickCount = Math.min(4, xy.length);
+  const ticks = Array.from(
+    new Set(
+      Array.from({ length: tickCount }, (_, k) => Math.round((k * iMax) / Math.max(1, tickCount - 1))),
+    ),
+  );
 
   return (
     <div className="panel chart-card">
@@ -102,13 +119,22 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
           <line className="bc-grid" x1={pad.l} y1={y(vMax)} x2={W - pad.r} y2={y(vMax)} />
           <path className="bc-area" d={area} />
           <path className="bc-line" d={line} />
-          {pts.length > 1 && <circle className="bc-dot" cx={xr(0)} cy={y(xy[0].v)} r={3} />}
-          <circle className="bc-dot bc-dot-now" cx={xr(xy.length - 1)} cy={y(last.v)} r={5} />
+          {/* one marker per change */}
+          {series.length > 1 &&
+            xy.map((p, i) => <circle key={i} className="bc-dot" cx={x(i)} cy={y(p.count)} r={3} />)}
+          <circle className="bc-dot bc-dot-now" cx={x(iMax)} cy={y(last.count)} r={5} />
           <text className="bc-vlabel" x={pad.l} y={y(vMax) - 7}>{vMax}</text>
-          <text className="bc-tlabel" x={pad.l} y={H - 10} textAnchor="start">{fmtDay(series[0].date)}</text>
-          <text className="bc-tlabel" x={W - pad.r} y={H - 10} textAnchor="end">
-            {fmtDay(series[series.length - 1].date)}
-          </text>
+          {ticks.map((i) => (
+            <text
+              key={i}
+              className="bc-tlabel"
+              x={x(i)}
+              y={H - 10}
+              textAnchor={i === 0 ? "start" : i === iMax ? "end" : "middle"}
+            >
+              {fmtDate(xy[i].t)}
+            </text>
+          ))}
         </svg>
       </figure>
     </div>

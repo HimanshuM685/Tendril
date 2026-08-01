@@ -183,8 +183,9 @@ curl -s $API/nodes
 
 ## `GET /metrics`
 
-Public platform aggregates — cumulative daily growth plus leaderboards. Derived entirely from
-top-ups and charges; no PII beyond addresses that are already public on-chain.
+Public platform aggregates — cumulative growth (one point per new user, `t` = epoch ms) plus
+leaderboards. Derived entirely from top-ups and charges; no PII beyond addresses that are already
+public on-chain.
 
 ```bash
 curl -s $API/metrics | jq
@@ -192,8 +193,8 @@ curl -s $API/metrics | jq
 
 ```json
 {
-  "usersOverTime":   [{ "date": "2026-08-01", "count": 1 }],
-  "activeOverTime":  [{ "date": "2026-08-01", "count": 1 }],
+  "usersOverTime":   [{ "t": 1754006400000, "count": 1 }],
+  "activeOverTime":  [{ "t": 1754006400000, "count": 1 }],
   "totalUsers": 1,
   "totalActive": 1,
   "topUsers": {
