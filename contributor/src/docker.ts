@@ -1,5 +1,6 @@
 import { execFile, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { createConnection, createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,19 +54,52 @@ async function dockerNcpu(): Promise<number> {
   return ncpuCache;
 }
 
-/** Build the SSH sandbox image locally if it isn't present (first run). */
-async function ensureImage(image: string): Promise<void> {
+/** Build context for the bundled sandbox image. */
+const SANDBOX_CTX = resolve(dirname(fileURLToPath(import.meta.url)), "../sandbox-ssh");
+
+/**
+ * Fingerprint of the files that decide how the sandbox behaves.
+ *
+ * The image is cached on the host forever, so tagging it `:latest` and only
+ * building when it is *absent* means an edit to `entrypoint.sh` is never picked
+ * up — the contributor keeps starting containers built from the old script, and
+ * the symptom is remote and baffling (SSH auth silently behaving like an older
+ * build). Folding the content hash into the tag makes a changed entrypoint a
+ * different image, so it rebuilds exactly when it should and not otherwise.
+ */
+function sandboxTag(): string | null {
+  const dockerfile = join(SANDBOX_CTX, "Dockerfile");
+  const entrypoint = join(SANDBOX_CTX, "entrypoint.sh");
+  if (!existsSync(dockerfile)) return null;
+  const h = createHash("sha256");
+  for (const f of [dockerfile, entrypoint]) {
+    if (existsSync(f)) h.update(readFileSync(f));
+  }
+  return `tendril-ssh-sandbox:${h.digest("hex").slice(0, 12)}`;
+}
+
+/**
+ * Resolve the image to run, building it if needed. Returns the tag actually
+ * used, which may differ from `image` when we substitute a content-tagged build
+ * of the bundled sandbox.
+ */
+async function ensureImage(image: string): Promise<string> {
+  // An explicitly configured SANDBOX_IMAGE is the operator's to manage: we only
+  // check it exists and never rebuild it from our context.
+  const bundled = image === config.sandbox.image && existsSync(join(SANDBOX_CTX, "Dockerfile"));
+  const tag = bundled ? (sandboxTag() ?? image) : image;
+
   try {
-    await execFileP("docker", ["image", "inspect", image]);
-    return;
+    await execFileP("docker", ["image", "inspect", tag]);
+    return tag;
   } catch {
     /* not present */
   }
-  const ctx = resolve(dirname(fileURLToPath(import.meta.url)), "../sandbox-ssh");
-  if (image === config.sandbox.image && existsSync(join(ctx, "Dockerfile"))) {
-    console.log(`[docker] image ${image} not found — building from ${ctx} (first run)...`);
-    await execFileP("docker", ["build", "-t", image, ctx], { maxBuffer: 50 * 1024 * 1024 });
-  }
+  if (!bundled) return tag; // nothing we can build; `docker run` will report it
+
+  console.log(`[docker] building sandbox image ${tag} from ${SANDBOX_CTX}…`);
+  await execFileP("docker", ["build", "-t", tag, SANDBOX_CTX], { maxBuffer: 50 * 1024 * 1024 });
+  return tag;
 }
 
 /**
@@ -86,7 +120,7 @@ export async function startSandbox(
   sshPubKey: string | null,
 ): Promise<SandboxEndpoint> {
   const image = imageOverride || config.sandbox.image;
-  await ensureImage(image);
+  const runImage = await ensureImage(image);
   const name = containerName(leaseId);
   const memory = limits.memory || config.sandbox.memory;
   // Clamp to what the daemon actually has — `docker run` rejects a --cpus value
@@ -157,10 +191,10 @@ export async function startSandbox(
     if (config.sandbox.boreSecret) args.push("-e", `BORE_SECRET=${config.sandbox.boreSecret}`);
   }
   if (gpus) args.push("--gpus", gpus);
-  args.push(image);
+  args.push(runImage);
 
   console.log(
-    `[docker] starting SSH sandbox ${name} (${image})` +
+    `[docker] starting SSH sandbox ${name} (${runImage})` +
       (local ? ` on 127.0.0.1:${hostPort}` : ` via bore (${config.sandbox.boreServer})`),
   );
   await execFileP("docker", args, { maxBuffer: 10 * 1024 * 1024 });
