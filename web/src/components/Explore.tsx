@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ExplorerNode } from "@tendril/shared";
-import { atomicPerHour, formatUsdc, proratedCost } from "@tendril/shared";
+import { atomicPerHour, formatUsdc, fundedSeconds } from "@tendril/shared";
 import { type ActiveLease, fetchExplorer, rentNode, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import type { Session } from "../App";
@@ -14,13 +14,6 @@ interface Props {
   onLeased: (lease: ActiveLease) => void;
 }
 
-/** Prepaid blocks. Each is a multiple of the server's 60s granularity. */
-const DURATIONS = [
-  { label: "15 min", seconds: 900 },
-  { label: "1 hour", seconds: 3600 },
-  { label: "4 hours", seconds: 14_400 },
-];
-
 export function Explore({
   session,
   activeAddress,
@@ -33,7 +26,6 @@ export function Explore({
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
   const [stage, setStage] = useState<PayStage | null>(null);
-  const [seconds, setSeconds] = useState(DURATIONS[1].seconds);
 
 
   // Poll the node list, pausing while the tab is hidden — same pattern as the
@@ -70,8 +62,11 @@ export function Explore({
     };
   }, []);
 
-  /** Full price of the selected block on this node, in atomic units. */
-  const quoteFor = (usdPerHour: number) => proratedCost(atomicPerHour(usdPerHour), seconds);
+  /**
+   * How long the current credit balance funds this node. This is the only limit
+   * on a session — there is no block to pick, and topping up moves it out.
+   */
+  const runtimeFor = (usdPerHour: number) => fundedSeconds(balanceAtomic, atomicPerHour(usdPerHour));
 
   async function rent(node: ExplorerNode) {
     if (!activeAddress) {
@@ -87,7 +82,6 @@ export function Explore({
         activeAddress,
         signTransactions,
         node.id,
-        seconds,
         setStage,
       );
       onLeased(toActiveLease(res, node.label));
@@ -99,6 +93,15 @@ export function Explore({
     }
   }
 
+  /** "2h 15m" / "45m" / "30s" — how long the credit lasts, at a glance. */
+  function formatDuration(totalSeconds: number): string {
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours === 0) return `${minutes}m`;
+    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+  }
+
   const STAGE_LABEL: Record<PayStage, string> = {
     signing: "Approve in wallet…",
     settling: "Settling + starting sandbox…",
@@ -108,24 +111,11 @@ export function Explore({
     <div>
       <p className="muted">
         Live nodes from <code>GET /explorer</code> (free). Renting pays a 0.01 USDC gate fee
-        on-chain — compute cost is deducted from your credit balance. Unused time
-        comes back as credit when you release.
+        on-chain, then the meter runs by the second and is billed from your credit when you
+        release. No fixed block — the session lasts as long as your credit covers it.
       </p>
       {error && <div className="error">{error}</div>}
       {!activeAddress && <p className="muted">Connect your wallet to rent.</p>}
-
-      <div className="topup" role="group" aria-label="Lease duration">
-        <span className="muted small">Block</span>
-        {DURATIONS.map((d) => (
-          <button
-            key={d.seconds}
-            className={`btn ghost${seconds === d.seconds ? " active" : ""}`}
-            onClick={() => setSeconds(d.seconds)}
-          >
-            {d.label}
-          </button>
-        ))}
-      </div>
 
       {loading && nodes.length === 0 && <p className="muted">Scanning for nodes…</p>}
       {!loading && nodes.length === 0 && (
@@ -133,7 +123,8 @@ export function Explore({
       )}
       <div className="grid">
         {nodes.map((n) => {
-          const quote = quoteFor(n.pricePerHourUsd);
+          const rate = atomicPerHour(n.pricePerHourUsd);
+          const runtime = runtimeFor(n.pricePerHourUsd);
           return (
             <div className="card" key={n.id}>
               <div className="card-head">
@@ -145,9 +136,14 @@ export function Explore({
                 <li>{(n.ramMb / 1024).toFixed(1)} GB RAM</li>
                 <li>{n.gpu ?? "no GPU"}</li>
               </ul>
-              <div className="price">{formatUsdc(quote)}</div>
+              <div className="price">{formatUsdc(rate)}/hr</div>
               <div className="muted small">
-                {formatUsdc(quote)} from credit · 0.01 USDC gate fee
+                0.01 USDC gate fee · billed by the second from credit
+              </div>
+              <div className="muted small">
+                {runtime === null
+                  ? "Free node — runs until you release it."
+                  : `Your credit funds ${formatDuration(runtime)}.`}
               </div>
               <button
                 className="btn"

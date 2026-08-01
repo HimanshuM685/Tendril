@@ -7,11 +7,11 @@
  */
 import assert from "node:assert/strict";
 import {
-  applicableCredit,
   atomicPerHour,
   networkDefaults,
   formatUsdc,
   formatUsdcExact,
+  fundedSeconds,
   proratedCost,
   usdToAtomic,
 } from "./index.js";
@@ -55,21 +55,37 @@ for (const seconds of [0, 1, 59, 60, 61, 599, 900]) {
   assert.ok(used <= quote, `used ${used} exceeded quote ${quote} at ${seconds}s`);
 }
 
-// ── credit discount ──
-// Signed in: the whole balance can be spent, right down to a zero-cost rent.
-const signedIn = { authenticated: true, minPayableAtomic: 10_000 };
-assert.equal(applicableCredit(250_000, 1_000_000, signedIn), 250_000);
-assert.equal(applicableCredit(250_000, 100_000, signedIn), 100_000);
+// ── how long credit funds a session ──
+// A session has no chosen duration: it runs until credit can no longer pay for
+// the next second. Getting this wrong either cuts people off early or lets them
+// run up a bill they cannot cover.
+const hourly = atomicPerHour(1.0); // 1 USDC/hr
 
-// Not signed in: the discount is floored, so `?payer=<victim>` can never buy a
-// lease for nothing — the payment must still come from the hinted address.
-const anon = { authenticated: false, minPayableAtomic: 10_000 };
-assert.equal(applicableCredit(250_000, 1_000_000, anon), 240_000); // 10_000 left to pay
-assert.equal(applicableCredit(250_000, 100_000, anon), 100_000); // under the ceiling, unclamped
-assert.equal(applicableCredit(5_000, 1_000_000, anon), 0); // quote below the floor: pay it all
-assert.equal(applicableCredit(250_000, 0, anon), 0);
+assert.equal(fundedSeconds(1_000_000, hourly), 3600); // exactly an hour
+assert.equal(fundedSeconds(250_000, hourly), 900); // a quarter of it
+assert.equal(fundedSeconds(0, hourly), 0); // no credit, no session
+assert.equal(fundedSeconds(-5, hourly), 0); // never negative
 
-console.log("credit discount ok");
+// Floors rather than rounds: promising a second the credit can't pay for is the
+// one direction that leaves the platform out of pocket.
+assert.equal(fundedSeconds(999_999, hourly), 3599);
+
+// A free node has no rate to run down, so there is nothing for credit to limit.
+// `null` forces callers to say what they mean instead of dividing by zero.
+assert.equal(fundedSeconds(0, 0), null);
+assert.equal(fundedSeconds(1_000_000, 0), null);
+
+// The round trip has to agree with the meter: whatever the funded window is,
+// billing it must not exceed the credit that funded it.
+for (const credit of [10_000, 250_000, 999_999, 5_000_000]) {
+  const seconds = fundedSeconds(credit, hourly)!;
+  assert.ok(
+    proratedCost(hourly, seconds) <= credit,
+    `funded ${seconds}s costs more than the ${credit} that funded it`,
+  );
+}
+
+console.log("funding window ok");
 
 // ── network switch ──
 // One value picks the chain. The failure this guards against is a half-applied

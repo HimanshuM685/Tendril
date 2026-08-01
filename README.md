@@ -1,13 +1,17 @@
 # 🌿 Tendril
 
-**A prepaid compute marketplace for individual contributors — metered in native ALGO on Algorand.**
+**A pay-per-call compute marketplace for individual contributors — x402 over USDC on Algorand.**
 
 Tendril is a lean, agent-first take on Akash / io.net, but for *individuals* instead of data
-centers. Anyone can rent out their PC's CPU/RAM/GPU. A human (or an autonomous AI agent) **tops up a
-prepaid ALGO balance once**, then rents a node and gets a sandboxed **SSH session** billed **by the
-hour, prorated** — usage is tracked as it runs and **charged once when the lease ends** (or when the
-balance is exhausted, which stops the session). The contributor is **paid on-chain** to their own
-address when the lease ends, minus a small platform fee. No per-action signing, no x402.
+centers. Anyone can rent out their PC's CPU/RAM/GPU. A human (or an autonomous AI agent) pays for
+what it wants over **x402** — an HTTP 402 names an exact price in **USDC**, the client signs, and the
+backend does the thing. Renting starts a **metered SSH session** — click once, the clock runs, and
+only the seconds you actually used are billed when you release. The contributor is **paid on-chain in USDC**
+when the lease ends, minus a small platform fee.
+
+Because the facilitator sponsors the network fee, **a client needs USDC and zero ALGO** — and
+because payment *is* the identity, a brand-new address can pay on its very first request with no
+sign-up and no sign-in.
 
 ## The trust model (why this is safe to contribute to)
 
@@ -62,10 +66,10 @@ Nodes are priced in USD per hour (`PRICE_PER_HOUR_USD`). USDC is a dollar with 6
 `PRICE_PER_HOUR_USD × 1e6` is the atomic rate — there is no exchange rate to set or keep current.
 Because the facilitator sponsors the network fee, **a client needs USDC and zero ALGO**.
 
-Renting buys a **prepaid block** of seconds. When the lease ends (early release, the block running
-out, or the node going away) the unused time is **refunded as credit** and the contributor is paid
-on-chain in USDC minus `PLATFORM_FEE_PCT`. That refund is what makes the next 402 for that address
-smaller. Signing in still exists, but its job has shrunk to reading and spending an existing balance.
+Renting opens an **open-ended metered session**. It ends when you release it, or when your credit can
+no longer pay for the next second — and only then is the time you used billed, from credit, in one
+charge. The contributor is paid on-chain in USDC out of what was collected, minus `PLATFORM_FEE_PCT`.
+Signing in still exists, but its job has shrunk to reading your balance.
 
 ## The payable endpoints
 
@@ -86,22 +90,21 @@ session. 402, pay, done, normal flow underneath.
 
 | Endpoint | Price | What you get |
 |---|---|---|
-| `POST /rent/:nodeId` | `FLAT_RENT_ATOMIC` (0.01 USDC) | `FLAT_RENT_SECONDS` of sandbox — lease created, container up, SSH + lease token returned |
+| `POST /rent/:nodeId` | `FLAT_RENT_ATOMIC` (0.01 USDC) gate fee | opens a **metered** session — container up, SSH + lease token returned, then billed by the second from credit |
 | `POST /lease/:id/run` | `FLAT_RUN_ATOMIC` (0.01 USDC) | one job execution — payload shipped to the contributor, output returned |
 
-**Metered — priced from the URL and your balance.**
+**Free.**
 
 | Endpoint | Price | Notes |
 |---|---|---|
-| `POST /x402/rent/:nodeId?seconds=<n>[&payer=<addr>]` | `ceil(seconds/3600 x rate)` minus your credit | Existing credit is applied first, so the 402 asks only for the remainder. Cover it all (signed in) and there is no 402 at all. |
-| `DELETE /x402/leases/:id` | free | Closes early; unused time comes back as credit. |
+| `DELETE /x402/leases/:id` | free | Stops the meter and bills the seconds actually used. |
 
-The flat rent price is deliberately independent of the node's hourly rate — that is what makes it
-flat. The contributor is paid a cut of what was actually paid, not of the list price, so money in and
-money out stay equal either way.
+Renting buys **no fixed block**. The gate fee starts the clock; the session then runs for as long as
+your credit covers the node's hourly rate, and only the seconds you actually used are billed when you
+release. Top up mid-session and the cut-off moves out. Nobody is disconnected at the end of a block
+they guessed wrong.
 
-Wallet popups, end to end: top up = 1, flat rent = 1, metered rent with enough credit = 0, metered
-rent without = 1, each job execution = 1, and release/SSH = 0.
+Wallet popups, end to end: top up = 1, rent = 1, each job execution = 1, release/SSH = 0.
 
 Full request/response reference, every status code and error string: **[docs/x402-api.md](docs/x402-api.md)**.
 
@@ -121,8 +124,10 @@ CORS only ever constrained browsers; a headless agent was never subject to it.
 - An **SSH client** to connect to a rented box (built into macOS/Linux/Windows). Public exposure uses
   an in-container **bore** tunnel — nothing to install on the contributor; or `TUNNEL_MODE=local`
   when consumer + agent share a machine
-- **Algorand testnet** accounts funded with **ALGO** ([ALGO faucet](https://bank.testnet.algorand.network/)) —
-  no USDC, no ASA opt-in
+- **Algorand testnet** accounts holding **USDC** (ASA `10458941`). Opt in, then use the
+  [asset dispenser](https://asset-dispenser.testnet.algorand.network/). A little
+  [ALGO](https://bank.testnet.algorand.network/) is needed *only* to opt in — the facilitator pays
+  transaction fees after that. `PLATFORM_PAYTO` must be opted in too, or payments to it fail.
 
 > **Full setup, account prep, and production deployment (registry / web / agent) live in
 > [DEPLOY.md](./DEPLOY.md).** The quick start below is for local dev.
@@ -208,43 +213,122 @@ inline `FOO=bar npm run …` overrides both. The web app reads `web/.env` (`VITE
 in at build time). See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
 and the env tables in [DEPLOY.md](./DEPLOY.md) for every variable.
 
+### Testnet / mainnet
+
+One switch picks the chain:
+
+```bash
+ALGORAND_NETWORK=testnet        # backend, contributor, buyer
+VITE_ALGORAND_NETWORK=testnet   # web — Vite inlines it, so set it at BUILD time
+```
+
+Everything chain-specific derives from it — the CAIP-2 id every payment must be on, the algod
+endpoint, the USDC asset id (`10458941` testnet / `31566704` mainnet) and the block explorer — so
+the pieces can't be left half-migrated. Each still has its own override (`ALGOD_URL`,
+`X402_ASSET_ID`, `VITE_EXPLORER_URL`) for a private node or a non-USDC ASA. An unrecognised value
+throws at boot rather than defaulting: silently running testnet while you believe you configured
+mainnet is worse than not starting.
+
+**The two ledgers never mix.** One database, one Postgres schema per network — tables live in
+`testnet.*` or `mainnet.*`, and the connection's `search_path` points at the right one, so every
+query in the process resolves to that network's tables and testnet play money can never be read as
+a mainnet balance. Both schemas are created at boot; switching networks starts from an empty ledger
+rather than inheriting the other's rows.
+
+> Because of this, `public` holds **no** tables. A SQL console (Neon's included) defaults to
+> `public`, so `SELECT * FROM credits` will say the relation does not exist — qualify it as
+> `SELECT * FROM testnet.credits`, or switch the console's schema.
+
+Before switching to mainnet, check that `PLATFORM_PAYTO` has opted into **mainnet** USDC and holds
+a little ALGO for payout fees, that your facilitator's `/supported` advertises the mainnet CAIP-2
+id (if it doesn't, every payment fails to verify), and that node prices are what you want to charge
+in real dollars.
+
+### Being findable (Bazaar discovery)
+
+Settling payments and being *discoverable* are separate systems — an endpoint can settle perfectly
+and still never appear in the [GoPlausible](https://facilitator.goplausible.xyz) Bazaar or on the
+leaderboard. A settlement is only proof that an address paid an amount; it carries no method, no
+input shape, no example output, so there is nothing in it to build a catalog entry from.
+
+Tendril declares that metadata in every 402, and any v2 client copies it onto the payment payload
+automatically. Set these so the listing is right:
+
+```bash
+PUBLIC_BASE_URL=https://api.your-domain.com   # REQUIRED behind a proxy — see below
+X402_TAG=x402-global-challenge                # how the facilitator attributes activity
+X402_SERVICE_NAME=TENDRIL
+X402_ICON_URL=https://your-domain.com/logo.png
+```
+
+`PUBLIC_BASE_URL` is the one that bites: discovery canonicalises the catalog entry on that origin,
+so leaving it unset behind a proxy catalogs you as `http://localhost:4000` — listed, but
+unreachable.
+
+Every payable route is declared in one place,
+[`backend/src/x402/discovery.ts`](backend/src/x402/discovery.ts). **Adding an endpoint means adding
+an entry there and passing it to `requirePayment` — that's the whole job.** An endpoint that skips
+it still takes payments; it just stays invisible.
+
+Discovery is triggered by a **settled payment**, so an endpoint nobody has paid yet is never
+cataloged. That includes a rent covered entirely by existing credit, which settles nothing on
+chain — pass `?credit=none` (the web UI exposes this as a checkbox) to pay on chain instead. To
+check your listing, after at least one payment:
+
+```bash
+curl -s "https://facilitator.goplausible.xyz/discovery/resources?includeTestnets=true&limit=1000" \
+  | jq '.items[] | select(.resourceUrl | contains("your-domain"))'
+```
+
 ## Demo script (the money shot)
 
 1. Start the **registry** and one **contributor** (a real machine sharing CPU/RAM).
 2. Show the node appear in **Explore** at `http://localhost:5173`.
-3. **Human path:** connect Pera (testnet) → **Sign in** → **Top up** (approve one ALGO deposit) →
-   watch the balance appear → click **Rent** (no popup) → a copyable **`ssh root@… -p …`** command
-   appears (password = your wallet address) with a balance-driven countdown. `ssh` in. **Release**
-   (or letting the balance hit zero) bills the exact time used and destroys the sandbox.
-4. **Autonomous path:** run `npm run client` and narrate the logs — the agent signs in, tops up if
-   low, rents the cheapest node, runs a tiny training loop *on someone else's machine*, prints the
-   falling loss, then releases and reports how much balance it drew down. No human clicked anything.
+3. **Human path:** connect Pera (testnet) → **Top up** (one wallet approval, any amount) → watch
+   the credit appear → click **Rent**. With enough credit that's **zero popups**; without, one 402
+   and one approval. A copyable **`ssh root@… -p …`** command appears (password = your wallet
+   address) with a countdown to `paidUntil`. `ssh` in. **Release** refunds the unused time as credit
+   and destroys the sandbox.
+4. **Autonomous path:** run `npm run client` and narrate the logs — **no sign-in anywhere**. The
+   agent tops up over x402, rents the cheapest node, runs a tiny training loop *on someone else's
+   machine*, prints the falling loss, then releases and shows the refund landing back as credit.
 5. Show `docker ps` during the lease (a hardened, mount-less container) and that it's **gone** after
    release. On a testnet explorer, confirm the top-up *and* the **payout to the contributor**; in
-   Neon, the single `charges` row (with the billed seconds) and the `payouts` row.
+   Neon, the single `testnet.charges` row (with the billed seconds) and the `testnet.payouts` row.
 
 ## What's verified vs. what needs your machine
 
 Compiles + builds clean (full `npm run typecheck`, web production build). Requires your environment
 to run end-to-end: a **Neon** database (`DATABASE_URL`), a **platform account** (`PLATFORM_PAYTO` +
 `PLATFORM_PRIVATE_KEY`), the Docker sandbox lifecycle (a running Docker daemon), outbound network for
-the bore tunnel, an SSH client, and Algod reachable to confirm top-ups + send payouts (funded testnet
-accounts).
+the bore tunnel, an SSH client, a reachable **x402 facilitator** (`X402_FACILITATOR_URL`) to verify
+and settle payments, and Algod for asset opt-in checks + contributor payouts (funded testnet
+accounts holding USDC).
 
 ## Notes & limitations
 
-- **Custodial model:** top-ups pool at one platform address and balances are an off-chain ledger in
-  Neon. Top-ups are confirmed on-chain and recorded by `txid` (idempotent — a deposit can't credit
-  twice). Contributor earnings **are** settled on-chain on lease end (needs `PLATFORM_PRIVATE_KEY`);
-  if it's unset, payouts are recorded as unpaid (`txid` null) instead.
-- **Billing:** usage is **calculated continuously but charged once**, at lease end, prorated at the
-  hourly rate (`elapsed/3600 × rate`) — no per-tick debits. A watchdog only checks every
-  `METER_INTERVAL_MS` whether the balance is exhausted, so worst-case over-use is one tick.
+- **Custodial model:** payments pool at one platform address and credit is an off-chain ledger in
+  Neon, in a schema per network (`testnet.*` / `mainnet.*`). Every payment is recorded by `txid`
+  (idempotent — replaying one can't credit twice).
+  Contributor earnings **are** settled on-chain in USDC on lease end (needs `PLATFORM_PRIVATE_KEY`);
+  if it's unset — or the payout address never opted into the asset — payouts are recorded as unpaid
+  (`txid` null) instead, and the node is flagged `payoutBlocked`.
+- **Billing:** nothing is charged for compute up front. A session is billed **once**, when it
+  closes, for the seconds it actually ran (`elapsed/3600 × rate`), and the debit is clamped to the
+  balance. A watchdog checks every `METER_INTERVAL_MS` whether credit has run out, so worst-case
+  overrun is one tick — absorbed by the platform, never billed past what the renter holds.
+- **Settlement ordering:** verify → do the work → settle. A sandbox that fails to start returns
+  `503` with **nothing settled**, so a failed rent costs the caller nothing.
 - **Nodes + leases are in-memory:** a registry restart drops live sessions (the sockets die anyway).
   This is what keeps the DB quiet — heartbeats and the watchdog never write to Postgres.
-- **SSH auth is a per-lease password (your wallet address)** over a throwaway root container; fine for
-  ephemeral compute, but it's a password, not a key — use a real key flow for anything sensitive.
-- **Auth:** spending the balance (rent, top-up, wallet read) requires a wallet **session token**,
-  minted only after the user signs a login nonce — so nobody can spend someone else's balance.
+- **SSH auth** is a throwaway root container either way. Send `sshPubKey` in the rent body and it
+  becomes the container's `authorized_keys` (`authMethod: "publickey"`) — the only option that works
+  without a session, since there is no wallet address to use as a password. Otherwise it falls back
+  to a per-lease password (your wallet address), which is fine for ephemeral compute but is a
+  password, not a key.
+- **Auth:** paying needs no account at all — the settled transaction's sender *is* the identity.
+  A **session token** (minted after signing a login nonce) is only needed to *spend existing credit*.
+  Unauthenticated callers can still hint `?payer=`, but the discount is floored at
+  `MIN_PAYABLE_ATOMIC` so nobody can drain a stranger's balance.
 - `web/` uses Vite (not Next.js) deliberately: the wallet stack is client-only, so an SPA
   avoids SSR/hydration friction.

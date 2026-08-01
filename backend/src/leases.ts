@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
 import type { Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
-import { proratedCost } from "@tendril/shared";
+import { fundedSeconds, proratedCost } from "@tendril/shared";
 import { recordPayout } from "./db.js";
-import { refundUnused } from "./x402/credit.js";
+import { chargeUsage } from "./x402/credit.js";
 import { payContributor, payoutsEnabled } from "./payout.js";
 import { getNode } from "./registry.js";
 import { destroyContainer } from "./ws.js";
@@ -13,8 +13,9 @@ import { config } from "./config.js";
  * don't survive a restart (the sockets they depend on don't either), so they
  * stay in memory and never touch the DB on the hot path.
  *
- * A lease is a *prepaid block*: the renter buys `paidSeconds` up front, and the
- * time they don't use comes back as credit when the lease closes.
+ * A lease is an open-ended metered session. Nothing is bought up front — the
+ * renter pays a small on-chain gate fee, the clock starts, and the time actually
+ * used is billed once when the session ends.
  */
 const leases = new Map<string, Lease>();
 
@@ -24,9 +25,9 @@ export interface NewLease {
   payerAddr: string;
   payToAddr: string;
   rateAtomicPerHour: number;
-  paidSeconds: number;
-  quoteAtomic: number;
-  creditAppliedAtomic: number;
+  gateFeeAtomic: number;
+  /** The payer's credit at lease start — what the funding window is computed from. */
+  fundingAtomic: number;
   paymentTxid: string | null;
 }
 
@@ -37,13 +38,23 @@ export function createLease(args: NewLease): Lease {
     access: null,
     status: "starting",
     startedAt: 0,
-    // Real window opens at activation; until then it is the worst case.
-    expiresAt: now + args.paidSeconds * 1000,
+    expiresAt: fundedUntil(now, args.fundingAtomic, args.rateAtomicPerHour),
     createdAt: now,
     ...args,
   };
   leases.set(lease.id, lease);
   return lease;
+}
+
+/**
+ * When credit runs dry at this rate. A free node (`rate <= 0`) has nothing to
+ * run down, so it gets `Infinity` — the watchdog then never stops it and the
+ * renter closes when they are done, which is the honest answer for a lease that
+ * costs nothing.
+ */
+function fundedUntil(from: number, creditAtomic: number, rateAtomicPerHour: number): number {
+  const seconds = fundedSeconds(creditAtomic, rateAtomicPerHour);
+  return seconds === null ? Number.POSITIVE_INFINITY : from + seconds * 1000;
 }
 
 export function getLease(id: string): Lease | undefined {
@@ -78,8 +89,10 @@ export function activateLease(id: string, access: SandboxAccess): void {
   if (!lease) return;
   lease.access = access;
   lease.status = "active";
+  // The meter starts when the sandbox is actually reachable, so a slow container
+  // start is never billed and never eats the renter's funded window.
   lease.startedAt = Date.now();
-  lease.expiresAt = lease.startedAt + lease.paidSeconds * 1000;
+  lease.expiresAt = fundedUntil(lease.startedAt, lease.fundingAtomic, lease.rateAtomicPerHour);
 }
 
 export function leasesForNode(nodeId: string): Lease[] {
@@ -97,25 +110,28 @@ export function nodeBusy(nodeId: string): boolean {
   return leasesForNode(nodeId).some((l) => l.status === "starting" || l.status === "active");
 }
 
-/** What a closed lease actually consumed, and what came back to the payer. */
+/** What a closed lease actually used, and what it cost. */
 export interface LeaseSettlement {
   usedSeconds: number;
+  /** Cost of those seconds at the lease's rate. */
   usedAtomic: number;
-  refundAtomic: number;
+  /** What was actually taken from credit — clamped to the balance. */
+  chargedAtomic: number;
   balance: number;
 }
 
 /**
- * Close a lease exactly once and settle the prepaid block. Idempotent: flips
- * status synchronously before the async work so a concurrent release and
- * watchdog tick can't settle twice.
+ * Close a lease exactly once and bill the time it ran. Idempotent: flips status
+ * synchronously before the async work so a concurrent release and watchdog tick
+ * can't bill twice.
  *
- *   usedSeconds  = min(elapsed, paidSeconds)      -- never bill past the block
- *   usedAtomic   = prorated cost of usedSeconds
- *   refund       = quote - usedAtomic             -> back to the payer's credit
- *   payout       = usedAtomic minus the platform fee -> contributor, on-chain
+ *   usedSeconds = wall-clock seconds the sandbox was up
+ *   usedAtomic  = prorated cost of those seconds
+ *   charged     = min(usedAtomic, balance)   -> taken from the payer's credit
+ *   payout      = charged minus the platform fee -> contributor, on-chain USDC
  *
- * The sandbox is always torn down, even if the money side throws.
+ * There is no refund step, because nothing was taken up front. The sandbox is
+ * always torn down, even if the money side throws.
  */
 export async function closeLease(
   leaseId: string,
@@ -130,35 +146,37 @@ export async function closeLease(
 
   destroyContainer(lease.nodeId, lease.id); // best-effort teardown
 
-  const elapsed = wasActive ? Math.max(0, Math.round((Date.now() - lease.startedAt) / 1000)) : 0;
-  const usedSeconds = Math.min(elapsed, lease.paidSeconds);
-  const usedAtomic = Math.min(lease.quoteAtomic, proratedCost(lease.rateAtomicPerHour, usedSeconds));
-  const refundAtomic = lease.quoteAtomic - usedAtomic;
+  const usedSeconds = wasActive
+    ? Math.max(0, Math.round((Date.now() - lease.startedAt) / 1000))
+    : 0;
+  const usedAtomic = proratedCost(lease.rateAtomicPerHour, usedSeconds);
 
   try {
-    const balance = await refundUnused({
+    const { charged, balance } = await chargeUsage({
       address: lease.payerAddr,
       leaseId: lease.id,
+      payToAddr: lease.payToAddr,
       usedAtomic,
       usedSeconds,
-      refundAtomic,
     });
     console.log(
-      `[bill] lease ${lease.id} (${reason}): used ${usedSeconds}/${lease.paidSeconds}s ` +
-        `= ${usedAtomic}, refunded ${refundAtomic} to ${lease.payerAddr}`,
+      `[bill] lease ${lease.id} (${reason}): ran ${usedSeconds}s = ${usedAtomic}, ` +
+        `charged ${charged} to ${lease.payerAddr} (balance ${balance})`,
     );
-    if (usedAtomic > 0) await payoutContributor(lease, usedAtomic);
-    return { usedSeconds, usedAtomic, refundAtomic, balance };
+    // Pay the contributor out of what was actually collected, never out of what
+    // was merely owed — otherwise an overrun would be funded by the platform.
+    if (charged > 0) await payoutContributor(lease, charged);
+    return { usedSeconds, usedAtomic, chargedAtomic: charged, balance };
   } catch (err) {
-    console.error(`[bill] failed to settle lease ${lease.id}:`, (err as Error).message);
+    console.error(`[bill] failed to bill lease ${lease.id}:`, (err as Error).message);
     return null;
   }
 }
 
-/** Pay the contributor their share of the used time on-chain; record it either way. */
-async function payoutContributor(lease: Lease, usedAtomic: number): Promise<void> {
-  const fee = Math.floor((usedAtomic * config.platformFeePct) / 100);
-  const contributorCut = usedAtomic - fee;
+/** Pay the contributor their share of what was collected; record it either way. */
+async function payoutContributor(lease: Lease, chargedAtomic: number): Promise<void> {
+  const fee = Math.floor((chargedAtomic * config.platformFeePct) / 100);
+  const contributorCut = chargedAtomic - fee;
   if (contributorCut <= 0) return;
 
   // Two ways a payout can't go out: we hold no signing key, or the contributor
@@ -184,8 +202,9 @@ async function payoutContributor(lease: Lease, usedAtomic: number): Promise<void
 }
 
 /**
- * The watchdog — enforcement half of prepaid billing. It does not bill per tick;
- * it ends leases whose paid block has run out. No DB writes per tick.
+ * The watchdog — the only thing that ends a lease the renter didn't. It does not
+ * bill per tick; it stops a session once the renter's credit can no longer pay
+ * for it. No DB writes per tick.
  */
 export function startWatchdog(intervalMs = config.meterIntervalMs): NodeJS.Timeout {
   return setInterval(() => void watchdogTick(), intervalMs);
@@ -196,8 +215,8 @@ async function watchdogTick(): Promise<void> {
   for (const lease of leases.values()) {
     if (lease.status !== "active") continue;
     if (now >= lease.expiresAt) {
-      console.log(`[watchdog] paid time used up — ending lease ${lease.id}`);
-      await closeLease(lease.id, "expired");
+      console.log(`[watchdog] credit exhausted — ending lease ${lease.id}`);
+      await closeLease(lease.id, "credit-exhausted");
     }
   }
 }

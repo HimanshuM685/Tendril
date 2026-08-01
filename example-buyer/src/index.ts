@@ -5,11 +5,11 @@
  *   1. tops up its credit over x402 (POST /x402/topup) — the payment itself is
  *      the identity, so a brand-new address works on its first request,
  *   2. discovers live compute via the free GET /explorer endpoint,
- *   3. picks the cheapest node meeting its RAM requirement and rents a prepaid
- *      block over x402 (POST /x402/rent/:nodeId), spending the credit it just
- *      bought and paying on-chain only for the remainder,
+ *   3. picks the cheapest node meeting its RAM requirement and opens a metered
+ *      session over x402 (POST /rent/:nodeId) — a small gate fee on-chain, then
+ *      billed by the second from the credit it just bought,
  *   4. streams a training script into the sandbox via /run,
- *   5. closes the lease early, and the unused time comes back as credit.
+ *   5. releases, and only the seconds it actually used are billed.
  *
  * This is the same code path the browser runs (see web/src/lib/x402Client.ts) —
  * only the signer differs: a private key here, a wallet extension there.
@@ -39,7 +39,6 @@ import {
 
 const REGISTRY = process.env.REGISTRY_URL ?? "http://localhost:4000";
 const MIN_RAM_MB = Number(process.env.AGENT_MIN_RAM_MB ?? 1024);
-const LEASE_SECONDS = Number(process.env.AGENT_LEASE_SECONDS ?? 300);
 const TOPUP_ATOMIC = Number(process.env.AGENT_TOPUP_ATOMIC ?? 500_000); // 0.50 USDC
 const PRIVATE_KEY = process.env.AVM_PRIVATE_KEY ?? "";
 
@@ -110,21 +109,15 @@ async function main() {
     .filter((n) => n.ramMb >= MIN_RAM_MB)
     .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
   if (!node) throw new Error(`no online node with >= ${MIN_RAM_MB}MB RAM`);
-  console.log(
-    `[agent] picked ${node.label} (${node.id}) @ $${node.pricePerHourUsd}/hr — renting ${LEASE_SECONDS}s ...`,
-  );
+  console.log(`[agent] picked ${node.label} (${node.id}) @ $${node.pricePerHourUsd}/hr — renting ...`);
 
-  // `payer` is only a hint, letting the server discount the quote by the credit
-  // this address already holds. The payment still has to come from it.
-  const lease = (await postJson(
-    pay,
-    `${REGISTRY}/x402/rent/${node.id}?seconds=${LEASE_SECONDS}&payer=${address}`,
-  )) as X402RentResponse;
+  // No duration to choose: the gate fee opens a metered session that runs for as
+  // long as this address's credit can pay for it.
+  const lease = (await postJson(pay, `${REGISTRY}/rent/${node.id}`)) as X402RentResponse;
   console.log(
-    `[agent] lease ${lease.leaseId} until ${lease.paidUntil} — ` +
-      `quote ${formatUsdcExact(Number(lease.billing.quoteAtomic))}, ` +
-      `credit ${formatUsdcExact(Number(lease.billing.creditApplied))}, ` +
-      `paid ${formatUsdcExact(Number(lease.billing.paidAtomic))}`,
+    `[agent] lease ${lease.leaseId} — ${formatUsdcExact(Number(lease.billing.rateAtomicPerHour))}/hr, ` +
+      `gate fee ${formatUsdcExact(Number(lease.billing.gateFeeAtomic))}, ` +
+      `credit funds ${lease.billing.fundedSeconds ?? "unlimited"}s (until ${lease.fundedUntil})`,
   );
   console.log(`[agent] ssh: ${lease.ssh.command}`);
 
@@ -139,15 +132,14 @@ async function main() {
   console.log(run.result);
   console.log("───────────────────────────────────");
 
-  // 5. Close early — the time bought but not used comes straight back as
-  //    credit, which is what makes the next rent cheaper.
+  // 5. Stop the meter. Only the seconds actually used are billed.
   const closed = (await request(fetch, `${REGISTRY}/x402/leases/${lease.leaseId}`, {
     method: "DELETE",
     headers: { authorization: `Bearer ${lease.leaseToken}` },
   })) as LeaseCloseResponse;
   console.log(
     `[agent] released after ${closed.usedSeconds}s: used ${formatUsdcExact(Number(closed.usedAtomic))}, ` +
-      `refunded ${formatUsdcExact(Number(closed.refundedAtomic))}, ` +
+      `charged ${formatUsdcExact(Number(closed.chargedAtomic))}, ` +
       `balance ${formatUsdcExact(Number(closed.balance))}`,
   );
 }

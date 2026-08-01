@@ -4,10 +4,11 @@
  * Every balance in Tendril lives in `credits.amount_atomic`, in atomic units of
  * the configured asset. It moves in exactly three ways:
  *
- *   1. `creditTopUp`  — a settled POST /x402/topup payment.
- *   2. `debitForLease` — renting spends the portion of a quote that credit covered.
- *   3. `refundUnused` — closing a lease returns the time that was paid for but
- *      not used, which is what makes the *next* 402 for that address smaller.
+ *   1. `creditTopUp` — a settled POST /topup payment.
+ *   2. `chargeUsage` — a closed lease, billed for the seconds it actually ran.
+ *
+ * Renting takes nothing up front (the gate fee is on-chain and never touches
+ * this ledger), so a session's whole cost lands in exactly one place.
  *
  * Both endpoints and the sign-in balance reader go through here so there is a
  * single definition of "what does this address have".
@@ -52,69 +53,48 @@ export async function creditTopUp(
 }
 
 /**
- * Charge a lease. Writes ONE `charges` row for the FULL quote (that is what the
- * usage cost, regardless of how it was funded) and takes `creditAppliedAtomic`
- * out of the balance — the rest arrived on-chain and never touched the ledger.
+ * Bill a closed lease for the time it actually ran, once, in one `charges` row.
  *
- * Fails loudly rather than clamping: the caller has already checked the balance
- * and settled a payment sized against it, so a shortfall here is a bug, not a
- * user error to paper over.
+ * Nothing is taken when the lease opens — a rent pays only the on-chain gate
+ * fee — so this is the single moment compute is charged for.
+ *
+ * The debit is **clamped to the balance** rather than throwing. The watchdog
+ * stops a lease when its funding runs out, but it only ticks every
+ * `METER_INTERVAL_MS`, so a lease can legitimately overrun by up to one tick.
+ * That is a rounding error the platform absorbs, not a reason to fail a close
+ * and leave the sandbox billed-but-not-torn-down.
+ *
+ * Idempotent per lease: `charges.lease_id` is unique, so a concurrent release
+ * and watchdog tick cannot bill the same session twice.
  */
-export async function debitForLease(args: {
+export async function chargeUsage(args: {
   address: string;
   leaseId: string;
   payToAddr: string;
-  quoteAtomic: number;
-  creditAppliedAtomic: number;
-  seconds: number;
-}): Promise<number> {
-  const { address, leaseId, payToAddr, quoteAtomic, creditAppliedAtomic, seconds } = args;
+  usedAtomic: number;
+  usedSeconds: number;
+}): Promise<{ charged: number; balance: number }> {
+  const { address, leaseId, payToAddr, usedAtomic, usedSeconds } = args;
   return inTransaction(async (client) => {
-    await client.query(
-      `INSERT INTO charges (address, lease_id, pay_to, amount_micro, asset_id, seconds, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [address, leaseId, payToAddr, quoteAtomic, Number(config.assetId), seconds, Date.now()],
-    );
-    if (creditAppliedAtomic <= 0) return currentBalance(client, address);
-
     const cur = await client.query(
       "SELECT amount_atomic FROM credits WHERE address = $1 FOR UPDATE",
       [address],
     );
     const balance = Number(cur.rows[0]?.amount_atomic ?? 0);
-    if (balance < creditAppliedAtomic) {
-      throw new Error(
-        `credit underflow for ${address}: have ${balance}, need ${creditAppliedAtomic}`,
-      );
-    }
-    return addCredit(client, address, -creditAppliedAtomic);
-  });
-}
+    const charged = Math.max(0, Math.min(usedAtomic, balance));
 
-/**
- * Return the unused part of a prepaid lease to the payer, and correct the
- * lease's charge row down to what was actually consumed.
- *
- * This is the hinge between the two endpoints: the refund lands in `credits`,
- * and the next 402 for that address is smaller by exactly this amount.
- */
-export async function refundUnused(args: {
-  address: string;
-  leaseId: string;
-  usedAtomic: number;
-  usedSeconds: number;
-  refundAtomic: number;
-}): Promise<number> {
-  const { address, leaseId, usedAtomic, usedSeconds, refundAtomic } = args;
-  return inTransaction(async (client) => {
-    // The charge was written for the whole prepaid block at rent time; bring it
-    // back down so spend totals reflect usage rather than what was fronted.
-    await client.query(
-      "UPDATE charges SET amount_micro = $2, seconds = $3 WHERE lease_id = $1",
-      [leaseId, usedAtomic, usedSeconds],
+    const ins = await client.query(
+      `INSERT INTO charges (address, lease_id, pay_to, amount_micro, asset_id, seconds, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (lease_id) DO NOTHING
+       RETURNING id`,
+      [address, leaseId, payToAddr, charged, Number(config.assetId), usedSeconds, Date.now()],
     );
-    if (refundAtomic <= 0) return currentBalance(client, address);
-    return addCredit(client, address, refundAtomic);
+    // Already billed by a concurrent close — leave the balance alone.
+    if (ins.rowCount === 0) return { charged: 0, balance };
+
+    if (charged <= 0) return { charged: 0, balance };
+    return { charged, balance: await addCredit(client, address, -charged) };
   });
 }
 
@@ -132,10 +112,6 @@ async function addCredit(client: PoolClient, address: string, deltaAtomic: numbe
   return Number(res.rows[0].amount_atomic);
 }
 
-async function currentBalance(client: PoolClient, address: string): Promise<number> {
-  const cur = await client.query("SELECT amount_atomic FROM credits WHERE address = $1", [address]);
-  return Number(cur.rows[0]?.amount_atomic ?? 0);
-}
 
 async function inTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();

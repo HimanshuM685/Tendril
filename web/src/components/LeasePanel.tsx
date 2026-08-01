@@ -112,11 +112,8 @@ export function LeasePanel({ lease, onRelease }: Props) {
         <div>
           <strong>Active session</strong> on <code>{lease.label}</code>
           <div className="muted small">
-            lease {lease.leaseId} · {formatUsdc(lease.rateAtomicPerHour)}/hr ·{" "}
-            {formatUsdc(Number(lease.billing.quoteAtomic))} prepaid
-            {Number(lease.billing.creditApplied) > 0 && (
-              <> ({formatUsdc(Number(lease.billing.creditApplied))} from credit)</>
-            )}
+            lease {lease.leaseId} · {formatUsdc(lease.rateAtomicPerHour)}/hr · metering now ·{" "}
+            {formatUsdc(Number(lease.billing.gateFeeAtomic))} gate fee paid
           </div>
         </div>
         <div className="timer" data-expiring={remainingMs < 60_000} title="time left at current balance">
@@ -189,14 +186,15 @@ export function LeasePanel({ lease, onRelease }: Props) {
             </div>
           )}
           <p className="muted small">
-            {Math.round(lease.paidSeconds / 60)} minutes prepaid — release early and the unused
-            time is refunded to your credit balance.
+            Billed by the second from your credit when you release. The countdown is when your
+            credit runs out at this rate — top up and it moves out.
           </p>
         </div>
       ) : (
         <div className="ssh-access">
           <p className="muted">
-            Lease ended — your balance ran out or you released it, and the sandbox was destroyed.
+            Session ended — you released it or your credit ran out. The time used has been
+            billed and the sandbox destroyed.
           </p>
           <button className="btn ghost" onClick={onRelease}>
             Dismiss

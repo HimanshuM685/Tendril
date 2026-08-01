@@ -525,9 +525,9 @@
     "semantic_hash": "68f7d5024be3b753b3a1ddbf10828c5f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/README.md": {
-    "mtime": 1785584389.832743,
-    "ast_hash": "5d9fdcc1fc3d81bbdea8805e3118e3b1",
-    "semantic_hash": "5d9fdcc1fc3d81bbdea8805e3118e3b1"
+    "mtime": 1785604133.6219103,
+    "ast_hash": "538ac7c193e35099c2eb94530a3bc1f2",
+    "semantic_hash": "538ac7c193e35099c2eb94530a3bc1f2"
   },
   "/Users/fusion/Code/GitRepos/Tendril/docker-compose.yml": {
     "mtime": 1782671036.334765,
@@ -638,5 +638,30 @@
     "mtime": 1785584366.8021708,
     "ast_hash": "538e37a90ee563e5941896466a856153",
     "semantic_hash": "538e37a90ee563e5941896466a856153"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/.clinerules/caveman.md": {
+    "mtime": 1785602856.7119782,
+    "ast_hash": "b1cdbe1b6654ab792a3744966034dcf7",
+    "semantic_hash": "b1cdbe1b6654ab792a3744966034dcf7"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/.github/copilot-instructions.md": {
+    "mtime": 1785602856.712139,
+    "ast_hash": "b1cdbe1b6654ab792a3744966034dcf7",
+    "semantic_hash": "b1cdbe1b6654ab792a3744966034dcf7"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/.opencode/AGENTS.md": {
+    "mtime": 1785602856.7122936,
+    "ast_hash": "b1cdbe1b6654ab792a3744966034dcf7",
+    "semantic_hash": "b1cdbe1b6654ab792a3744966034dcf7"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/.windsurf/rules/caveman.md": {
+    "mtime": 1785602856.7117252,
+    "ast_hash": "b439cfa81819754ec6be648d7e2073ca",
+    "semantic_hash": "b439cfa81819754ec6be648d7e2073ca"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/AGENTS.md": {
+    "mtime": 1785602856.7123976,
+    "ast_hash": "b1cdbe1b6654ab792a3744966034dcf7",
+    "semantic_hash": "b1cdbe1b6654ab792a3744966034dcf7"
   }
 }

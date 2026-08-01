@@ -24,12 +24,13 @@ export type ActiveLease = {
   leaseId: string;
   leaseToken: string;
   access: SandboxAccess;
-  /** Unix ms the paid block runs out (`paidUntil`, parsed). */
+  /**
+   * Unix ms the renter's credit runs out at this rate (`fundedUntil`, parsed),
+   * or `Infinity` on a free node. Not a chosen duration — top up and it moves.
+   */
   expiresAt: number;
   rateAtomicPerHour: number;
-  /** Seconds of runtime bought up front. */
-  paidSeconds: number;
-  /** What the block cost and how much of it came out of credit. */
+  /** The rate, the gate fee paid, and how long the credit funds. */
   billing: LeaseBilling;
   nodeId: string;
   label: string;
@@ -102,11 +103,10 @@ export async function rentNode(
   address: string,
   sign: SignTransactions,
   nodeId: string,
-  seconds: number,
   onStage?: (stage: PayStage) => void,
 ): Promise<X402RentResponse> {
   const res = await payingFetch(address, sign, onStage)(
-    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}`,
+    `${REGISTRY_URL}/rent/${nodeId}`,
     {
       method: "POST",
       headers: {
@@ -126,9 +126,8 @@ export function toActiveLease(r: X402RentResponse, label: string): ActiveLease {
     leaseId: r.leaseId,
     leaseToken: r.leaseToken,
     access: r.ssh,
-    expiresAt: Date.parse(r.paidUntil),
-    rateAtomicPerHour: Math.round(r.node.pricePerHourUsd * 1e6),
-    paidSeconds: r.paidSeconds,
+    expiresAt: r.fundedUntil === "never" ? Infinity : Date.parse(r.fundedUntil),
+    rateAtomicPerHour: Number(r.billing.rateAtomicPerHour),
     billing: r.billing,
     nodeId: r.node.id,
     label,

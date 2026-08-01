@@ -70,8 +70,15 @@ export interface SandboxAccess {
 }
 
 /**
- * A prepaid block of time on a node. The renter buys `paidSeconds` up front;
- * at lease end the unused remainder comes back as credit (see `proratedCost`).
+ * An open-ended metered session on a node.
+ *
+ * Renting costs a small on-chain gate fee and nothing else up front. The clock
+ * then simply runs: usage accrues second by second and is charged **once**, at
+ * the end, from the renter's credit. Nobody picks a duration, so nobody gets
+ * disconnected at the end of a block they guessed wrong.
+ *
+ * `expiresAt` is the only limit, and it is not a policy — it is the moment the
+ * renter's credit can no longer pay for the next second.
  */
 export interface Lease {
   id: string;
@@ -79,8 +86,8 @@ export interface Lease {
   /** Algorand address of the renter (the sandbox user). */
   renterAddr: string;
   /**
-   * Address the block was paid from and any refund goes back to — the sender
-   * of the settled payment, or the session address when credit covered it all.
+   * Address billed for the time used — the sender of the settled gate-fee
+   * payment, which is the only identity we trust for this.
    */
   payerAddr: string;
   /** Algorand address the contributor is paid out to on lease end. */
@@ -90,25 +97,27 @@ export interface Lease {
   status: LeaseStatus;
   /** Billing rate snapshotted at lease start, in atomic units per hour. */
   rateAtomicPerHour: number;
-  /** Seconds of runtime bought up front. */
-  paidSeconds: number;
-  /** Full prepaid price of the block, in atomic units. */
-  quoteAtomic: number;
-  /** Portion of `quoteAtomic` taken from existing credit rather than paid on-chain. */
-  creditAppliedAtomic: number;
-  /** Settled payment txid, or null when credit covered the whole quote. */
+  /** The on-chain gate fee paid to open this lease. Not refundable, not usage. */
+  gateFeeAtomic: number;
+  /** Credit the payer held at lease start — what `expiresAt` was computed from. */
+  fundingAtomic: number;
+  /** Settled gate-fee txid. */
   paymentTxid: string | null;
   /** Unix ms the sandbox went active (start of the billable window). */
   startedAt: number;
-  /** Unix ms the paid block runs out; the watchdog kills the sandbox here. */
+  /**
+   * Unix ms the renter's credit runs dry at `rateAtomicPerHour`, projected at
+   * lease start. The watchdog stops the sandbox here so usage can never exceed
+   * what the credit can pay for.
+   */
   expiresAt: number;
   createdAt: number;
 }
 
 // ───────────────────────────── Credit ledger ─────────────────────────────
-// Credit enters only two ways: POST /x402/topup, and the refund of unused time
-// when a lease closes. It leaves only by paying for a lease. Top-ups and
-// charges are both recorded so an address has a full history.
+// Credit enters one way: POST /topup. It leaves one way: a closed lease is
+// billed for the seconds it actually ran. Both are recorded so an address has a
+// full history. The on-chain gate fee never touches this ledger.
 
 /** An address's credit balance. */
 export interface Wallet {
@@ -405,21 +414,23 @@ export interface X402TopUpResponse {
   payment: PaymentReceipt;
 }
 
-/** What a lease cost and how it was paid for. */
+/** What a running lease costs, and what is funding it. */
 export interface LeaseBilling {
-  /** Full prepaid price of the block. */
-  quoteAtomic: string;
-  /** Portion covered by existing credit. */
-  creditApplied: string;
-  /** Portion paid on-chain now (`quote - creditApplied`). */
-  paidAtomic: string;
+  /** What the meter charges per hour, in atomic units. */
+  rateAtomicPerHour: string;
+  /** The on-chain gate fee paid to open the lease. Not usage, not refundable. */
+  gateFeeAtomic: string;
+  /** Credit available at lease start — what `fundedUntil` was computed from. */
+  creditAtomic: string;
+  /** How long that credit funds at this rate. `null` when the node is free. */
+  fundedSeconds: number | null;
   asset: AssetInfo;
 }
 
-/** POST /x402/rent/:nodeId?seconds=<n> → a running, prepaid sandbox. */
+/** POST /rent/:nodeId → a running sandbox, metered by the second. */
 export interface X402RentResponse {
   leaseId: string;
-  /** Opaque bearer token required by /run, /release and /extend. */
+  /** Opaque bearer token required by /run and /release. */
   leaseToken: string;
   node: {
     id: string;
@@ -429,25 +440,28 @@ export interface X402RentResponse {
     pricePerHourUsd: number;
   };
   ssh: SandboxAccess;
-  paidSeconds: number;
-  /** ISO 8601. */
+  /** ISO 8601 — when the meter started. */
   startedAt: string;
-  /** ISO 8601 — when the watchdog kills the sandbox unless extended. */
-  paidUntil: string;
+  /**
+   * ISO 8601 — when the renter's credit runs out at this rate, and the watchdog
+   * stops the sandbox. Not a chosen duration: top up and it moves out.
+   */
+  fundedUntil: string;
   billing: LeaseBilling;
-  /** Absent when the whole quote was covered by credit (no on-chain payment). */
+  /** The settled gate-fee payment. */
   payment: PaymentReceipt | null;
 }
 
-/** DELETE /x402/leases/:leaseId → early close, unused time refunded as credit. */
+/** DELETE /x402/leases/:leaseId → stop the meter and bill what was used. */
 export interface LeaseCloseResponse {
   leaseId: string;
+  /** Seconds the sandbox was actually up. */
   usedSeconds: number;
-  /** Atomic units actually consumed. */
+  /** Cost of those seconds, in atomic units. */
   usedAtomic: string;
-  /** Atomic units returned to the payer's credit balance. */
-  refundedAtomic: string;
-  /** The payer's credit balance after the refund. */
+  /** What was actually taken from credit (clamped to the balance). */
+  chargedAtomic: string;
+  /** The payer's credit balance after the charge. */
   balance: string;
   asset: AssetInfo;
 }
@@ -481,23 +495,15 @@ export function proratedCost(rateAtomicPerHour: number, seconds: number): number
 }
 
 /**
- * How much of an address's credit may be applied to a quote.
+ * How many seconds `creditAtomic` funds at `rateAtomicPerHour`.
  *
- * With a session the answer is "all of it" — the token proves the address.
- * Without one, the payer is only a hint on the URL, so the discount is clamped
- * to leave at least `minPayableAtomic` to pay on-chain: settling that payment
- * from the hinted address is what proves control of it. Drop the floor and
- * `?payer=<victim>` becomes a way to spend a stranger's balance for free.
+ * `null` means "as long as you like" — a free node has no rate to run down, so
+ * there is nothing for credit to limit. Callers must handle that rather than
+ * dividing by zero and getting a lease that expires the instant it opens.
  */
-export function applicableCredit(
-  quoteAtomic: number,
-  creditAtomic: number,
-  opts: { authenticated: boolean; minPayableAtomic: number },
-): number {
-  const ceiling = opts.authenticated
-    ? quoteAtomic
-    : Math.max(0, quoteAtomic - opts.minPayableAtomic);
-  return Math.max(0, Math.min(creditAtomic, ceiling));
+export function fundedSeconds(creditAtomic: number, rateAtomicPerHour: number): number | null {
+  if (rateAtomicPerHour <= 0) return null;
+  return Math.max(0, Math.floor((creditAtomic / rateAtomicPerHour) * 3600));
 }
 
 /** Full USDC precision, e.g. 100000 -> "0.100000 USDC". Ledgers and tooltips. */

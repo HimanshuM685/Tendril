@@ -99,17 +99,16 @@ export const config = {
   // exactly this amount, and on payment do the ordinary thing. The metered
   // /x402/rent is unchanged and still there for callers who want prorating.
   flatRentAtomic: Number(process.env.FLAT_RENT_ATOMIC ?? 10_000), // 0.01 USDC
-  // What that flat fee buys. Unused time is still refunded at close.
-  flatRentSeconds: Number(process.env.FLAT_RENT_SECONDS ?? 900),
   flatRunAtomic: Number(process.env.FLAT_RUN_ATOMIC ?? 10_000), // 0.01 USDC per job
   // Top-up is NOT flat — the caller names any amount within the bounds below.
   // This is only the fallback for a request that omits `?amount=`.
   defaultTopUpAtomic: Number(process.env.DEFAULT_TOPUP_ATOMIC ?? 1_000_000), // 1.00 USDC
 
   // ─────────────────────────── Lease bounds ───────────────────────────
+  // Least credit a renter must hold to open a session, as seconds of runtime at
+  // the node's rate. Below this the gate fee would buy a session the watchdog
+  // kills almost immediately.
   minLeaseSeconds: Number(process.env.MIN_LEASE_SECONDS ?? 60),
-  maxLeaseSeconds: Number(process.env.MAX_LEASE_SECONDS ?? 14_400),
-  leaseSecondsGranularity: Number(process.env.LEASE_SECONDS_GRANULARITY ?? 60),
   // How long to wait for a contributor's sandbox to come up before giving up
   // and returning 503 — the payment is never settled if this elapses.
   sandboxReadyTimeoutMs: Number(process.env.SANDBOX_READY_TIMEOUT_MS ?? 45_000),

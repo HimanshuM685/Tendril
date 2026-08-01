@@ -120,6 +120,13 @@ export async function initDb(): Promise<void> {
       created_at   BIGINT NOT NULL
     );
 
+    -- One charge per lease: usage is billed once, when the lease closes, and a
+    -- concurrent release + watchdog tick must not bill the same session twice.
+    -- Dedupe legacy rows first so an existing database adopts this without a
+    -- manual migration.
+    DELETE FROM charges a USING charges b WHERE a.lease_id = b.lease_id AND a.id > b.id;
+    CREATE UNIQUE INDEX IF NOT EXISTS charges_lease_uniq ON charges (lease_id);
+
     CREATE INDEX IF NOT EXISTS topups_address_idx ON topups (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS charges_address_idx ON charges (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS payouts_addr_idx ON payouts (to_addr, created_at DESC);

@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import {
   atomicPerHour,
   formatUsdc,
-  proratedCost,
+  fundedSeconds,
   type LeaseCloseResponse,
   type PlatformInfo,
   type RunRequest,
@@ -30,7 +30,7 @@ import {
 } from "./x402/server.js";
 import { requirePayment, type PaidRequest } from "./x402/paywall.js";
 import { ROUTES } from "./x402/discovery.js";
-import { creditBalance, creditTopUp, debitForLease } from "./x402/credit.js";
+import { creditBalance, creditTopUp } from "./x402/credit.js";
 import {
   addressFromSession,
   issueLeaseToken,
@@ -266,35 +266,26 @@ async function topUpBody(payer: string, credited: number, txid: string): Promise
   };
 }
 
-// ═══════════════════════ x402: POST /x402/rent/:nodeId ═══════════════════════
+// ═══════════════════════ POST /rent/:nodeId ═══════════════════════
 //
-// Buy a prepaid block of time on a node. Every rent pays a flat gate fee
-// (FLAT_RENT_ATOMIC, 0.01 USDC) on-chain — no exceptions, no "covered by
-// credit" path. After the gate payment settles and the sandbox comes up, the
-// actual compute cost is deducted from the renter's credit balance.
+// Rent a machine. Click, and the meter starts.
+//
+// There is no duration to choose and no block to buy. Renting pays one flat
+// on-chain gate fee (`FLAT_RENT_ATOMIC`) — that is the x402 payment, and it is
+// the only thing that goes on chain up front. From then on the clock simply
+// runs, and the seconds actually used are billed once, when the lease closes.
+//
+// The lease lives exactly as long as the renter's credit can pay for it: the
+// watchdog stops it at `expiresAt`, which is credit ÷ rate. Top up and that
+// moment moves out. Nobody is disconnected at the end of a block they guessed.
 //
 // Ordering is the whole design: verify, provision, *then* settle. If the sandbox
 // does not come up, the caller gets a 503 and has paid nothing.
-router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
+async function rent(req: Request, res: Response) {
   const node = getNode(req.params.nodeId);
   if (!node) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
     return res.status(409).json({ error: "node_unavailable" });
-  }
-
-  const seconds = Number(String(req.query.seconds ?? ""));
-  if (
-    !Number.isInteger(seconds) ||
-    seconds < config.minLeaseSeconds ||
-    seconds > config.maxLeaseSeconds ||
-    seconds % config.leaseSecondsGranularity !== 0
-  ) {
-    return res.status(400).json({
-      error: "invalid_duration",
-      detail:
-        `seconds must be a multiple of ${config.leaseSecondsGranularity}, ` +
-        `between ${config.minLeaseSeconds} and ${config.maxLeaseSeconds}`,
-    });
   }
 
   const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
@@ -303,98 +294,65 @@ router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
   }
 
   const rate = atomicPerHour(node.pricePerHourUsd);
-  const quote = proratedCost(rate, seconds);
-
-  // The gate fee is always charged on-chain. The compute cost comes from credit.
   const gateFee = config.flatRentAtomic;
 
-  // Always demand the flat gate fee on-chain via x402.
   const paid = await requirePayment(
     req,
     res,
     "rent",
     gateFee,
-    `Gate fee for ${seconds}s lease on ${node.id} (${node.cpuCores} vCPU, ` +
-      `${Math.round(node.ramMb / 1024)}GB). Compute cost (${formatUsdc(quote)}) ` +
-      `is deducted from your credit balance.`,
+    `Open a metered session on ${node.id} (${node.cpuCores} vCPU, ` +
+      `${Math.round(node.ramMb / 1024)}GB) for a ${formatUsdc(gateFee)} gate fee. ` +
+      `Time is then billed from credit at ${formatUsdc(rate)}/hr for as long as you keep it.`,
     ROUTES.rent,
   );
   if (!paid) return; // 402/400/409 already sent
 
   if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
 
-  // The payer is always read off the settled transaction — trustworthy identity.
+  // The payer is read off the settled transaction — the only trustworthy identity.
   const renter = paid.facts.payer;
+
+  // Checked here, after verify but BEFORE settle: an address with no credit
+  // cannot fund a single minute, and taking a gate fee for a session that would
+  // be killed on the next watchdog tick is just theft with extra steps.
+  const credit = await creditBalance(renter);
+  const funded = fundedSeconds(credit, rate);
+  if (funded !== null && funded < config.minLeaseSeconds) {
+    return res.status(402).json({
+      error: "insufficient_credit",
+      detail:
+        `${formatUsdc(credit)} funds ${funded}s at ${formatUsdc(rate)}/hr; ` +
+        `at least ${config.minLeaseSeconds}s of credit is required to open a session.`,
+      creditAtomic: String(credit),
+      rateAtomicPerHour: String(rate),
+    });
+  }
 
   return provision(res, {
     node,
-    seconds,
     rate,
-    quote,
-    creditApplied: quote, // full compute cost deducted from credit
+    gateFee,
+    fundingAtomic: credit,
     renterAddr: renter,
     payerAddr: renter,
     sshPubKey,
     paid,
   });
-}));
+}
 
-// ═══════════════════ flat price: POST /rent/:nodeId ═══════════════════
-//
-// The simple way to buy. One fixed price, whatever the node costs per hour and
-// however long the block is: pay `FLAT_RENT_ATOMIC`, get a sandbox. No quote
-// arithmetic, no credit, no session, no `?seconds=` — just a 402 and then the
-// ordinary rent flow. /x402/rent is still there for callers who want prorating.
-router.post("/rent/:nodeId", guard(async (req: Request, res: Response) => {
-  const node = getNode(req.params.nodeId);
-  if (!node) return res.status(404).json({ error: "node_not_found" });
-  if (node.status !== "online" || !isNodeConnected(node.id)) {
-    return res.status(409).json({ error: "node_unavailable" });
-  }
-
-  const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
-  if (sshPubKey !== null && (typeof sshPubKey !== "string" || !isOpenSshPubKey(sshPubKey))) {
-    return res.status(400).json({ error: "invalid_ssh_key" });
-  }
-
-  const seconds = config.flatRentSeconds;
-  const quote = config.flatRentAtomic;
-  const paid = await requirePayment(
-    req,
-    res,
-    "rent",
-    quote,
-    `${seconds}s sandbox on ${node.id} (${node.cpuCores} vCPU, ` +
-      `${Math.round(node.ramMb / 1024)}GB) for a flat ${formatUsdc(quote)}.`,
-    ROUTES.rentFlat,
-  );
-  if (!paid) return;
-
-  if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
-
-  // The lease still needs an hourly rate, for the refund on early close and for
-  // the contributor's cut. Derive it from what was actually paid rather than the
-  // node's list price, so the money in and the money out stay equal.
-  const rate = Math.ceil((quote * 3600) / seconds);
-  return provision(res, {
-    node,
-    seconds,
-    rate,
-    quote,
-    creditApplied: 0,
-    renterAddr: paid.facts.payer,
-    payerAddr: paid.facts.payer,
-    sshPubKey,
-    paid,
-  });
-}));
+router.post("/rent/:nodeId", guard(rent));
+// Kept so existing x402 clients and the Bazaar catalog entry keep resolving.
+router.post("/x402/rent/:nodeId", guard(rent));
 
 interface ProvisionArgs {
   node: NonNullable<ReturnType<typeof getNode>>;
-  seconds: number;
+  /** Metered rate, in atomic units per hour. */
   rate: number;
-  quote: number;
-  creditApplied: number;
+  /** The on-chain gate fee being settled. */
+  gateFee: number;
+  /** The payer's credit at open — what the funding window is computed from. */
+  fundingAtomic: number;
   renterAddr: string;
   payerAddr: string;
   sshPubKey: string | null;
@@ -409,8 +367,7 @@ interface ProvisionArgs {
  * container start — the cheaper of the two mistakes.
  */
 async function provision(res: Response, args: ProvisionArgs): Promise<void> {
-  const { node, seconds, rate, quote, creditApplied, renterAddr, payerAddr, sshPubKey, paid } =
-    args;
+  const { node, rate, gateFee, fundingAtomic, renterAddr, payerAddr, sshPubKey, paid } = args;
 
   const lease = createLease({
     nodeId: node.id,
@@ -418,9 +375,8 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
     payerAddr,
     payToAddr: node.payToAddr,
     rateAtomicPerHour: rate,
-    paidSeconds: seconds,
-    quoteAtomic: quote,
-    creditAppliedAtomic: creditApplied,
+    gateFeeAtomic: gateFee,
+    fundingAtomic,
     paymentTxid: paid?.facts.txid ?? null,
   });
 
@@ -457,16 +413,8 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
     return;
   }
 
-  // One charge row for the whole prepaid block; the credit portion comes out of
-  // the ledger, the rest already arrived on chain.
-  await debitForLease({
-    address: payerAddr,
-    leaseId: lease.id,
-    payToAddr: node.payToAddr,
-    quoteAtomic: quote,
-    creditAppliedAtomic: creditApplied,
-    seconds,
-  });
+  // Nothing is debited here. The session has only just started; what it costs
+  // is not known until it ends, and that is the one place it is billed.
 
   const body: X402RentResponse = {
     leaseId: lease.id,
@@ -479,13 +427,15 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
       pricePerHourUsd: node.pricePerHourUsd,
     },
     ssh: access,
-    paidSeconds: seconds,
     startedAt: new Date(lease.startedAt).toISOString(),
-    paidUntil: new Date(lease.expiresAt).toISOString(),
+    fundedUntil: Number.isFinite(lease.expiresAt)
+      ? new Date(lease.expiresAt).toISOString()
+      : "never",
     billing: {
-      quoteAtomic: String(quote),
-      creditApplied: String(creditApplied),
-      paidAtomic: String(quote - creditApplied),
+      rateAtomicPerHour: String(rate),
+      gateFeeAtomic: String(gateFee),
+      creditAtomic: String(fundingAtomic),
+      fundedSeconds: fundedSeconds(fundingAtomic, rate),
       asset,
     },
     payment: paid ? { txid: paid.facts.txid, network: config.x402Network } : null,
@@ -494,8 +444,8 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
 }
 
 /**
- * Close a lease early. The unused time goes back to the payer as credit, which
- * is exactly what makes their next 402 smaller.
+ * Stop the meter. Bills the seconds the sandbox was actually up, from credit,
+ * and tears it down. Nothing was taken up front, so there is nothing to refund.
  */
 async function releaseLease(req: Request, res: Response): Promise<void> {
   const lease = requireLease(req, res);
@@ -505,7 +455,7 @@ async function releaseLease(req: Request, res: Response): Promise<void> {
     leaseId: lease.id,
     usedSeconds: settled?.usedSeconds ?? 0,
     usedAtomic: String(settled?.usedAtomic ?? 0),
-    refundedAtomic: String(settled?.refundAtomic ?? 0),
+    chargedAtomic: String(settled?.chargedAtomic ?? 0),
     balance: String(settled?.balance ?? (await creditBalance(lease.payerAddr))),
     asset,
   };

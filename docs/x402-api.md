@@ -23,15 +23,15 @@ arithmetic on it.
 - [Common schemas](#common-schemas)
 - **Endpoints**
   - [`POST /topup`](#post-topup) — buy credit, any amount
-  - [`POST /rent/:nodeId`](#post-rentnodeid) — buy a sandbox, flat price
-  - [`POST /x402/rent/:nodeId`](#post-x402rentnodeid) — buy a sandbox, metered
+  - [`POST /rent/:nodeId`](#post-rentnodeid) — open a metered session
   - [`POST /lease/:id/run`](#post-leaseidrun) — execute one job, flat price
-  - [`DELETE /x402/leases/:id`](#delete-x402leasesid) — close early, refund unused time
+  - [`DELETE /x402/leases/:id`](#delete-x402leasesid) — stop the meter and bill
   - [`GET /lease/:id`](#get-leaseid) — lease status (free)
   - [`GET /platform`](#get-platform) — asset + network discovery (free)
   - [`GET /explorer`](#get-explorer) — available nodes (free)
 - [Error index](#error-index)
 - [Configuration](#configuration)
+- [Renting from the CLI](#renting-from-the-cli) — no browser, no sign-in
 - [Client recipes](#client-recipes)
 
 ---
@@ -76,8 +76,8 @@ whose fee covers both — and signs **only its own**. The facilitator signs the 
 A client therefore needs USDC and **zero ALGO**. The fee is never itemised and never charged on.
 
 **Payer identity comes off the settled transaction.** The server decodes the transaction at
-`paymentIndex` and takes its sender. Nothing a client says about who it is — including `?payer=` —
-is trusted for anything but a price quote.
+`paymentIndex` and takes its sender. That address is what gets credited, billed, and refunded —
+nothing a client says about who it is, is trusted.
 
 ---
 
@@ -247,12 +247,13 @@ Every non-402 failure, and the two 402s that are *not* challenges:
 
 ```jsonc
 { "error": "node_busy" }                      // machine-readable code
-{ "error": "invalid_duration", "detail": "…" } // some carry extra context
+{ "error": "insufficient_credit", "detail": "…" } // some carry extra context
 ```
 
 > **Two shapes of 402.** A 402 that means *"pay this"* has a [PaymentRequired](#paymentrequired)
-> body. A 402 that means *"your payment was rejected"* — `settlement_failed`, `payer_mismatch` — has
-> an error envelope. Branch on the presence of `accepts`, not on the status code alone.
+> body. A 402 that means *"your payment cannot proceed"* — `settlement_failed`,
+> `insufficient_credit` — has an error envelope. Branch on the presence of `accepts`, not on the
+> status code alone.
 
 ---
 
@@ -348,17 +349,21 @@ curl -X POST 'http://localhost:4000/topup?amount=5000000' \
 
 ## `POST /rent/:nodeId`
 
-Rent a sandbox at a **flat price**. One fixed amount buys `FLAT_RENT_SECONDS` of runtime, whatever
-the node charges per hour. No quote arithmetic, no credit, no session, no duration to choose.
+Open a metered session on a node. **Alias:** `POST /x402/rent/:nodeId`.
 
-The flat price is deliberately independent of the node's `pricePerHourUsd` — that is what makes it
-flat. The contributor is paid a cut of what was actually paid, not of the list price.
+There is no duration to choose and no block to buy. Renting pays one flat on-chain **gate fee** —
+that is the x402 payment, and the only thing that moves up front. From there the clock simply runs,
+and the seconds actually used are billed from credit **once**, when the session closes.
+
+The session lives exactly as long as the renter's credit can pay for it. The watchdog stops it at
+`fundedUntil`, which is `credit ÷ rate`. Top up and that moment moves out — nobody is disconnected
+at the end of a block they guessed wrong.
 
 | | |
 |---|---|
 | **Auth** | none |
 | **CORS** | open |
-| **Price** | `FLAT_RENT_ATOMIC` (default `10000` = 0.01 USDC) |
+| **Price** | `FLAT_RENT_ATOMIC` (0.01 USDC) on-chain, then `pricePerHourUsd` billed from credit |
 
 ### Path parameters
 
@@ -378,12 +383,12 @@ flat. The contributor is paid a cut of what was actually paid, not of the list p
 
 ### `200 OK`
 
-Sandbox is up and the payment has settled. Carries `PAYMENT-RESPONSE`.
+Sandbox is up, the gate fee has settled, and the meter is running. Carries `PAYMENT-RESPONSE`.
 
 ```jsonc
 {
   "leaseId": "lease_9k2m",
-  "leaseToken": "eyJhbGciOi…",          // required by /lease/:id/run, /release
+  "leaseToken": "eyJhbGciOi…",          // required by /lease/:id/run and /release
   "node": {
     "id": "node_7f2",
     "cpu": 8,
@@ -400,28 +405,30 @@ Sandbox is up and the payment has settled. Carries `PAYMENT-RESPONSE`.
     "password": null,
     "command": "ssh root@bore.pub -p 41823"
   },
-  "paidSeconds": 900,
   "startedAt": "2026-08-01T10:14:02.000Z",
-  "paidUntil": "2026-08-01T10:29:02.000Z",
+  "fundedUntil": "2026-08-01T11:14:02.000Z",   // or "never" on a free node
   "billing": {
-    "quoteAtomic": "10000",
-    "creditApplied": "0",
-    "paidAtomic": "10000",
+    "rateAtomicPerHour": "1000000",
+    "gateFeeAtomic": "10000",
+    "creditAtomic": "1000000",          // credit at open — what funded the window
+    "fundedSeconds": 3600,              // null on a free node
     "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" }
   },
   "payment": { "txid": "DEF456…", "network": "algorand:SGO1…cOUJOiI=" }
 }
 ```
 
-The watchdog kills the sandbox at `paidUntil`. Close earlier with
-[`DELETE /x402/leases/:id`](#delete-x402leasesid) and the unused time comes back as credit.
+`fundedUntil` is a projection, not a promise of disconnection at that instant: the watchdog checks
+every `METER_INTERVAL_MS`, so a session can overrun by up to one tick. That overrun is clamped to the
+balance at billing time and absorbed by the platform, never charged past what the renter holds.
 
 ### Responses
 
 | Status | `error` | Meaning |
 |---|---|---|
-| `402` | *(PaymentRequired body)* | Pay `FLAT_RENT_ATOMIC`, or your payment did not verify. Nothing submitted. |
-| `402` | `settlement_failed` | Sandbox came up but the payment would not settle. Sandbox torn down, node freed. Carries `detail`. |
+| `402` | *(PaymentRequired body)* | Pay the gate fee, or your payment did not verify. Nothing submitted. |
+| `402` | `insufficient_credit` | Verified, but the payer's credit funds less than `MIN_LEASE_SECONDS` at this node's rate. **Nothing settled** — top up first. Carries `detail`, `creditAtomic`, `rateAtomicPerHour`. |
+| `402` | `settlement_failed` | Sandbox came up but the gate fee would not settle. Sandbox torn down, node freed. Carries `detail`. |
 | `400` | `invalid_ssh_key` | `sshPubKey` is not a valid OpenSSH public key line. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
 | `404` | `node_not_found` | No such node. |
@@ -431,117 +438,10 @@ The watchdog kills the sandbox at `paidUntil`. Close earlier with
 | `503` | `provisioning_failed` | Sandbox did not come up within `SANDBOX_READY_TIMEOUT_MS`. **Nothing was settled** — retry on another node. Carries `detail`. |
 | `502` | `facilitator_unavailable` | Facilitator unreachable. Nothing submitted. |
 
----
+The credit check runs **after** `verify()` and **before** `settle()`. An address that cannot fund a
+minimum session is turned away without paying the gate fee, rather than being charged for a session
+the watchdog would kill on its next tick.
 
-## `POST /x402/rent/:nodeId`
-
-Rent a **metered** prepaid block: you choose the duration, the price is prorated from the node's
-hourly rate, and any credit you already hold is applied first.
-
-```
-rate  = round(node.pricePerHourUsd × 1_000_000)     // USDC is a dollar; no exchange rate
-quote = ceil(seconds / 3600 × rate)
-owed  = quote − creditApplied
-```
-
-Three ways this goes:
-
-| | Condition | Result |
-|---|---|---|
-| **A** | credit covers the whole quote, and you are signed in | no 402, no wallet popup — `200` straight away |
-| **B** | something is owed, no payment attached | `402` for the remainder |
-| **C** | something is owed, payment attached | verify → provision → settle → `200` |
-
-**No reservation is held during B.** If another caller takes the node while you are paying, your
-retry gets `409 node_busy` and nothing is settled. That is the intended trade: better a 409 than a
-settled payment for a node held open and never used.
-
-| | |
-|---|---|
-| **Auth** | optional session token; **required** when credit covers the whole quote |
-| **CORS** | open |
-| **Price** | `ceil(seconds/3600 × rate)` minus applicable credit |
-
-### Query parameters
-
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `seconds` | integer | yes | Length of the block. Must be a multiple of `LEASE_SECONDS_GRANULARITY` (default 60), between `MIN_LEASE_SECONDS` (60) and `MAX_LEASE_SECONDS` (14400). |
-| `payer` | Algorand address | no | Price this quote against that address's credit. **A hint only** — see below. |
-
-### The `payer` hint, and why it is floored
-
-`?payer=` lets an agent spend down its own balance without signing in. It is not proof of anything,
-so two rules constrain it:
-
-1. **Unauthenticated requests are floored.** Without a session token the discount is clamped so that
-   `owed >= MIN_PAYABLE_ATOMIC` (default `10000` = 0.01 USDC). Settling that payment *from the hinted
-   address* is what proves you control it.
-2. **The sender must match the hint.** After verification, the payment's sender must equal the hinted
-   address, or you get `402 payer_mismatch`.
-
-Without rule 1, anyone could pass `?payer=<victim>` and rent for nothing on a stranger's balance.
-
-Credit changing between the challenge and the retry is normal — the amounts stop matching, the
-payment fails to verify, and you get a fresh 402 with the new number. Re-quote and retry; that is
-correct behaviour, not an error to work around.
-
-### Request headers
-
-| Header | Required | Description |
-|---|---|---|
-| `Authorization: Bearer <session>` | no | Proves the payer address, lifting the discount floor. |
-
-### Request body
-
-Same as [`POST /rent/:nodeId`](#post-rentnodeid) — optional `sshPubKey`.
-
-### `200 OK`
-
-Identical shape to the flat route, with `billing` telling you how it was funded:
-
-```jsonc
-{
-  "leaseId": "lease_9k2m",
-  "leaseToken": "eyJhbGciOi…",
-  "node": { "id": "node_7f2", "cpu": 8, "memoryGb": 32, "gpu": null, "pricePerHourUsd": 1.0 },
-  "ssh": { "kind": "ssh", "host": "bore.pub", "port": 41823, "username": "root",
-           "authMethod": "password", "password": "AGENT7XYZ…",
-           "command": "ssh root@bore.pub -p 41823" },
-  "paidSeconds": 900,
-  "startedAt": "2026-08-01T10:14:02.000Z",
-  "paidUntil": "2026-08-01T10:29:02.000Z",
-  "billing": {
-    "quoteAtomic": "250000",
-    "creditApplied": "100000",
-    "paidAtomic": "150000",
-    "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" }
-  },
-  "payment": { "txid": "DEF456…", "network": "algorand:SGO1…cOUJOiI=" }
-}
-```
-
-`payment` is `null` on path A — credit covered it, nothing went on chain.
-
-### Responses
-
-| Status | `error` | Meaning |
-|---|---|---|
-| `402` | *(PaymentRequired body)* | Pay `owed`. The `description` names the duration, the node, the hourly rate and how much credit was applied. |
-| `402` | `payer_mismatch` | The payment's sender is not the address the discount was priced against. Carries `expected` and `got`. Nothing settled. |
-| `402` | `settlement_failed` | Sandbox came up, payment would not settle. Sandbox torn down. Carries `detail`. |
-| `400` | `invalid_duration` | `seconds` missing, out of range, or not a multiple of the granularity. Carries `detail`. |
-| `400` | `invalid_ssh_key` | Not a valid OpenSSH public key line. |
-| `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
-| `401` | `sign in to spend credit` | Credit covers the whole quote but there is no session token. |
-| `404` | `node_not_found` | No such node. |
-| `409` | `node_unavailable` | Node offline or missed heartbeats. |
-| `409` | `node_busy` | Node taken — possibly during your payment round trip. Nothing settled. |
-| `409` | `payment_already_used` | That payment already bought something. Carries `txid`. |
-| `503` | `provisioning_failed` | Sandbox did not come up. **Nothing settled.** Carries `detail`. |
-| `502` | `facilitator_unavailable` | Facilitator unreachable. |
-
----
 
 ## `POST /lease/:id/run`
 
@@ -605,17 +505,21 @@ and it is still charged — the compute was consumed.
 
 ## `DELETE /x402/leases/:id`
 
-Close a lease early. **Alias:** `POST /lease/:id/release`.
+Stop the meter. **Alias:** `POST /lease/:id/release`.
 
-Free — closing costs nothing. The time you paid for but did not use comes back as credit on the
-payer's address, and that refund is exactly what makes your next 402 smaller.
+Free — closing costs nothing. This is the moment compute is billed, and the only one: nothing was
+taken when the session opened, so there is nothing to refund.
 
 ```
-usedSeconds = min(elapsed, paidSeconds)
+usedSeconds = wall-clock seconds the sandbox was up
 usedAtomic  = ceil(usedSeconds / 3600 × rate)
-refund      = quoteAtomic − usedAtomic       -> credited to the payer
-payout      = usedAtomic × (1 − PLATFORM_FEE_PCT/100)  -> contributor, on-chain USDC
+charged     = min(usedAtomic, balance)   -> taken from the payer's credit
+payout      = charged × (1 − PLATFORM_FEE_PCT/100)  -> contributor, on-chain USDC
 ```
+
+`charged` is clamped to the balance because the watchdog only ticks every `METER_INTERVAL_MS`, so a
+session can legitimately overrun its funding by up to one tick. The platform absorbs that; the
+contributor is paid out of what was collected, never out of what was merely owed.
 
 | | |
 |---|---|
@@ -630,14 +534,14 @@ payout      = usedAtomic × (1 − PLATFORM_FEE_PCT/100)  -> contributor, on-cha
   "leaseId": "lease_9k2m",
   "usedSeconds": 300,
   "usedAtomic": "83334",
-  "refundedAtomic": "166666",
-  "balance": "266666",                  // payer's credit after the refund
+  "chargedAtomic": "83334",             // what was actually taken from credit
+  "balance": "916666",                  // payer's credit after the charge
   "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" }
 }
 ```
 
-Idempotent. Closing an already-closed lease returns zeros and the current balance rather than
-refunding twice.
+Idempotent. `charges.lease_id` is unique, so a concurrent release and watchdog tick cannot bill the
+same session twice — the loser returns zeros and the current balance.
 
 ### Responses
 
@@ -670,9 +574,8 @@ Lease status. Free.
     "access": { /* SandboxAccess */ },
     "status": "active",                 // starting | active | ended | failed
     "rateAtomicPerHour": 1000000,
-    "paidSeconds": 900,
-    "quoteAtomic": 250000,
-    "creditAppliedAtomic": 100000,
+    "gateFeeAtomic": 10000,
+    "fundingAtomic": 1000000,
     "paymentTxid": "DEF456…",
     "startedAt": 1785542042000,
     "expiresAt": 1785542942000,
@@ -744,28 +647,26 @@ payouts are recorded but unpaid until they do. The node still rents and still wo
 | `amount_below_minimum` | 400 | topup | carries `minimum` |
 | `facilitator_unavailable` | 502 | all paid | nothing submitted; carries `detail` |
 | `invalid_amount` | 400 | topup | carries `detail` |
-| `invalid_duration` | 400 | metered rent | carries `detail` |
-| `invalid_ssh_key` | 400 | both rents | |
+| `insufficient_credit` | 402 | rent | verified but unfunded; **nothing settled**; carries `detail`, `creditAtomic`, `rateAtomicPerHour` |
+| `invalid_ssh_key` | 400 | rent | |
 | `invalid or missing lease token` | 401 | lease routes | |
 | `lease not active` | 409 | run | |
 | `lease not found` | 404 | lease routes | |
 | `malformed_payment` | 400 | all paid | header undecodable or not an AVM group |
-| `node_busy` | 409 | both rents | nothing settled |
-| `node_not_found` | 404 | both rents | |
-| `node_unavailable` | 409 | both rents | offline or missed heartbeats |
-| `payer_mismatch` | 402 | metered rent | carries `expected`, `got`; nothing settled |
+| `node_busy` | 409 | rent | nothing settled |
+| `node_not_found` | 404 | rent | |
+| `node_unavailable` | 409 | rent | offline or missed heartbeats |
 | `payment_already_used` | 409 | rent, run | carries `txid` |
 | `payload (string) required` | 400 | run | |
-| `provisioning_failed` | 503 | both rents | **nothing settled**; carries `detail` |
+| `provisioning_failed` | 503 | rent | **nothing settled**; carries `detail` |
 | `settlement_failed` | 402 | all paid | carries `detail` |
-| `sign in to spend credit` | 401 | metered rent | credit covers it all but no session |
 
 ### What is safe to retry
 
 | Outcome | Money moved? | Retry? |
 |---|---|---|
 | `402` with `accepts` | no | yes — pay the amount quoted |
-| `402 payer_mismatch` | no | yes — pay from the hinted address |
+| `402 insufficient_credit` | no | yes — after topping up |
 | `402 settlement_failed` | no | yes — with a fresh payment |
 | `409 node_busy` | no | yes — another node |
 | `409 payment_already_used` | **yes, earlier** | no — build a new payment |
@@ -791,16 +692,162 @@ Server-side environment variables that change what clients see.
 | `MIN_TOPUP_ATOMIC` | `100000` | 0.10 USDC |
 | `MAX_TOPUP_ATOMIC` | `1000000000` | 1000 USDC |
 | `DEFAULT_TOPUP_ATOMIC` | `1000000` | Used when `?amount=` is omitted. |
-| `MIN_PAYABLE_ATOMIC` | `10000` | Discount floor for unauthenticated metered rents. |
-| `FLAT_RENT_ATOMIC` | `10000` | Price of `POST /rent/:nodeId`. |
-| `FLAT_RENT_SECONDS` | `900` | What that price buys. |
+| `FLAT_RENT_ATOMIC` | `10000` | Gate fee to open a session on `POST /rent/:nodeId`. |
 | `FLAT_RUN_ATOMIC` | `10000` | Price of one job execution. |
-| `MIN_LEASE_SECONDS` | `60` | |
-| `MAX_LEASE_SECONDS` | `14400` | |
-| `LEASE_SECONDS_GRANULARITY` | `60` | `seconds` must be a multiple of this. |
+| `MIN_LEASE_SECONDS` | `60` | Least credit (as seconds of runtime) needed to open a session. |
 | `SANDBOX_READY_TIMEOUT_MS` | `45000` | Wait before `provisioning_failed`. |
 | `CORS_ORIGIN` | `*` | Guards everything **except** the payable routes. |
 | `PUBLIC_BASE_URL` | request host | `resource.url` in challenges. |
+
+---
+
+## Renting from the CLI
+
+No browser, no wallet extension, no sign-in. An address holding USDC is the whole account.
+
+### What `curl` can and cannot do
+
+Read this first, because it is the thing that surprises people. Paying an x402 endpoint means
+building an Algorand **atomic transaction group**, signing your transaction in it with an ed25519
+key, and base64-msgpack encoding the group into `PAYMENT-SIGNATURE`. `curl` cannot do that. There
+is no header you can hand-write that stands in for a signature.
+
+| You want to | `curl` alone? |
+|---|---|
+| List nodes, read prices, check platform config | **yes** — `GET /explorer`, `/platform`, `/metrics`, `/nodes` are free |
+| See a price quote before paying | **yes** — the unpaid `POST` returns `402` with the exact amount |
+| Read lease status | **yes** — `GET /lease/:id` with the lease token |
+| Stop a session | **yes** — `DELETE /x402/leases/:id` is free |
+| Top up, rent, or run a job | **no** — those settle a payment and need a signer |
+
+So: everything except the three paid calls is plain HTTP. For those three you need ~20 lines of
+JavaScript, below.
+
+### Option A — the bundled agent
+
+The repo ships a working headless renter. It tops up, picks the cheapest node meeting a RAM floor,
+opens a session, runs a script inside it, releases, and prints what it was billed.
+
+```bash
+npm run keygen                  # prints an Address + AVM_PRIVATE_KEY
+# fund that address: opt into ASA 10458941, then use the testnet USDC dispenser
+echo 'AVM_PRIVATE_KEY=<base64 64-byte key>' >> .env
+echo 'REGISTRY_URL=https://api.your-domain.com' >> .env
+
+npm run client
+```
+
+Knobs: `AGENT_TOPUP_ATOMIC` (default `500000` = 0.50 USDC), `AGENT_MIN_RAM_MB` (default `1024`).
+Source: [`example-buyer/src/index.ts`](../example-buyer/src/index.ts) — the same code path the
+browser runs, differing only in the signer.
+
+### Option B — rent a box and SSH into it
+
+The agent above executes a script and leaves. If what you want is a **shell**, you never touch
+`/run` at all: rent, `ssh` in, work, release. Save as `rent.mjs` in a directory with
+`@x402/fetch @x402/avm @x402/core algosdk` installed:
+
+```js
+import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { ExactAvmScheme } from "@x402/avm/exact/client";
+import algosdk from "algosdk";
+import { readFileSync } from "node:fs";
+
+const API = process.env.REGISTRY_URL ?? "http://localhost:4000";
+const sk = new Uint8Array(Buffer.from(process.env.AVM_PRIVATE_KEY, "base64"));
+const address = algosdk.encodeAddress(sk.slice(32));
+
+// Sign only the indexes asked for. The fee-payer transaction in the group is
+// left unsigned on purpose — the facilitator signs that one and pays the fee,
+// which is why this account needs USDC but no ALGO.
+const signer = {
+  address,
+  async signTransactions(txns, indexes) {
+    const wanted = indexes ?? txns.map((_, i) => i);
+    return txns.map((b, i) =>
+      wanted.includes(i) ? algosdk.decodeUnsignedTransaction(b).signTxn(sk) : null,
+    );
+  },
+};
+
+const { network } = await (await fetch(`${API}/platform`)).json();
+const pay = wrapFetchWithPayment(
+  fetch,
+  new x402Client().register(network, new ExactAvmScheme(signer)),
+);
+
+// 1. Buy credit. Renting bills from credit, so this must cover the time you want.
+//    Skip it if the address already has a balance.
+await pay(`${API}/topup?amount=1000000`, { method: "POST" });   // 1.00 USDC
+
+// 2. Pick a node. Free endpoint — no payment, no auth.
+const { nodes } = await (await fetch(`${API}/explorer`)).json();
+const node = nodes
+  .filter((n) => n.status === "online" && n.ramMb >= 1024)
+  .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
+if (!node) throw new Error("no node available");
+
+// 3. Open the session. Send a public key — without a session token it is the
+//    only usable auth, since there is no wallet address to use as a password.
+const res = await pay(`${API}/rent/${node.id}`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    sshPubKey: readFileSync(`${process.env.HOME}/.ssh/id_ed25519.pub`, "utf8").trim(),
+  }),
+});
+if (!res.ok) throw new Error(`rent failed: ${res.status} ${await res.text()}`);
+const lease = await res.json();
+
+console.log(lease.ssh.command);                 // ssh root@bore.pub -p 41823
+console.log("lease   ", lease.leaseId);
+console.log("token   ", lease.leaseToken);      // KEEP THIS — needed to release
+console.log("funded  ", lease.fundedUntil);     // when credit runs out at this rate
+```
+
+```bash
+node rent.mjs
+# ssh root@bore.pub -p 41823
+```
+
+No key yet? `ssh-keygen -t ed25519` first. Omitting `sshPubKey` falls back to password auth, but
+the password is the *session* address — so without signing in there is nothing to log in with. Send
+the key.
+
+### Working, then stopping
+
+`leaseToken` is the credential for everything after the rent. Both calls below are free, so plain
+`curl` is fine:
+
+```bash
+LEASE=lease_9k2m
+TOKEN=eyJhbGciOi…
+
+# Is it still up, and how long is it funded for?
+curl -s "$API/lease/$LEASE" -H "authorization: Bearer $TOKEN" | jq
+
+# Stop the meter. This is when compute is billed — nothing was taken up front.
+curl -s -X DELETE "$API/x402/leases/$LEASE" -H "authorization: Bearer $TOKEN" | jq
+# { "usedSeconds": 300, "chargedAtomic": "83334", "balance": "916666", … }
+```
+
+**Always release.** If you walk away the watchdog stops the session at `fundedUntil` and bills the
+time used, so you cannot be charged past your credit — but the sandbox keeps running (and keeps
+billing) until then.
+
+### Things that bite
+
+- **Losing `leaseToken` means you cannot release.** It is returned once and stored nowhere you can
+  read back. If you lose it, the session runs until credit is exhausted. Print it, save it.
+- **Credit is per address, and the address comes from the settled transaction** — never from
+  anything you send. Paying from an exchange withdrawal address credits an account nobody can spend.
+- **A headless client cannot read its own balance.** `GET /wallet` needs a session token, which
+  needs a signed login. Without one, credit surfaces two ways: `billing.creditAtomic` in a
+  successful rent, and the `402 insufficient_credit` body when it is too low.
+- **`402 insufficient_credit` is not "pay more"**, it is "top up first". It means the gate fee
+  verified but your credit funds less than `MIN_LEASE_SECONDS` at that node's rate. Nothing settled.
+- **`409 node_busy` can happen after you paid nothing.** The node is not held while you are away
+  paying, so a retry may find it taken. Nothing settled — pick another node.
 
 ---
 
@@ -834,6 +881,7 @@ const pay = wrapFetchWithPayment(fetch, client);
 // Every 402 below is answered automatically.
 const top = await (await pay(`${API}/topup?amount=5000000`, { method: "POST" })).json();
 const lease = await (await pay(`${API}/rent/${nodeId}`, { method: "POST" })).json();
+// lease.fundedUntil — when credit runs out at this rate. Top up and it moves.
 const run = await (
   await pay(`${API}/lease/${lease.leaseId}/run`, {
     method: "POST",
@@ -866,9 +914,7 @@ Wallet approvals, end to end:
 | Action | Popups |
 |---|---|
 | Top up | 1 |
-| Flat rent | 1 |
-| Metered rent, credit covers it | 0 |
-| Metered rent, credit does not | 1 |
+| Rent (opens the meter) | 1 |
 | Each job execution | 1 |
 | Release, SSH, lease status | 0 |
 
