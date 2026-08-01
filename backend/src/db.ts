@@ -6,9 +6,37 @@ import { creditBalance } from "./x402/credit.js";
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
 // Only money state lives here: wallets + their history. Nodes and leases are
 // ephemeral and kept in memory (see registry.ts / leases.ts).
+/**
+ * Testnet and mainnet money never mix.
+ *
+ * Each network gets its own Postgres schema and the connection's `search_path`
+ * points at it, so every unqualified query in this process resolves to that
+ * network's tables. Two consequences worth spelling out:
+ *
+ *  - Table names stay the same everywhere. No query says `credits_testnet`, so
+ *    a table added later is scoped automatically with no extra work — which is
+ *    the whole reason to do it with schemas rather than name prefixes.
+ *  - Testnet play money can never be read as a mainnet balance. The isolation
+ *    is at the connection, not at each call site, so there is no query left to
+ *    forget to filter.
+ *
+ * `config.network` comes from `networkDefaults`, which throws on anything but
+ * "testnet"/"mainnet", so this is a closed set and safe to interpolate.
+ */
+const SCHEMA = config.network;
+if (!/^[a-z]+$/.test(SCHEMA)) {
+  throw new Error(`refusing to use "${SCHEMA}" as a schema name`);
+}
+
+// The search_path is set in the connection startup packet rather than by a
+// `SET` in a `connect` handler: the handler races the first real query on that
+// client (pg warns about exactly this and will make it an error in pg@9),
+// whereas a startup option is applied by the server before the client is
+// usable at all. `public` stays on the path so extensions there still resolve.
 const pool = new pg.Pool({
   connectionString: config.databaseUrl,
   ssl: config.databaseUrl.includes("localhost") ? undefined : { rejectUnauthorized: false },
+  options: `-c search_path=${SCHEMA},public`,
 });
 
 // int8/bigint comes back as a string by default; we store epoch-ms + atomic
@@ -21,11 +49,22 @@ export async function q<T = Row>(text: string, params: unknown[] = []): Promise<
   return res.rows as T[];
 }
 
-/** Create tables if they don't exist. Call once at startup before serving. */
+/**
+ * Create this network's schema and its tables if they don't exist. Call once at
+ * startup before serving.
+ *
+ * Switching ALGORAND_NETWORK therefore starts from an empty ledger rather than
+ * inheriting the other network's rows — a testnet balance must never be
+ * spendable as mainnet USDC.
+ */
 export async function initDb(): Promise<void> {
   if (!config.databaseUrl) {
     throw new Error("DATABASE_URL is not set — point it at your Neon Postgres connection string");
   }
+  // Must exist before the CREATE TABLEs below: `search_path` tolerates naming a
+  // schema that isn't there, but the tables would then land in `public` and the
+  // two networks would silently share one ledger.
+  await pool.query(`CREATE SCHEMA IF NOT EXISTS "${SCHEMA}"`);
   await pool.query(`
     -- Prepaid credit, in atomic units of the configured asset. Fed by
     -- POST /x402/topup and by refunds of unused lease time; spent by renting.
@@ -50,10 +89,13 @@ export async function initDb(): Promise<void> {
       settled_at    BIGINT
     );
 
+    -- Settled top-up payments. asset_id is stored per row rather than assumed,
+    -- because a schema outlives any one X402_ASSET_ID setting.
     CREATE TABLE IF NOT EXISTS topups (
       txid         TEXT PRIMARY KEY,
       address      TEXT NOT NULL,
       amount_micro BIGINT NOT NULL,
+      asset_id     BIGINT NOT NULL,
       created_at   BIGINT NOT NULL
     );
 
@@ -63,26 +105,20 @@ export async function initDb(): Promise<void> {
       lease_id     TEXT NOT NULL,
       pay_to       TEXT NOT NULL DEFAULT '',
       amount_micro BIGINT NOT NULL,
+      asset_id     BIGINT NOT NULL,
       seconds      INTEGER NOT NULL,
       created_at   BIGINT NOT NULL
     );
-    -- Add pay_to to charges created by older builds (idempotent).
-    ALTER TABLE charges ADD COLUMN IF NOT EXISTS pay_to TEXT NOT NULL DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS payouts (
       id           BIGSERIAL PRIMARY KEY,
       to_addr      TEXT NOT NULL,
       lease_id     TEXT NOT NULL,
       amount_micro BIGINT NOT NULL,
+      asset_id     BIGINT NOT NULL,
       txid         TEXT,
       created_at   BIGINT NOT NULL
     );
-
-    -- Which asset each historical row is denominated in. Rows written before
-    -- the move to USDC are native ALGO, hence the 0 default (see registry docs).
-    ALTER TABLE topups  ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
-    ALTER TABLE charges ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
-    ALTER TABLE payouts ADD COLUMN IF NOT EXISTS asset_id BIGINT NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS topups_address_idx ON topups (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS charges_address_idx ON charges (address, created_at DESC);

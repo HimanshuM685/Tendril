@@ -69,7 +69,10 @@ export function App() {
       "/about": "ABOUT",
     };
     const page = titles[path];
-    document.title = page ? `TENDRIL — ${page}` : "TENDRIL";
+    // Brand last, and bare on the landing page: the Bazaar scraper reads
+    // whatever `document.title` holds, and a tagline there becomes the
+    // service name on the dashboard.
+    document.title = page ? `${page} · TENDRIL` : "TENDRIL";
   }, [path]);
 
   // Drop the session only on a real disconnect / account switch — and only once
