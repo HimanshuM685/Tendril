@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { nanoid } from "nanoid";
 import {
   applicableCredit,
@@ -49,11 +49,29 @@ import { config } from "./config.js";
 
 export const router = Router();
 
-router.get("/health", (_req, res) => res.json({ ok: true }));
+/**
+ * Express 4 does not catch a rejected promise from an async handler: the request
+ * simply hangs until the client gives up. On a payment route that is the worst
+ * possible failure — the wallet has signed, the money may have settled, and the
+ * caller sees only "Failed to fetch".
+ *
+ * So every handler goes through here, and a rejection becomes a 500 the caller
+ * can actually see. Wrap new routes too; an unwrapped one silently reintroduces
+ * the hang.
+ */
+type Handler = (req: Request, res: Response) => unknown | Promise<unknown>;
+
+function guard(handler: Handler) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(handler(req, res)).catch(next);
+  };
+}
+
+router.get("/health", guard((_req, res) => res.json({ ok: true })));
 
 // What we charge in and where. No exchange rate: prices are USD, the asset is a
 // dollar stablecoin, so `pricePerHourUsd * 1e6` is the atomic amount.
-router.get("/platform", (_req, res) => {
+router.get("/platform", guard((_req, res) => {
   const info: PlatformInfo = {
     payTo: config.platformPayTo,
     network: config.x402Network,
@@ -63,24 +81,24 @@ router.get("/platform", (_req, res) => {
     maxTopUpAtomic: config.maxTopUpAtomic,
   };
   res.json(info);
-});
+}));
 
 // ─────────────────────── contributor agent auth (WS hello) ───────────────────────
-router.get("/auth/nonce", (req: Request, res: Response) => {
+router.get("/auth/nonce", guard((req: Request, res: Response) => {
   const address = String(req.query.address ?? "");
   if (!address) return res.status(400).json({ error: "address required" });
   res.json({ nonce: issueNonce(address) });
-});
+}));
 
 // ─────────────────────── wallet login (web users) ───────────────────────
 // Signing in reads and spends an existing balance. It is NOT how money gets in.
-router.get("/auth/wallet-nonce", (req: Request, res: Response) => {
+router.get("/auth/wallet-nonce", guard((req: Request, res: Response) => {
   const address = String(req.query.address ?? "");
   if (!address) return res.status(400).json({ error: "address required" });
   res.json({ nonce: issueWalletNonce(address) });
-});
+}));
 
-router.post("/auth/wallet-login", async (req: Request, res: Response) => {
+router.post("/auth/wallet-login", guard(async (req: Request, res: Response) => {
   const { address, payment, nonce } = (req.body ?? {}) as {
     address?: string;
     payment?: string;
@@ -101,34 +119,34 @@ router.post("/auth/wallet-login", async (req: Request, res: Response) => {
     balanceAtomic: await creditBalance(address),
   };
   res.json(body);
-});
+}));
 
 // ─────────────────────── discovery (free) ───────────────────────
-router.get("/explorer", (_req, res) => {
+router.get("/explorer", guard((_req, res) => {
   res.json({ nodes: listOnlineNodes() });
-});
+}));
 
 // Public platform metrics — growth series + leaderboards.
-router.get("/metrics", async (_req, res) => {
+router.get("/metrics", guard(async (_req, res) => {
   try {
     res.json(await metrics());
   } catch (err) {
     res.status(500).json({ error: `metrics failed: ${(err as Error).message}` });
   }
-});
+}));
 
-router.get("/nodes", (req: Request, res: Response) => {
+router.get("/nodes", guard((req: Request, res: Response) => {
   const owner = String(req.query.owner ?? "");
   if (!owner) return res.status(400).json({ error: "owner required" });
   res.json({ nodes: listNodesByOwner(owner) });
-});
+}));
 
 // ─────────────────────── credit balance (session-gated) ───────────────────────
-router.get("/wallet", async (req: Request, res: Response) => {
+router.get("/wallet", guard(async (req: Request, res: Response) => {
   const address = requireSession(req, res);
   if (!address) return;
   res.json(await walletSummary(address));
-});
+}));
 
 // ═══════════════════════ POST /topup?amount=<atomic> ═══════════════════════
 //
@@ -231,9 +249,9 @@ async function topUp(req: Request, res: Response) {
   res.json(await topUpBody(facts.payer, amount, facts.txid));
 }
 
-router.post("/x402/topup", topUp);
+router.post("/x402/topup", guard(topUp));
 // Short alias, so "just top me up" is one obvious path.
-router.post("/topup", topUp);
+router.post("/topup", guard(topUp));
 
 async function topUpBody(payer: string, credited: number, txid: string): Promise<X402TopUpResponse> {
   return {
@@ -253,7 +271,7 @@ async function topUpBody(payer: string, credited: number, txid: string): Promise
 //
 // Ordering is the whole design: verify, provision, *then* settle. If the sandbox
 // does not come up, the caller gets a 503 and has paid nothing.
-router.post("/x402/rent/:nodeId", async (req: Request, res: Response) => {
+router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
   const node = getNode(req.params.nodeId);
   if (!node) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
@@ -343,7 +361,7 @@ router.post("/x402/rent/:nodeId", async (req: Request, res: Response) => {
     sshPubKey,
     paid,
   });
-});
+}));
 
 // ═══════════════════ flat price: POST /rent/:nodeId ═══════════════════
 //
@@ -351,7 +369,7 @@ router.post("/x402/rent/:nodeId", async (req: Request, res: Response) => {
 // however long the block is: pay `FLAT_RENT_ATOMIC`, get a sandbox. No quote
 // arithmetic, no credit, no session, no `?seconds=` — just a 402 and then the
 // ordinary rent flow. /x402/rent is still there for callers who want prorating.
-router.post("/rent/:nodeId", async (req: Request, res: Response) => {
+router.post("/rent/:nodeId", guard(async (req: Request, res: Response) => {
   const node = getNode(req.params.nodeId);
   if (!node) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
@@ -392,7 +410,7 @@ router.post("/rent/:nodeId", async (req: Request, res: Response) => {
     sshPubKey,
     paid,
   });
-});
+}));
 
 interface ProvisionArgs {
   node: NonNullable<ReturnType<typeof getNode>>;
@@ -517,15 +535,15 @@ async function releaseLease(req: Request, res: Response): Promise<void> {
   res.json(body);
 }
 
-router.delete("/x402/leases/:id", releaseLease);
-router.post("/lease/:id/release", releaseLease);
+router.delete("/x402/leases/:id", guard(releaseLease));
+router.post("/lease/:id/release", guard(releaseLease));
 
 // ─────────────────────── lease-token-gated: run / status ───────────────────────
 // Pay a flat `FLAT_RUN_ATOMIC` to execute one job, then the ordinary flow: ship
 // the payload to the contributor over the websocket and return what it printed.
 // The job runs BEFORE the payment settles, so a job that never ran is never paid
 // for.
-router.post("/lease/:id/run", async (req: Request, res: Response) => {
+router.post("/lease/:id/run", guard(async (req: Request, res: Response) => {
   const lease = requireLease(req, res);
   if (!lease) return;
   if (lease.status !== "active") {
@@ -557,13 +575,13 @@ router.post("/lease/:id/run", async (req: Request, res: Response) => {
 
   const body: RunResponse = { jobId, ok: result.ok, result: result.result };
   res.json(body);
-});
+}));
 
-router.get("/lease/:id", (req: Request, res: Response) => {
+router.get("/lease/:id", guard((req: Request, res: Response) => {
   const lease = requireLease(req, res);
   if (!lease) return;
   res.json({ lease });
-});
+}));
 
 // ─────────────────────────── helpers ───────────────────────────
 

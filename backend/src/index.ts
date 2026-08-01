@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { config } from "./config.js";
 import { router } from "./routes.js";
 import { initDb } from "./db.js";
@@ -21,7 +21,34 @@ const corsOrigin = allowedOrigin();
 const app = express();
 app.use(corsPolicy());
 app.use(express.json());
+
+// One line per request, with the duration. Paid requests are slow by nature —
+// verify, provision, settle — so when a client reports "failed to fetch" the
+// only way to tell a hang from a rejection from a timeout is to see the timing.
+app.use((req, res, next) => {
+  const started = Date.now();
+  res.on("finish", () => {
+    const paid = req.header("payment-signature") ?? req.header("x-payment") ? " [paid]" : "";
+    console.log(
+      `[http] ${req.method} ${req.originalUrl} -> ${res.statusCode}${paid} ${Date.now() - started}ms`,
+    );
+  });
+  next();
+});
+
 app.use(router);
+
+/**
+ * Anything a handler threw. Without this a rejected async handler in express 4
+ * leaves the request open until the client times out — and on a payment route
+ * that means the wallet has signed, the money may have moved, and the caller
+ * sees only "Failed to fetch". A 500 they can read is strictly better.
+ */
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  console.error(`[registry] ${req.method} ${req.originalUrl} failed:`, err);
+  if (res.headersSent) return; // a payment receipt may already be on the wire
+  res.status(500).json({ error: "internal_error", detail: err.message });
+});
 
 async function main(): Promise<void> {
   await initDb();
