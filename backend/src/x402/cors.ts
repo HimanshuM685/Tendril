@@ -46,7 +46,10 @@ export function corsPolicy() {
       origin: isPayablePath(req.path) ? "*" : restricted,
       // The V2 payment header is non-simple, so a browser preflights every paid
       // request. Naming it explicitly keeps that working under a strict origin.
-      allowedHeaders: ["content-type", "authorization", "payment-signature", "x-payment"],
+      // `access-control-expose-headers` is here because @x402/fetch sets it as
+      // a *request* header on the paid retry — the browser preflights it, and
+      // without it in allowedHeaders the preflight fails silently ("Failed to fetch").
+      allowedHeaders: ["content-type", "authorization", "payment-signature", "x-payment", "access-control-expose-headers"],
       exposedHeaders: X402_HEADERS,
     });
   });
