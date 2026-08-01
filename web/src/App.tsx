@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
@@ -9,6 +9,8 @@ import { Docs } from "./components/Docs";
 import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
+// ~90KB of markdown compiles into this page; keep it out of the landing bundle.
+const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 
@@ -65,6 +67,7 @@ export function App() {
       "/explore": "EXPLORE",
       "/contribute": "CONTRIBUTE",
       "/dashboard": "DASHBOARD",
+      "/api": "API",
       "/docs": "DOCS",
       "/about": "ABOUT",
     };
@@ -169,6 +172,9 @@ export function App() {
           <NavLink to="/metrics" className={navClass}>
             METRICS
           </NavLink>
+          <NavLink to="/api" className={navClass}>
+            API
+          </NavLink>
           <NavLink to="/docs" className={navClass}>
             DOCS
           </NavLink>
@@ -266,6 +272,14 @@ export function App() {
             }
           />
           <Route path="/metrics" element={<Metrics />} />
+          <Route
+            path="/api"
+            element={
+              <Suspense fallback={<p className="muted dash-note">Loading API reference…</p>}>
+                <ApiDocs />
+              </Suspense>
+            }
+          />
           <Route path="/docs" element={<Docs />} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />

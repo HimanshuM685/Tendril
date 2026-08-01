@@ -989,3 +989,55 @@ main { display: block; }
 @media (max-width: 640px) {
   .board-row { grid-template-columns: 22px 92px 1fr auto; gap: 10px; font-size: 12px; }
 }
+
+/* ── API docs (rendered markdown) ───────────────────────────────────────── */
+
+.doc-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 16px; }
+/* minmax(0,1fr) above, not 1fr: a grid item defaults to min-content width, so a
+   wide table or long code line would stretch the column and scroll the page. */
+
+.doc-toc {
+  position: sticky; top: 16px; align-self: start;
+  max-height: calc(100vh - 32px); overflow-y: auto;
+  border-left: 1px solid var(--cream); padding-left: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.doc-toc a {
+  font-family: "Space Mono", monospace; font-size: 11px; line-height: 1.4;
+  color: var(--cream); opacity: 0.65; text-decoration: none;
+}
+.doc-toc a:hover { opacity: 1; text-decoration: underline; }
+
+.doc-body { max-width: none; }
+.doc-body h2 { font-size: 18px; margin: 28px 0 8px; border-top: 1px solid var(--cream); padding-top: 16px; }
+.doc-body h2:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.doc-body h3 { font-size: 14px; margin: 20px 0 6px; }
+.doc-body h4 { font-size: 12px; margin: 14px 0 4px; opacity: 0.85; }
+
+/* Wide content scrolls inside its own box so the page never scrolls sideways. */
+.doc-body pre, .doc-body .table-wrap { overflow-x: auto; max-width: 100%; }
+.doc-body pre {
+  background: rgba(0, 0, 0, 0.22); border: 1px solid var(--cream);
+  padding: 12px 14px; margin: 10px 0;
+}
+.doc-body pre code { border: 0; padding: 0; background: none; font-size: 12px; line-height: 1.6; white-space: pre; }
+
+.doc-body table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
+.doc-body th, .doc-body td { border: 1px solid var(--cream); padding: 6px 9px; text-align: left; vertical-align: top; }
+.doc-body th { font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.doc-body td code { white-space: nowrap; }
+
+.doc-body blockquote {
+  border-left: 3px solid var(--cream); margin: 12px 0; padding: 2px 0 2px 14px; opacity: 0.9;
+}
+.doc-body details { border: 1px solid var(--cream); padding: 8px 12px; margin: 10px 0; }
+.doc-body summary { cursor: pointer; font-family: "Space Mono", monospace; font-size: 12px; }
+.doc-body hr { border: 0; border-top: 1px solid var(--cream); opacity: 0.5; margin: 24px 0; }
+/* Anchored headings sit under nothing fixed, but leave breathing room on jump. */
+.doc-body :target { scroll-margin-top: 16px; }
+
+@media (max-width: 900px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { position: static; max-height: none; border-left: 0; padding-left: 0;
+             flex-direction: row; flex-wrap: wrap; gap: 10px; }
+}

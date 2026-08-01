@@ -34,6 +34,10 @@ arithmetic on it.
 - [Renting from the CLI](#renting-from-the-cli) — no browser, no sign-in
 - [Client recipes](#client-recipes)
 
+> Looking for the **free** endpoints — `/explorer`, `/platform`, `/metrics`, `/wallet`,
+> sign-in, lease status and release? Those are plain HTTP with copy-paste `curl`:
+> **[api.md](./api.md)**. This document covers only the three that move money.
+
 ---
 
 ## How payment works
@@ -332,17 +336,128 @@ The facilitator could not be reached. Nothing was submitted and nothing was cred
 
 ### Example
 
-```bash
-# 1. ask
-curl -i -X POST 'http://localhost:4000/topup?amount=5000000'
-# HTTP/1.1 402 Payment Required
-# PAYMENT-REQUIRED: eyJ4NDAyVmVyc2lvbiI6Miwi…
+**Step 1 — ask, with `curl`.** Reading the quote needs no signer, so this half is plain HTTP.
 
-# 2. pay
-curl -X POST 'http://localhost:4000/topup?amount=5000000' \
-     -H 'PAYMENT-SIGNATURE: eyJ4NDAyVmVyc2lvbiI6Miwic2NoZW1lIjoi…'
-# HTTP/1.1 200 OK
-# PAYMENT-RESPONSE: eyJzdWNjZXNzIjp0cnVlLCJ0cmFuc2FjdGlvbiI6…
+```bash
+curl -isS -X POST "$API/topup?amount=5000000"
+```
+
+```http
+HTTP/1.1 402 Payment Required
+payment-required: eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwi…
+content-type: application/json; charset=utf-8
+```
+
+The body is the same object as the header, so `jq` it directly:
+
+```bash
+curl -sS -X POST "$API/topup?amount=5000000" | jq '{amount:.accepts[0].amount, payTo:.accepts[0].payTo, asset:.accepts[0].asset}'
+```
+
+```json
+{
+  "amount": "5000000",
+  "payTo": "PLATFORM7ADDRESS7EXAMPLE7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "asset": "10458941"
+}
+```
+
+Or decode the header, which is what a v2 client actually reads:
+
+```bash
+curl -sS -D - -o /dev/null -X POST "$API/topup?amount=5000000" \
+  | grep -i '^payment-required:' | cut -d' ' -f2 | base64 -d | jq .resource
+```
+
+```json
+{
+  "url": "https://api.tendril.example/topup?amount=5000000",
+  "description": "Credit 5 USDC to the paying address. Pay from a wallet you control: the balance is keyed to the sender and can only be spent by signing from that address.",
+  "mimeType": "application/json",
+  "serviceName": "TENDRIL",
+  "tags": ["x402-global-challenge", "compute", "ssh", "sandbox"]
+}
+```
+
+**Step 2 — pay.** `curl` cannot build this header: it is a base64-msgpack Algorand transaction
+group with your signature over one of its transactions. Mint it with the helper below, then the
+request itself is `curl` again.
+
+```bash
+# sign.mjs prints a PAYMENT-SIGNATURE value for a given 402 body
+SIG=$(curl -sS -X POST "$API/topup?amount=5000000" | node sign.mjs)
+
+curl -isS -X POST "$API/topup?amount=5000000" -H "PAYMENT-SIGNATURE: $SIG"
+```
+
+```http
+HTTP/1.1 200 OK
+payment-response: eyJzdWNjZXNzIjp0cnVlLCJ0cmFuc2FjdGlvbiI6…
+```
+
+```json
+{
+  "address": "YOUR7ADDRESS7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "credited": "5000000",
+  "balance": "5000000",
+  "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" },
+  "payment": { "txid": "ABC123…", "network": "algorand:SGO1…cOUJOiI=" }
+}
+```
+
+<details>
+<summary><code>sign.mjs</code> — reads a 402 body on stdin, prints the header value</summary>
+
+```js
+// npm i @x402/core @x402/avm algosdk
+import { x402Client } from "@x402/core/client";
+import { ExactAvmScheme } from "@x402/avm/exact/client";
+import { encodePaymentSignatureHeader } from "@x402/core/http";
+import algosdk from "algosdk";
+
+const sk = new Uint8Array(Buffer.from(process.env.AVM_PRIVATE_KEY, "base64"));
+const address = algosdk.encodeAddress(sk.slice(32));
+const signer = {
+  address,
+  // Sign only the indexes asked for — the fee-payer transaction is left unsigned
+  // for the facilitator, which is why this account needs USDC but no ALGO.
+  async signTransactions(txns, indexes) {
+    const wanted = indexes ?? txns.map((_, i) => i);
+    return txns.map((b, i) =>
+      wanted.includes(i) ? algosdk.decodeUnsignedTransaction(b).signTxn(sk) : null,
+    );
+  },
+};
+
+const challenge = JSON.parse(await new Response(process.stdin).text());
+const client = new x402Client().register(
+  challenge.accepts[0].network,
+  new ExactAvmScheme(signer),
+);
+process.stdout.write(
+  encodePaymentSignatureHeader(await client.createPaymentPayload(challenge)),
+);
+```
+
+</details>
+
+The signed header is **single-use**: replaying it returns the original receipt for `/topup`
+(idempotent) but `409 payment_already_used` on `/rent` and `/run`, which buy something.
+
+### Errors, with `curl`
+
+All three are plain requests — no signer needed to see them.
+
+```bash
+curl -sS -X POST "$API/topup?amount=1"            # below MIN_TOPUP_ATOMIC
+curl -sS -X POST "$API/topup?amount=99999999999"  # above MAX_TOPUP_ATOMIC
+curl -sS -X POST "$API/topup?amount=abc"          # not an integer
+```
+
+```json
+{"error":"amount_below_minimum","minimum":"100000"}
+{"error":"amount_above_maximum","maximum":"1000000000"}
+{"error":"invalid_amount","detail":"?amount= must be a whole number of atomic units"}
 ```
 
 ---
@@ -442,6 +557,61 @@ The credit check runs **after** `verify()` and **before** `settle()`. An address
 minimum session is turned away without paying the gate fee, rather than being charged for a session
 the watchdog would kill on its next tick.
 
+### Example
+
+Pick a node and read the gate-fee quote — both plain `curl`:
+
+```bash
+NODE=$(curl -sS $API/explorer | jq -r '[.nodes[] | select(.status=="online")]
+                                       | sort_by(.pricePerHourUsd) | .[0].id')
+
+curl -sS -X POST "$API/rent/$NODE" | jq '.accepts[0].amount'
+```
+
+```json
+"10000"
+```
+
+Then pay it, sending your public key so you can actually log in (see the note below):
+
+```bash
+BODY=$(jq -n --arg k "$(cat ~/.ssh/id_ed25519.pub)" '{sshPubKey:$k}')
+SIG=$(curl -sS -X POST "$API/rent/$NODE" -H 'content-type: application/json' -d "$BODY" | node sign.mjs)
+
+curl -sS -X POST "$API/rent/$NODE" \
+     -H 'content-type: application/json' \
+     -H "PAYMENT-SIGNATURE: $SIG" \
+     -d "$BODY" | tee lease.json | jq '{cmd:.ssh.command, until:.fundedUntil}'
+```
+
+```json
+{
+  "cmd": "ssh root@bore.pub -p 41823",
+  "until": "2026-08-01T11:14:02.000Z"
+}
+```
+
+Keep the token — it is the only credential for status, `/run` and release, and it is returned once:
+
+```bash
+export LEASE=$(jq -r .leaseId lease.json)
+export LEASE_TOKEN=$(jq -r .leaseToken lease.json)
+eval "$(jq -r .ssh.command lease.json)"      # actually connect
+```
+
+Without a session, **omitting `sshPubKey` leaves you locked out**: the fallback password is the
+session address, and there isn't one. The rent still succeeds and still bills.
+
+Failures you can reproduce with `curl` alone, no signer:
+
+```bash
+curl -sS -X POST "$API/rent/node_doesnotexist"
+```
+
+```json
+{"error":"node_not_found"}
+```
+
 
 ## `POST /lease/:id/run`
 
@@ -500,6 +670,30 @@ and it is still charged — the compute was consumed.
 | `409` | `lease not active` | Lease has not started, or has already ended. |
 | `409` | `payment_already_used` | That payment already bought something. Carries `txid`. |
 | `502` | *(message from the agent)* | Job timed out or the node dropped. **Nothing settled.** |
+
+### Example
+
+The lease token authenticates; the payment buys the execution. Both headers are required.
+
+```bash
+RUN=$(jq -n '{payload:"print(sum(range(100)))"}')
+SIG=$(curl -sS -X POST "$API/lease/$LEASE/run" \
+        -H "authorization: Bearer $LEASE_TOKEN" \
+        -H 'content-type: application/json' -d "$RUN" | node sign.mjs)
+
+curl -sS -X POST "$API/lease/$LEASE/run" \
+     -H "authorization: Bearer $LEASE_TOKEN" \
+     -H 'content-type: application/json' \
+     -H "PAYMENT-SIGNATURE: $SIG" \
+     -d "$RUN" | jq
+```
+
+```json
+{ "jobId": "a1b2c3d4e5", "ok": true, "result": "4950\n" }
+```
+
+If you have an SSH session open you do not need this endpoint at all — `/run` exists for clients
+that want one-shot execution without holding a shell.
 
 ---
 
@@ -660,6 +854,26 @@ payouts are recorded but unpaid until they do. The node still rents and still wo
 | `payload (string) required` | 400 | run | |
 | `provisioning_failed` | 503 | rent | **nothing settled**; carries `detail` |
 | `settlement_failed` | 402 | all paid | carries `detail` |
+
+### The first-run failure
+
+A payment that is built correctly but cannot be *simulated* comes back as a fresh `402` whose
+`error` is the facilitator's own message. By far the most common one:
+
+```json
+{
+  "x402Version": 2,
+  "error": "Transaction simulation failed: transaction KOAJRO…: asset 10458941 missing from T42FOE…",
+  "accepts": [ … ]
+}
+```
+
+The paying address has never **opted into** the asset. An Algorand account cannot receive or send
+an ASA it has not opted into, and simulation catches that before anything is submitted — so nothing
+settled and nothing was charged. Opt in, fund the address, retry the same request.
+
+The sibling of this one is `asset 10458941 missing from <PLATFORM_PAYTO>`, which means the
+*server's* address is not opted in. That is an operator problem, not a client one.
 
 ### What is safe to retry
 
