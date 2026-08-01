@@ -36,7 +36,10 @@ export function payingFetch(
   sign: SignTransactions,
   onStage?: (stage: PayStage) => void,
 ): typeof globalThis.fetch {
-  const scheme = new ExactAvmScheme({ address, signTransactions: sign }, { algodUrl: ALGOD_URL });
+  const scheme = new ExactAvmScheme(
+    { address, signTransactions: serialize(sign) },
+    { algodUrl: ALGOD_URL },
+  );
   // The two spellings of testnet's CAIP-2 id are registered against one scheme:
   // @x402/avm uses the 32-char genesis prefix, our shared constant the full
   // hash. Whichever the registry quotes, a scheme is registered for it.
@@ -47,7 +50,54 @@ export function payingFetch(
     client.onBeforePaymentCreation(async () => void onStage("signing"));
     client.onAfterPaymentCreation(async () => void onStage("settling"));
   }
-  return wrapFetchWithPayment(fetch, client) as typeof globalThis.fetch;
+  const paying = wrapFetchWithPayment(fetch, client) as typeof globalThis.fetch;
+  return async (input, init) => {
+    try {
+      return await paying(input, init);
+    } catch (err) {
+      throw readableWalletError(err);
+    }
+  };
+}
+
+/**
+ * Wallets take one signing request at a time. Pera and Defly reject a second one
+ * outright — "Confirmation Failed(4100) … another transaction request in
+ * progress" — and since a paid request can be fired from anywhere in the app
+ * (top up here, rent there), two can overlap without either caller knowing.
+ *
+ * So the queue lives at the signer, the single point every payment funnels
+ * through, rather than in a `busy` flag on each button. A second payment now
+ * waits for the wallet instead of failing.
+ */
+let walletQueue: Promise<unknown> = Promise.resolve();
+
+function serialize(sign: SignTransactions): SignTransactions {
+  return (txns, indexesToSign) => {
+    // `.then(f, f)` rather than `.then(f)`: a rejected predecessor (the user hit
+    // reject) must hand the wallet on, not wedge the queue behind it.
+    const run = walletQueue.then(
+      () => sign(txns, indexesToSign),
+      () => sign(txns, indexesToSign),
+    );
+    walletQueue = run.catch(() => undefined);
+    return run;
+  };
+}
+
+/** Turn wallet error codes into something a person can act on. */
+function readableWalletError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/\b4100\b|another transaction request in progress/i.test(message)) {
+    return new Error(
+      "Your wallet already has a signing request open. Approve or dismiss it and try again — " +
+        "if you can't see one, disconnect and reconnect the wallet to clear it.",
+    );
+  }
+  if (/\b4001\b|user rejected|request rejected|cancelled by user/i.test(message)) {
+    return new Error("Payment cancelled in the wallet.");
+  }
+  return err instanceof Error ? err : new Error(message);
 }
 
 /** The settled-payment receipt a paid response carries, or null if it was free. */
