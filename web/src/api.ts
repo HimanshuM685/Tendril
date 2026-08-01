@@ -93,11 +93,9 @@ export async function fetchWallet(token: string): Promise<WalletSummary> {
 /**
  * Rent a node over x402: `POST /x402/rent/:nodeId?seconds=<n>`.
  *
- * One path covers both cases. When credit already covers the block the server
- * never sends a 402, so the wallet is never opened; when it doesn't, the 402
- * asks only for the shortfall and `payingFetch` settles it. The session token
- * is what lets the server apply the caller's credit — without it the discount
- * is floored and the caller always pays something on-chain.
+ * Every rent pays a flat gate fee (0.01 USDC) on-chain via x402 — the wallet
+ * always opens. After the gate fee settles, the compute cost is deducted from
+ * the renter's credit balance on the backend.
  */
 export async function rentNode(
   token: string | null,
@@ -106,12 +104,9 @@ export async function rentNode(
   nodeId: string,
   seconds: number,
   onStage?: (stage: PayStage) => void,
-  /** Pay the whole quote on-chain rather than spending an existing balance. */
-  useCredit = true,
 ): Promise<X402RentResponse> {
-  const credit = useCredit ? "" : "&credit=none";
   const res = await payingFetch(address, sign, onStage)(
-    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}${credit}`,
+    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}`,
     {
       method: "POST",
       headers: {

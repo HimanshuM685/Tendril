@@ -1,7 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { nanoid } from "nanoid";
 import {
-  applicableCredit,
   atomicPerHour,
   formatUsdc,
   proratedCost,
@@ -269,9 +268,10 @@ async function topUpBody(payer: string, credited: number, txid: string): Promise
 
 // ═══════════════════════ x402: POST /x402/rent/:nodeId ═══════════════════════
 //
-// Buy a prepaid block of time on a node. The price is a pure function of the URL
-// and live state — recomputed when the payment arrives, so there is no quote
-// table and nothing to keep in sync.
+// Buy a prepaid block of time on a node. Every rent pays a flat gate fee
+// (FLAT_RENT_ATOMIC, 0.01 USDC) on-chain — no exceptions, no "covered by
+// credit" path. After the gate payment settles and the sandbox comes up, the
+// actual compute cost is deducted from the renter's credit balance.
 //
 // Ordering is the whole design: verify, provision, *then* settle. If the sandbox
 // does not come up, the caller gets a 503 and has paid nothing.
@@ -305,69 +305,33 @@ router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
   const rate = atomicPerHour(node.pricePerHourUsd);
   const quote = proratedCost(rate, seconds);
 
-  // Who to price against: a session proves the address; `?payer=` is a hint and
-  // nothing more. An agent can drain its own balance without ever signing in.
-  const sessionAddr = addressFromSession(req.header("authorization"));
-  const hinted = typeof req.query.payer === "string" ? req.query.payer : null;
-  const payerAddress = sessionAddr ?? hinted;
+  // The gate fee is always charged on-chain. The compute cost comes from credit.
+  const gateFee = config.flatRentAtomic;
 
-  // `?credit=none` pays the whole quote on chain instead of spending an existing
-  // balance. Two reasons it exists: a caller may simply want to keep their
-  // credit, and — less obviously — a lease that is always covered by credit
-  // never settles a payment, so it is never cataloged by the Bazaar. Discovery
-  // is driven by settlement, so an endpoint needs a way to actually be paid.
-  const useCredit = !/^(none|false|0|no)$/i.test(String(req.query.credit ?? ""));
-  const credit = payerAddress && useCredit ? await creditBalance(payerAddress) : 0;
-
-  // Unauthenticated requests are floored: paying at least `minPayableAtomic`
-  // proves control of the hinted address.
-  const creditApplied = applicableCredit(quote, credit, {
-    authenticated: sessionAddr !== null,
-    minPayableAtomic: config.minPayableAtomic,
-  });
-  const owed = quote - creditApplied;
-
-  // Path B — something is owed and no payment came with it: `requirePayment`
-  // answers 402 and returns null. No reservation is held while the caller is
-  // away paying; if someone else takes the node meanwhile, the retry 409s below
-  // and nothing has settled.
-  const covered =
-    creditApplied > 0 ? ` ${formatUsdc(creditApplied)} covered by existing credit.` : "";
-  const paid =
-    owed > 0
-      ? await requirePayment(
-          req,
-          res,
-          "rent",
-          owed,
-          `${seconds}s lease on ${node.id} (${node.cpuCores} vCPU, ` +
-            `${Math.round(node.ramMb / 1024)}GB) at ${formatUsdc(rate)}/hr.${covered}`,
-          ROUTES.rent,
-        )
-      : null;
-  if (owed > 0 && !paid) return; // 402/400/409 already sent
+  // Always demand the flat gate fee on-chain via x402.
+  const paid = await requirePayment(
+    req,
+    res,
+    "rent",
+    gateFee,
+    `Gate fee for ${seconds}s lease on ${node.id} (${node.cpuCores} vCPU, ` +
+      `${Math.round(node.ramMb / 1024)}GB). Compute cost (${formatUsdc(quote)}) ` +
+      `is deducted from your credit balance.`,
+    ROUTES.rent,
+  );
+  if (!paid) return; // 402/400/409 already sent
 
   if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
 
-  // Path A — credit covers the lot: no 402, no wallet popup. Only a session can
-  // do this; an unauthenticated caller was floored to a payable amount above.
-  if (!paid && !sessionAddr) return res.status(401).json({ error: "sign in to spend credit" });
+  // The payer is always read off the settled transaction — trustworthy identity.
+  const renter = paid.facts.payer;
 
-  // Path C — the discount was priced against `payerAddress`, so the money has to
-  // come from there too, or the hint is a way to spend someone else's credit.
-  if (paid && payerAddress && paid.facts.payer !== payerAddress) {
-    return res
-      .status(402)
-      .json({ error: "payer_mismatch", expected: payerAddress, got: paid.facts.payer });
-  }
-
-  const renter = paid?.facts.payer ?? sessionAddr!;
   return provision(res, {
     node,
     seconds,
     rate,
     quote,
-    creditApplied,
+    creditApplied: quote, // full compute cost deducted from credit
     renterAddr: renter,
     payerAddr: renter,
     sshPubKey,

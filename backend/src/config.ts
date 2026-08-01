@@ -68,7 +68,9 @@ export const config = {
     .filter(Boolean),
   // How the API is named and pictured in the Bazaar dashboard. The icon must be
   // a publicly reachable http(s) URL or the facilitator drops it.
-  serviceName: process.env.X402_SERVICE_NAME ?? "Tendril",
+  // Must match the <title>/og:site_name the web app serves — the facilitator
+  // takes the name from whichever it sees, so they should not disagree.
+  serviceName: process.env.X402_SERVICE_NAME ?? "TENDRIL",
   serviceIconUrl: process.env.X402_ICON_URL ?? "",
   // Absolute base URL this registry is reachable at. Discovery canonicalises on
   // the origin, so behind a proxy this must be the PUBLIC url, not localhost.

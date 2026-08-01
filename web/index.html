@@ -3,9 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TENDRIL — prepaid compute, metered in ALGO</title>
+    <!-- The Bazaar scrapes this page for listing metadata, so the title is the
+         service name and nothing else — a tagline here becomes the name shown
+         on the dashboard. Description belongs in og:description below. -->
+    <title>TENDRIL</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#0B5D3A" />
+
+    <!-- Bazaar / social branding. og:image must be an ABSOLUTE https URL to be
+         picked up; a relative path is ignored. Set VITE_PUBLIC_URL at build
+         time (or hard-code your domain) once a PNG logo is hosted. -->
+    <meta property="og:site_name" content="TENDRIL" />
+    <meta property="og:title" content="TENDRIL" />
+    <meta
+      property="og:description"
+      content="Rent a sandboxed SSH machine by the hour. Pay per call with x402 on Algorand, in USDC."
+    />
+    <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

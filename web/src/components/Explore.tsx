@@ -34,7 +34,7 @@ export function Explore({
   const [renting, setRenting] = useState<string | null>(null);
   const [stage, setStage] = useState<PayStage | null>(null);
   const [seconds, setSeconds] = useState(DURATIONS[1].seconds);
-  const [useCredit, setUseCredit] = useState(true);
+
 
   // Poll the node list, pausing while the tab is hidden — same pattern as the
   // balance poll in App. A stale "can't reach backend" error clears itself on
@@ -73,17 +73,6 @@ export function Explore({
   /** Full price of the selected block on this node, in atomic units. */
   const quoteFor = (usdPerHour: number) => proratedCost(atomicPerHour(usdPerHour), seconds);
 
-  /**
-   * What the wallet will actually be asked to pay. Credit only applies with a
-   * session — unauthenticated rents are floored server-side, so promising a
-   * free rent here would be a lie the 402 immediately contradicts.
-   */
-  const owedFor = (usdPerHour: number) => {
-    const quote = quoteFor(usdPerHour);
-    if (!useCredit) return quote; // paying on-chain by choice
-    return session ? Math.max(0, quote - balanceAtomic) : quote;
-  };
-
   async function rent(node: ExplorerNode) {
     if (!activeAddress) {
       setError("Connect a wallet to rent.");
@@ -100,7 +89,6 @@ export function Explore({
         node.id,
         seconds,
         setStage,
-        useCredit,
       );
       onLeased(toActiveLease(res, node.label));
     } catch (e) {
@@ -119,16 +107,12 @@ export function Explore({
   return (
     <div>
       <p className="muted">
-        Live nodes from <code>GET /explorer</code> (free). Renting buys a prepaid block of SSH
-        time over x402 — unused time comes back as credit when you release.
+        Live nodes from <code>GET /explorer</code> (free). Renting pays a 0.01 USDC gate fee
+        on-chain — compute cost is deducted from your credit balance. Unused time
+        comes back as credit when you release.
       </p>
       {error && <div className="error">{error}</div>}
       {!activeAddress && <p className="muted">Connect your wallet to rent.</p>}
-      {activeAddress && !session && (
-        <p className="muted small">
-          Signed out — you can still rent, but existing credit only applies once you sign in.
-        </p>
-      )}
 
       <div className="topup" role="group" aria-label="Lease duration">
         <span className="muted small">Block</span>
@@ -143,20 +127,6 @@ export function Explore({
         ))}
       </div>
 
-      {/* With enough credit a rent settles nothing on chain and opens no wallet.
-          That is usually what you want, but it also means the lease never
-          becomes a payment — so make paying directly an explicit choice. */}
-      {balanceAtomic > 0 && (
-        <label className="muted small" style={{ display: "block", marginTop: 8 }}>
-          <input
-            type="checkbox"
-            checked={!useCredit}
-            onChange={(e) => setUseCredit(!e.target.checked)}
-          />{" "}
-          Pay on-chain with x402 instead of using my {formatUsdc(balanceAtomic)} credit
-        </label>
-      )}
-
       {loading && nodes.length === 0 && <p className="muted">Scanning for nodes…</p>}
       {!loading && nodes.length === 0 && (
         <p className="muted">No nodes online. Start a contributor agent.</p>
@@ -164,7 +134,6 @@ export function Explore({
       <div className="grid">
         {nodes.map((n) => {
           const quote = quoteFor(n.pricePerHourUsd);
-          const owed = owedFor(n.pricePerHourUsd);
           return (
             <div className="card" key={n.id}>
               <div className="card-head">
@@ -178,15 +147,7 @@ export function Explore({
               </ul>
               <div className="price">{formatUsdc(quote)}</div>
               <div className="muted small">
-                {owed === 0 ? (
-                  <>covered by credit · no signature</>
-                ) : owed < quote ? (
-                  <>
-                    {formatUsdc(quote - owed)} from credit · pay {formatUsdc(owed)}
-                  </>
-                ) : (
-                  <>${n.pricePerHourUsd}/hr</>
-                )}
+                {formatUsdc(quote)} from credit · 0.01 USDC gate fee
               </div>
               <button
                 className="btn"
