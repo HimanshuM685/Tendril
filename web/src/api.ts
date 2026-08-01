@@ -106,9 +106,12 @@ export async function rentNode(
   nodeId: string,
   seconds: number,
   onStage?: (stage: PayStage) => void,
+  /** Pay the whole quote on-chain rather than spending an existing balance. */
+  useCredit = true,
 ): Promise<X402RentResponse> {
+  const credit = useCredit ? "" : "&credit=none";
   const res = await payingFetch(address, sign, onStage)(
-    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}`,
+    `${REGISTRY_URL}/x402/rent/${nodeId}?seconds=${seconds}&payer=${address}${credit}`,
     {
       method: "POST",
       headers: {

@@ -30,6 +30,7 @@ import {
   type PaymentFacts,
 } from "./x402/server.js";
 import { requirePayment, type PaidRequest } from "./x402/paywall.js";
+import { ROUTES } from "./x402/discovery.js";
 import { creditBalance, creditTopUp, debitForLease } from "./x402/credit.js";
 import {
   addressFromSession,
@@ -199,6 +200,8 @@ async function topUp(req: Request, res: Response) {
       amount,
       `Credit ${formatUsdc(amount)} to the paying address. Pay from a wallet you control: ` +
         `the balance is keyed to the sender and can only be spent by signing from that address.`,
+      undefined,
+      ROUTES.topup,
     ).catch((err) => fail(res, err));
   }
 
@@ -233,6 +236,7 @@ async function topUp(req: Request, res: Response) {
       amount,
       "Payment did not verify",
       verified.invalidReason ?? "invalid_payment",
+      ROUTES.topup,
     ).catch((err) => fail(res, err));
   }
 
@@ -306,7 +310,14 @@ router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
   const sessionAddr = addressFromSession(req.header("authorization"));
   const hinted = typeof req.query.payer === "string" ? req.query.payer : null;
   const payerAddress = sessionAddr ?? hinted;
-  const credit = payerAddress ? await creditBalance(payerAddress) : 0;
+
+  // `?credit=none` pays the whole quote on chain instead of spending an existing
+  // balance. Two reasons it exists: a caller may simply want to keep their
+  // credit, and — less obviously — a lease that is always covered by credit
+  // never settles a payment, so it is never cataloged by the Bazaar. Discovery
+  // is driven by settlement, so an endpoint needs a way to actually be paid.
+  const useCredit = !/^(none|false|0|no)$/i.test(String(req.query.credit ?? ""));
+  const credit = payerAddress && useCredit ? await creditBalance(payerAddress) : 0;
 
   // Unauthenticated requests are floored: paying at least `minPayableAtomic`
   // proves control of the hinted address.
@@ -331,6 +342,7 @@ router.post("/x402/rent/:nodeId", guard(async (req: Request, res: Response) => {
           owed,
           `${seconds}s lease on ${node.id} (${node.cpuCores} vCPU, ` +
             `${Math.round(node.ramMb / 1024)}GB) at ${formatUsdc(rate)}/hr.${covered}`,
+          ROUTES.rent,
         )
       : null;
   if (owed > 0 && !paid) return; // 402/400/409 already sent
@@ -390,6 +402,7 @@ router.post("/rent/:nodeId", guard(async (req: Request, res: Response) => {
     quote,
     `${seconds}s sandbox on ${node.id} (${node.cpuCores} vCPU, ` +
       `${Math.round(node.ramMb / 1024)}GB) for a flat ${formatUsdc(quote)}.`,
+    ROUTES.rentFlat,
   );
   if (!paid) return;
 
@@ -560,6 +573,7 @@ router.post("/lease/:id/run", guard(async (req: Request, res: Response) => {
     "run",
     config.flatRunAtomic,
     `Execute one job on lease ${lease.id} for a flat ${formatUsdc(config.flatRunAtomic)}.`,
+    ROUTES.run,
   );
   if (!paid) return;
 

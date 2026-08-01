@@ -31,6 +31,7 @@ import {
   type PaymentFacts,
   type PaymentRoute,
 } from "./server.js";
+import type { RouteDiscovery } from "./discovery.js";
 
 /** A verified-but-unsettled payment, waiting on the work it paid for. */
 export interface PaidRequest {
@@ -58,6 +59,7 @@ export async function requirePayment(
   route: PaymentRoute,
   priceAtomic: number,
   description: string,
+  discovery?: RouteDiscovery,
 ): Promise<PaidRequest | null> {
   let payload;
   try {
@@ -68,7 +70,9 @@ export async function requirePayment(
   }
 
   if (!payload) {
-    await challenge(req, res, priceAtomic, description).catch((err) => fail(res, err));
+    await challenge(req, res, priceAtomic, description, undefined, discovery).catch((err) =>
+      fail(res, err),
+    );
     return null;
   }
 
@@ -106,6 +110,7 @@ export async function requirePayment(
       priceAtomic,
       description,
       verified.invalidReason ?? "invalid_payment",
+      discovery,
     ).catch((err) => fail(res, err));
     return null;
   }

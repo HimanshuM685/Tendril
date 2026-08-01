@@ -34,6 +34,7 @@ export function Explore({
   const [renting, setRenting] = useState<string | null>(null);
   const [stage, setStage] = useState<PayStage | null>(null);
   const [seconds, setSeconds] = useState(DURATIONS[1].seconds);
+  const [useCredit, setUseCredit] = useState(true);
 
   // Poll the node list, pausing while the tab is hidden — same pattern as the
   // balance poll in App. A stale "can't reach backend" error clears itself on
@@ -79,6 +80,7 @@ export function Explore({
    */
   const owedFor = (usdPerHour: number) => {
     const quote = quoteFor(usdPerHour);
+    if (!useCredit) return quote; // paying on-chain by choice
     return session ? Math.max(0, quote - balanceAtomic) : quote;
   };
 
@@ -98,6 +100,7 @@ export function Explore({
         node.id,
         seconds,
         setStage,
+        useCredit,
       );
       onLeased(toActiveLease(res, node.label));
     } catch (e) {
@@ -139,6 +142,20 @@ export function Explore({
           </button>
         ))}
       </div>
+
+      {/* With enough credit a rent settles nothing on chain and opens no wallet.
+          That is usually what you want, but it also means the lease never
+          becomes a payment — so make paying directly an explicit choice. */}
+      {balanceAtomic > 0 && (
+        <label className="muted small" style={{ display: "block", marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={!useCredit}
+            onChange={(e) => setUseCredit(!e.target.checked)}
+          />{" "}
+          Pay on-chain with x402 instead of using my {formatUsdc(balanceAtomic)} credit
+        </label>
+      )}
 
       {loading && nodes.length === 0 && <p className="muted">Scanning for nodes…</p>}
       {!loading && nodes.length === 0 && (

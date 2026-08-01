@@ -57,6 +57,23 @@ export const config = {
   // How long a 402 challenge stays payable.
   x402MaxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 60),
 
+  // ────────────────────── Bazaar discovery / branding ──────────────────────
+  // Tag every resource carries. The facilitator uses it to attribute activity,
+  // so the challenge tag has to be present for challenge tracking to see us.
+  x402Tag: process.env.X402_TAG ?? "x402-global-challenge",
+  // Extra categorisation tags (comma-separated). 5 tags total, 32 chars each.
+  x402ExtraTags: (process.env.X402_EXTRA_TAGS ?? "compute,ssh,sandbox")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean),
+  // How the API is named and pictured in the Bazaar dashboard. The icon must be
+  // a publicly reachable http(s) URL or the facilitator drops it.
+  serviceName: process.env.X402_SERVICE_NAME ?? "Tendril",
+  serviceIconUrl: process.env.X402_ICON_URL ?? "",
+  // Absolute base URL this registry is reachable at. Discovery canonicalises on
+  // the origin, so behind a proxy this must be the PUBLIC url, not localhost.
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "",
+
   // Algorand address that receives x402 payments. REQUIRED in production.
   platformPayTo: process.env.PLATFORM_PAYTO ?? "",
   // Base64 64-byte secret key for PLATFORM_PAYTO — signs on-chain contributor

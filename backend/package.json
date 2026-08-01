@@ -11,6 +11,7 @@
     "@tendril/shared": "*",
     "@x402/avm": "^2.20.0",
     "@x402/core": "^2.20.0",
+    "@x402/extensions": "^2.20.0",
     "algosdk": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

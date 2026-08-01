@@ -36,6 +36,7 @@ import type {
 } from "@x402/core/types";
 import { decodeTransaction, getSenderFromTransaction, getTransactionId } from "@x402/avm";
 import type { AssetInfo } from "@tendril/shared";
+import { discoveryExtensions, serviceMetadata, type RouteDiscovery } from "./discovery.js";
 import { config } from "../config.js";
 import { q } from "../db.js";
 
@@ -129,7 +130,14 @@ export async function requirements(amountAtomic: number): Promise<PaymentRequire
     asset: config.assetId,
     payTo: config.platformPayTo,
     maxTimeoutSeconds: config.x402MaxTimeoutSeconds,
-    extra: { decimals: config.assetDecimals, name: config.assetSymbol, ...(sponsor ? { feePayer: sponsor } : {}) },
+    extra: {
+      decimals: config.assetDecimals,
+      name: config.assetSymbol,
+      ...(sponsor ? { feePayer: sponsor } : {}),
+      // Attribution for the facilitator's activity tracking. Payments settle
+      // with or without it; without it they just aren't counted as ours.
+      tag: config.x402Tag,
+    },
   };
 }
 
@@ -146,20 +154,38 @@ export async function challenge(
   amountAtomic: number,
   description: string,
   error = "Payment required",
+  discovery?: RouteDiscovery,
 ): Promise<void> {
   const body: PaymentRequired = {
     x402Version: 2,
     error,
-    resource: { url: resourceUrl(req), description, mimeType: "application/json" },
+    // `resource` is copied verbatim onto the payment payload by any v2 client,
+    // and it is where the Bazaar reads our name, tags and icon from.
+    resource: {
+      url: resourceUrl(req),
+      description,
+      mimeType: "application/json",
+      ...serviceMetadata(),
+    },
     accepts: [await requirements(amountAtomic)],
+    ...(discovery ? { extensions: discoveryExtensions(discovery) } : {}),
   };
+  // The header, not the body, is what a v2 client reads — `getPaymentRequiredResponse`
+  // looks at PAYMENT-REQUIRED first and only falls back to the body for v1. The
+  // discovery extension has to be in the encoded header or it never reaches the
+  // payload, and the resource is never cataloged.
   res.setHeader("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body));
   res.status(402).json(body);
 }
 
-/** Canonical absolute URL of the resource being paid for. */
+/**
+ * Canonical absolute URL of the resource being paid for.
+ *
+ * Behind a proxy `req.get("host")` is the internal host, which would catalog us
+ * under something unreachable — set PUBLIC_BASE_URL in that case.
+ */
 export function resourceUrl(req: Request): string {
-  const base = process.env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
+  const base = config.publicBaseUrl || `${req.protocol}://${req.get("host") ?? "localhost"}`;
   return `${base}${req.originalUrl}`;
 }
 
