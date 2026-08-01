@@ -7,11 +7,10 @@ import type {
 import { usdToAtomic } from "@tendril/shared";
 import { REGISTRY_URL, apiError } from "./api";
 import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Client";
+import { ALGOD_URL } from "./lib/network";
 
 export type { SignTransactions };
 
-const ALGOD_URL =
-  (import.meta.env.VITE_ALGOD_URL as string | undefined) ?? "https://testnet-api.algonode.cloud";
 const algod = new algosdk.Algodv2("", ALGOD_URL, "");
 
 function toB64(bytes: Uint8Array): string {

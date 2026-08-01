@@ -8,18 +8,20 @@ import {
   WalletProvider,
 } from "@txnlab/use-wallet-react";
 import { App } from "./App";
+import { network } from "./lib/network";
 import "./styles.css";
 
-// Lute (browser wallet, no WalletConnect relay → fastest connect) + Pera + Defly
-// on Algorand testnet. Connecting a wallet is the auth layer; the same wallet
-// signs the native ALGO payments — one chain, one signature.
+// Lute (browser wallet, no WalletConnect relay → fastest connect) + Pera + Defly.
+// Connecting a wallet is the auth layer; the same wallet signs x402 payments.
+// The network comes from VITE_ALGORAND_NETWORK so the wallet can't end up on a
+// different chain than the one the registry quotes prices on.
 const walletManager = new WalletManager({
   wallets: [
     { id: WalletId.LUTE, options: { siteName: "Tendril" } },
     WalletId.PERA,
     WalletId.DEFLY,
   ],
-  defaultNetwork: NetworkId.TESTNET,
+  defaultNetwork: network.network === "mainnet" ? NetworkId.MAINNET : NetworkId.TESTNET,
 });
 
 // Warm up lute-connect so use-wallet's lazy import is already cached when the

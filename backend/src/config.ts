@@ -1,11 +1,11 @@
 import { config as loadEnv } from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-// The full-genesis-hash spelling, which is what the facilitator's /supported
-// advertises. @x402/avm exports a 32-char-truncated variant of the same id;
-// they are not interchangeable when matching a facilitator's supported kinds.
-import { ALGORAND_TESTNET_CAIP2 } from "@tendril/shared";
-import { USDC_TESTNET_ASA_ID } from "@x402/avm";
+// networkDefaults carries the full-genesis-hash CAIP-2 spelling, which is what
+// the facilitator's /supported advertises. @x402/avm exports a 32-char-truncated
+// variant of the same id; they are not interchangeable when matching a
+// facilitator's supported kinds.
+import { networkDefaults } from "@tendril/shared";
 
 // Load env from the app's own directory first (highest file priority), then fall
 // back to the monorepo-root .env. dotenv never overrides already-set vars, so
@@ -14,7 +14,20 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 loadEnv();
 loadEnv({ path: resolve(repoRoot, ".env") });
 
+// One switch for the chain. Every network-dependent default below comes from
+// here, so testnet/mainnet can't be half-applied; the individual vars still
+// override for a private algod or a non-USDC asset. Throws at import on an
+// unrecognised name rather than quietly running testnet.
+const net = networkDefaults(process.env.ALGORAND_NETWORK);
+
+/** The algod override for the network we're actually on, if one is set. */
+function networkAlgodUrl(): string | undefined {
+  return net.network === "mainnet" ? process.env.ALGOD_MAINNET_URL : process.env.ALGOD_TESTNET_URL;
+}
+
 export const config = {
+  /** "testnet" | "mainnet" — what ALGORAND_NETWORK resolved to. */
+  network: net.network,
   port: Number(process.env.REGISTRY_PORT ?? 4000),
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   heartbeatTimeoutMs: Number(process.env.HEARTBEAT_TIMEOUT_MS ?? 30_000),
@@ -24,16 +37,20 @@ export const config = {
   // Comma-separated list of allowed web origins for CORS; "*" allows all.
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
   // Algod endpoint used to read balances/opt-ins and submit payouts (public node, no token).
-  algodUrl: process.env.ALGOD_TESTNET_URL ?? "https://testnet-api.algonode.cloud",
+  // ALGOD_URL overrides on any network. The network-named vars are deliberately
+  // scoped to their own network — a leftover ALGOD_TESTNET_URL must not quietly
+  // pin a mainnet deployment to testnet algod (and @x402/avm reads these two for
+  // its own defaults, so the names stay meaningful).
+  algodUrl: process.env.ALGOD_URL ?? networkAlgodUrl() ?? net.algodUrl,
 
   // ─────────────────────────────── x402 ───────────────────────────────
   // CAIP-2 network every payment must be on.
-  x402Network: process.env.X402_NETWORK ?? ALGORAND_TESTNET_CAIP2,
+  x402Network: process.env.X402_NETWORK ?? net.caip2,
   // The ASA every price is denominated in. USDC has 6 decimals, so
   // `pricePerHourUsd * 1e6` is the atomic amount — there is no exchange rate.
-  assetId: process.env.X402_ASSET_ID ?? USDC_TESTNET_ASA_ID,
-  assetDecimals: Number(process.env.X402_ASSET_DECIMALS ?? 6),
-  assetSymbol: process.env.X402_ASSET_SYMBOL ?? "USDC",
+  assetId: process.env.X402_ASSET_ID ?? net.asset.id,
+  assetDecimals: Number(process.env.X402_ASSET_DECIMALS ?? net.asset.decimals),
+  assetSymbol: process.env.X402_ASSET_SYMBOL ?? net.asset.symbol,
   // Verifies (simulates) and settles payment groups, and sponsors the network
   // fee, so a client needs the asset but no ALGO.
   facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://facilitator.goplausible.xyz",

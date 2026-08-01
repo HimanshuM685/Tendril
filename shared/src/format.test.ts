@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import {
   applicableCredit,
   atomicPerHour,
+  networkDefaults,
   formatUsdc,
   formatUsdcExact,
   proratedCost,
@@ -69,3 +70,31 @@ assert.equal(applicableCredit(5_000, 1_000_000, anon), 0); // quote below the fl
 assert.equal(applicableCredit(250_000, 0, anon), 0);
 
 console.log("credit discount ok");
+
+// ── network switch ──
+// One value picks the chain. The failure this guards against is a half-applied
+// switch: mainnet CAIP-2 paired with the testnet USDC id would send real
+// payments to an asset that doesn't exist there.
+const testnet = networkDefaults("testnet");
+const mainnet = networkDefaults("mainnet");
+
+assert.equal(networkDefaults(undefined).network, "testnet", "unset must not mean mainnet");
+assert.equal(networkDefaults("MainNet").network, "mainnet", "case/whitespace tolerant");
+assert.equal(networkDefaults(" testnet ").network, "testnet");
+assert.throws(() => networkDefaults("mainet"), /unknown Algorand network/, "typo must throw, not default");
+
+// Nothing may be shared between the two: an id that appears on both sides is a
+// copy-paste slip that would silently point mainnet at testnet infrastructure.
+for (const key of ["caip2", "algodUrl", "explorerUrl"] as const) {
+  assert.notEqual(testnet[key], mainnet[key], `${key} is identical on both networks`);
+}
+assert.notEqual(testnet.asset.id, mainnet.asset.id, "USDC asset id is identical on both networks");
+assert.equal(testnet.asset.id, "10458941");
+assert.equal(mainnet.asset.id, "31566704");
+
+// The x402 SDK truncates the genesis hash to 32 chars; ours is the full form.
+// `startsWith` is what makes the two spellings interchangeable at registration.
+assert.ok(testnet.caip2.startsWith("algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDe"));
+assert.ok(mainnet.caip2.startsWith("algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73k"));
+
+console.log("network switch ok");

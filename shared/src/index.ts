@@ -524,5 +524,66 @@ export function isOnline(lastHeartbeat: number, timeoutMs: number, now = Date.no
   return now - lastHeartbeat <= timeoutMs;
 }
 
-/** Algorand testnet CAIP-2 network identifier. */
+// ───────────────────────────── Network selection ─────────────────────────────
+// One switch picks the chain: `ALGORAND_NETWORK` (backend, contributor, buyer)
+// or `VITE_ALGORAND_NETWORK` (web). Everything that differs between testnet and
+// mainnet — the CAIP-2 id, the algod endpoint, the USDC asset, the explorer —
+// is derived from it here, so the two can never be set to disagree. Each value
+// still has its own env override for a private node or a non-USDC asset.
+
+/** CAIP-2 network identifiers, full genesis hash (what a facilitator advertises). */
 export const ALGORAND_TESTNET_CAIP2 = "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=";
+export const ALGORAND_MAINNET_CAIP2 = "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=";
+
+export type AlgorandNetwork = "testnet" | "mainnet";
+
+/** Everything that changes when you flip the network switch. */
+export interface NetworkDefaults {
+  network: AlgorandNetwork;
+  /** CAIP-2 id, full genesis hash. `@x402/avm` uses a 32-char-truncated form of
+   *  the same hash; the two are NOT interchangeable when matching a
+   *  facilitator's supported kinds, so keep the full one here.
+   *  Typed `namespace:reference` — that shape is what CAIP-2 guarantees and
+   *  what the x402 SDK's `Network` type requires. */
+  caip2: `${string}:${string}`;
+  algodUrl: string;
+  /** Block explorer root, e.g. `<root>/transaction/<txid>`. */
+  explorerUrl: string;
+  /** USDC on this network — the asset every price is denominated in. */
+  asset: AssetInfo;
+}
+
+const NETWORKS: Record<AlgorandNetwork, NetworkDefaults> = {
+  testnet: {
+    network: "testnet",
+    caip2: ALGORAND_TESTNET_CAIP2,
+    algodUrl: "https://testnet-api.algonode.cloud",
+    explorerUrl: "https://lora.algokit.io/testnet",
+    asset: { id: "10458941", decimals: 6, symbol: "USDC" },
+  },
+  mainnet: {
+    network: "mainnet",
+    caip2: ALGORAND_MAINNET_CAIP2,
+    algodUrl: "https://mainnet-api.algonode.cloud",
+    explorerUrl: "https://lora.algokit.io/mainnet",
+    asset: { id: "31566704", decimals: 6, symbol: "USDC" },
+  },
+};
+
+/**
+ * Resolve a network name to its defaults. Unset falls back to testnet — the
+ * safe default, since a typo must never quietly move real money. Anything set
+ * but unrecognised throws rather than defaulting, because silently running
+ * testnet while the operator believes they configured mainnet (or the reverse)
+ * is the one failure mode worth crashing at boot over.
+ */
+export function networkDefaults(name?: string | null): NetworkDefaults {
+  const key = (name ?? "testnet").trim().toLowerCase();
+  const found = NETWORKS[key as AlgorandNetwork];
+  if (!found) {
+    throw new Error(
+      `unknown Algorand network "${name}" — expected "testnet" or "mainnet"`,
+    );
+  }
+  return found;
+}
