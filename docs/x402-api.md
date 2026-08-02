@@ -23,8 +23,8 @@ arithmetic on it.
 - [Common schemas](#common-schemas)
 - **Endpoints**
   - [`POST /topup`](#post-topup) — buy credit, any amount
-  - [`POST /rent/:nodeId`](#post-rentnodeid) — open a metered session
-  - [`POST /lease/:id/run`](#post-leaseidrun) — execute one job, flat price
+  - [`POST /x402/rent`](#post-x402rent) — open a metered session
+  - [`POST /x402/run`](#post-x402run) — execute one job, flat price
   - [`DELETE /x402/leases/:id`](#delete-x402leasesid) — stop the meter and bill
   - [`GET /lease/:id`](#get-leaseid) — lease status (free)
   - [`GET /platform`](#get-platform) — asset + network discovery (free)
@@ -137,8 +137,8 @@ the same whoever asks.
 | Open to any origin | Behind `CORS_ORIGIN` |
 |---|---|
 | `POST /topup`, `POST /x402/topup` | `GET /platform` |
-| `POST /rent/:nodeId`, `POST /x402/rent/:nodeId` | `GET /explorer`, `GET /nodes` |
-| `POST /lease/:id/run` | `GET /wallet`, `GET /metrics` |
+| `POST /x402/rent` (+ legacy `/rent/:nodeId`) | `GET /explorer`, `GET /nodes` |
+| `POST /x402/run` (+ legacy `/lease/:id/run`) | `GET /wallet`, `GET /metrics` |
 | `POST /lease/:id/release`, `DELETE /x402/leases/:id` | `GET /lease/:id`, `/auth/*` |
 
 CORS constrains browsers only — a headless agent was never subject to it and can call anything.
@@ -462,9 +462,11 @@ curl -sS -X POST "$API/topup?amount=abc"          # not an integer
 
 ---
 
-## `POST /rent/:nodeId`
+## `POST /x402/rent`
 
-Open a metered session on a node. **Alias:** `POST /x402/rent/:nodeId`.
+Open a metered session on a node. The machine is named by `?nodeId=`, **not** by a path segment —
+one URL for every rent, so the endpoint is one entry in the Bazaar catalog rather than one per node.
+**Legacy aliases:** `POST /rent/:nodeId` and `POST /x402/rent/:nodeId` still work unchanged.
 
 There is no duration to choose and no block to buy. Renting pays one flat on-chain **gate fee** —
 that is the x402 payment, and the only thing that moves up front. From there the clock simply runs,
@@ -480,16 +482,17 @@ at the end of a block they guessed wrong.
 | **CORS** | open |
 | **Price** | `FLAT_RENT_ATOMIC` (0.01 USDC) on-chain, then `pricePerHourUsd` billed from credit |
 
-### Path parameters
+### Query parameters
 
-| Name | Description |
-|---|---|
-| `nodeId` | From `GET /explorer`. |
+| Name | Required | Description |
+|---|---|---|
+| `nodeId` | yes | Which machine to rent, from `GET /explorer`. May also be sent as a body field. Missing it is `400 node_required`. |
 
 ### Request body
 
 | Field | Type | Required | Description |
 |---|---|---|---|
+| `nodeId` | string | no | Alternative to `?nodeId=`. The query parameter wins if both are given. |
 | `sshPubKey` | string | no | An OpenSSH public key line, e.g. `ssh-ed25519 AAAAC3Nza…`. Installed as the sandbox's `authorized_keys`; the response then has `authMethod: "publickey"` and `password: null`. **Without a session this is the only usable auth** — there is no address to use as a password. |
 
 ```jsonc
@@ -503,7 +506,7 @@ Sandbox is up, the gate fee has settled, and the meter is running. Carries `PAYM
 ```jsonc
 {
   "leaseId": "lease_9k2m",
-  "leaseToken": "eyJhbGciOi…",          // required by /lease/:id/run and /release
+  "leaseToken": "eyJhbGciOi…",          // required by /x402/run and /release
   "node": {
     "id": "node_7f2",
     "cpu": 8,
@@ -571,7 +574,7 @@ Pick a node and read the gate-fee quote — both plain `curl`:
 NODE=$(curl -sS $API/explorer | jq -r '[.nodes[] | select(.status=="online")]
                                        | sort_by(.pricePerHourUsd) | .[0].id')
 
-curl -sS -X POST "$API/rent/$NODE" | jq '.accepts[0].amount'
+curl -sS -X POST "$API/x402/rent?nodeId=$NODE" | jq '.accepts[0].amount'
 ```
 
 ```json
@@ -582,9 +585,9 @@ Then pay it, sending your public key so you can actually log in (see the note be
 
 ```bash
 BODY=$(jq -n --arg k "$(cat ~/.ssh/id_ed25519.pub)" '{sshPubKey:$k}')
-SIG=$(curl -sS -X POST "$API/rent/$NODE" -H 'content-type: application/json' -d "$BODY" | node sign.mjs)
+SIG=$(curl -sS -X POST "$API/x402/rent?nodeId=$NODE" -H 'content-type: application/json' -d "$BODY" | node sign.mjs)
 
-curl -sS -X POST "$API/rent/$NODE" \
+curl -sS -X POST "$API/x402/rent?nodeId=$NODE" \
      -H 'content-type: application/json' \
      -H "PAYMENT-SIGNATURE: $SIG" \
      -d "$BODY" | tee lease.json | jq '{cmd:.ssh.command, until:.fundedUntil}'
@@ -611,7 +614,7 @@ session address, and there isn't one. The rent still succeeds and still bills.
 Failures you can reproduce with `curl` alone, no signer:
 
 ```bash
-curl -sS -X POST "$API/rent/node_doesnotexist"
+curl -sS -X POST "$API/x402/rent?nodeId=node_doesnotexist"
 ```
 
 ```json
@@ -619,9 +622,13 @@ curl -sS -X POST "$API/rent/node_doesnotexist"
 ```
 
 
-## `POST /lease/:id/run`
+## `POST /x402/run`
 
 Execute one job inside a running sandbox, at a flat price per call.
+
+The lease is named by the bearer token, so the path carries no lease id — every job goes to the same
+URL and rolls up into one Bazaar entry. **Legacy alias:** `POST /lease/:id/run`, where `:id` must
+match the token, as before.
 
 **The job runs before the payment settles.** A job that never ran is never paid for.
 
@@ -635,7 +642,7 @@ Execute one job inside a running sandbox, at a flat price per call.
 
 | Header | Required | Description |
 |---|---|---|
-| `Authorization: Bearer <leaseToken>` | yes | The `leaseToken` from the rent response. Must match `:id`. |
+| `Authorization: Bearer <leaseToken>` | yes | The `leaseToken` from the rent response. This is what identifies the lease. |
 | `PAYMENT-SIGNATURE` | on the retry | |
 
 ### Request body
@@ -683,11 +690,11 @@ The lease token authenticates; the payment buys the execution. Both headers are 
 
 ```bash
 RUN=$(jq -n '{payload:"print(sum(range(100)))"}')
-SIG=$(curl -sS -X POST "$API/lease/$LEASE/run" \
+SIG=$(curl -sS -X POST "$API/x402/run" \
         -H "authorization: Bearer $LEASE_TOKEN" \
         -H 'content-type: application/json' -d "$RUN" | node sign.mjs)
 
-curl -sS -X POST "$API/lease/$LEASE/run" \
+curl -sS -X POST "$API/x402/run" \
      -H "authorization: Bearer $LEASE_TOKEN" \
      -H 'content-type: application/json' \
      -H "PAYMENT-SIGNATURE: $SIG" \
@@ -913,7 +920,7 @@ Server-side environment variables that change what clients see.
 | `MIN_TOPUP_ATOMIC` | `100000` | 0.10 USDC |
 | `MAX_TOPUP_ATOMIC` | `1000000000` | 1000 USDC |
 | `DEFAULT_TOPUP_ATOMIC` | `1000000` | Used when `?amount=` is omitted. |
-| `FLAT_RENT_ATOMIC` | `10000` | Gate fee to open a session on `POST /rent/:nodeId`. |
+| `FLAT_RENT_ATOMIC` | `10000` | Gate fee to open a session on `POST /x402/rent`. |
 | `FLAT_RUN_ATOMIC` | `10000` | Price of one job execution. |
 | `MIN_LEASE_SECONDS` | `60` | Least credit (as seconds of runtime) needed to open a session. |
 | `SANDBOX_READY_TIMEOUT_MS` | `45000` | Wait before `provisioning_failed`. |
@@ -1010,7 +1017,7 @@ if (!node) throw new Error("no node available");
 
 // 3. Open the session. Send a public key — without a session token it is the
 //    only usable auth, since there is no wallet address to use as a password.
-const res = await pay(`${API}/rent/${node.id}`, {
+const res = await pay(`${API}/x402/rent?nodeId=${node.id}`, {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
@@ -1101,10 +1108,10 @@ const pay = wrapFetchWithPayment(fetch, client);
 
 // Every 402 below is answered automatically.
 const top = await (await pay(`${API}/topup?amount=5000000`, { method: "POST" })).json();
-const lease = await (await pay(`${API}/rent/${nodeId}`, { method: "POST" })).json();
+const lease = await (await pay(`${API}/x402/rent?nodeId=${nodeId}`, { method: "POST" })).json();
 // lease.fundedUntil — when credit runs out at this rate. Top up and it moves.
 const run = await (
-  await pay(`${API}/lease/${lease.leaseId}/run`, {
+  await pay(`${API}/x402/run`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${lease.leaseToken}` },
     body: JSON.stringify({ payload: "print(1+1)" }),

@@ -12,6 +12,8 @@ import { isPayablePath } from "./cors.js";
 for (const path of [
   "/topup",
   "/x402/topup",
+  "/x402/rent",
+  "/x402/run",
   "/rent/node_7f2",
   "/x402/rent/node_7f2",
   "/lease/lease_9k2m/run",

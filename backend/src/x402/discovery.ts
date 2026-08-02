@@ -32,13 +32,20 @@ import { config } from "../config.js";
 /**
  * How a route describes itself to the Bazaar.
  *
- * `routeTemplate` is the one field worth getting right: the facilitator
- * canonicalises a resource as `origin + (routeTemplate ?? pathname)`. Without
- * it, `/x402/rent/node_7f2` and `/x402/rent/node_a91` become two catalog
- * entries — one per node ever rented — instead of a single endpoint.
+ * `routeTemplate` is the one field worth getting right, and it must contain **no
+ * path parameters**. The catalog keys an entry on the resource URL, and in
+ * practice the facilitator uses the concrete `resource.url` rather than this
+ * template — so `/x402/rent/node_7f2` and `/x402/rent/node_a91` became two
+ * catalog rows, one per node ever rented, and every lease minted its own `/run`
+ * row. Volume that should roll up into one endpoint was scattered across dozens.
+ *
+ * So the fix is not to describe the parameter better, it is to take it out of
+ * the path: every payable route is a fixed path and the variable part travels as
+ * a query parameter or in the body. `resourceUrl()` then emits exactly this
+ * string for every call, and one endpoint is one row.
  */
 export interface RouteDiscovery {
-  /** Express-style path with its params, e.g. `/x402/rent/:nodeId`. */
+  /** Fixed, parameter-free path, e.g. `/x402/rent`. Also the advertised URL. */
   routeTemplate: string;
   method: "GET" | "POST" | "DELETE" | "PUT" | "PATCH";
   /** Query params, body shape and an example response. `{}` is valid. */
@@ -120,69 +127,47 @@ export const ROUTES = {
     },
   },
   rent: {
-    routeTemplate: "/x402/rent/:nodeId",
+    routeTemplate: "/x402/rent",
     method: "POST",
     spec: {
       bodyType: "json",
-      input: { sshPubKey: "ssh-ed25519 AAAA…" },
+      input: { nodeId: "wbVu3T-ru3", sshPubKey: "ssh-ed25519 AAAA…" },
       inputSchema: {
         properties: {
-          seconds: {
+          nodeId: {
             type: "string",
             description:
-              "QUERY parameter (?seconds=): lease length, a multiple of 60 between 60 and 14400. Required.",
-          },
-          payer: {
-            type: "string",
-            description:
-              "QUERY parameter (?payer=): address to apply existing credit from. " +
-              "Unauthenticated callers still pay a floor on-chain, and the payment must be " +
-              "signed by this address.",
+              "QUERY parameter (?nodeId=) or BODY field: which machine to rent. " +
+              "Required. Pick one from GET /nodes.",
           },
           sshPubKey: {
             type: "string",
             description: "BODY field: OpenSSH public key to authorize. Optional.",
           },
         },
+        required: ["nodeId"],
       },
       output: {
         example: {
           leaseId: "lease_9k2m",
+          leaseToken: "eyJhbGciOi…",
           ssh: { host: "bore.pub", port: 41823, username: "root", command: "ssh root@bore.pub -p 41823" },
-          paidSeconds: 900,
-          paidUntil: "2026-08-01T10:29:02Z",
-        },
-      },
-    },
-  },
-  rentFlat: {
-    routeTemplate: "/rent/:nodeId",
-    method: "POST",
-    spec: {
-      bodyType: "json",
-      input: { sshPubKey: "ssh-ed25519 AAAA…" },
-      inputSchema: {
-        properties: {
-          sshPubKey: { type: "string", description: "OpenSSH public key to authorize (optional)" },
-        },
-      },
-      output: {
-        example: {
-          leaseId: "lease_9k2m",
-          ssh: { host: "bore.pub", port: 41823, username: "root", command: "ssh root@bore.pub -p 41823" },
-          paidSeconds: 900,
+          startedAt: "2026-08-01T10:14:02Z",
+          fundedUntil: "2026-08-01T11:14:02Z",
         },
       },
     },
   },
   run: {
-    routeTemplate: "/lease/:id/run",
+    routeTemplate: "/x402/run",
     method: "POST",
     spec: {
       bodyType: "json",
       input: { payload: "print('hello from the sandbox')" },
       inputSchema: {
-        properties: { payload: { type: "string", description: "Code to execute in the sandbox" } },
+        properties: {
+          payload: { type: "string", description: "BODY field: code to execute in the sandbox" },
+        },
         required: ["payload"],
       },
       output: { example: { jobId: "a1b2c3", ok: true, result: "hello from the sandbox\n" } },

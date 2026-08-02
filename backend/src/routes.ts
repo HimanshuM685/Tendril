@@ -266,9 +266,14 @@ async function topUpBody(payer: string, credited: number, txid: string): Promise
   };
 }
 
-// ═══════════════════════ POST /rent/:nodeId ═══════════════════════
+// ═══════════════════════ POST /x402/rent?nodeId= ═══════════════════════
 //
 // Rent a machine. Click, and the meter starts.
+//
+// The node id is a QUERY parameter (or a body field), never a path segment.
+// That is a discovery constraint, not a style choice: the Bazaar keys a catalog
+// entry on the resource URL, so `/rent/node_a` and `/rent/node_b` listed as two
+// separate endpoints and split this one product's volume across a row per node.
 //
 // There is no duration to choose and no block to buy. Renting pays one flat
 // on-chain gate fee (`FLAT_RENT_ATOMIC`) — that is the x402 payment, and it is
@@ -282,7 +287,20 @@ async function topUpBody(payer: string, credited: number, txid: string): Promise
 // Ordering is the whole design: verify, provision, *then* settle. If the sandbox
 // does not come up, the caller gets a 503 and has paid nothing.
 async function rent(req: Request, res: Response) {
-  const node = getNode(req.params.nodeId);
+  // Accepted three ways: `?nodeId=` (canonical), a body field, or the legacy
+  // `/rent/:nodeId` path the older clients and docs still use.
+  const body = req.body as { nodeId?: unknown } | undefined;
+  const nodeId =
+    req.params.nodeId ??
+    (typeof req.query.nodeId === "string" ? req.query.nodeId : undefined) ??
+    (typeof body?.nodeId === "string" ? body.nodeId : undefined);
+  if (!nodeId) {
+    return res
+      .status(400)
+      .json({ error: "node_required", detail: "pass ?nodeId= (or a nodeId body field)" });
+  }
+
+  const node = getNode(nodeId);
   if (!node) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
     return res.status(409).json({ error: "node_unavailable" });
@@ -341,8 +359,12 @@ async function rent(req: Request, res: Response) {
   });
 }
 
+// The canonical, parameter-free endpoint — the one the Bazaar lists.
+router.post("/x402/rent", guard(rent));
+// Legacy path-parameter aliases. Still fully functional for clients that have
+// them hard-coded, and they cannot pollute the catalog any more: their 402
+// advertises `/x402/rent` like every other call.
 router.post("/rent/:nodeId", guard(rent));
-// Kept so existing x402 clients and the Bazaar catalog entry keep resolving.
 router.post("/x402/rent/:nodeId", guard(rent));
 
 interface ProvisionArgs {
@@ -470,15 +492,21 @@ router.post("/lease/:id/release", guard(releaseLease));
 // the payload to the contributor over the websocket and return what it printed.
 // The job runs BEFORE the payment settles, so a job that never ran is never paid
 // for.
-router.post("/lease/:id/run", guard(async (req: Request, res: Response) => {
+//
+// The lease is named by the bearer lease token, so the path needs no parameter
+// at all — which is also what keeps every job in one Bazaar catalog entry
+// instead of one per lease id ever run.
+async function runOnLease(req: Request, res: Response): Promise<void> {
   const lease = requireLease(req, res);
   if (!lease) return;
   if (lease.status !== "active") {
-    return res.status(409).json({ error: "lease not active" });
+    res.status(409).json({ error: "lease not active" });
+    return;
   }
   const payload = (req.body as RunRequest)?.payload;
   if (typeof payload !== "string") {
-    return res.status(400).json({ error: "payload (string) required" });
+    res.status(400).json({ error: "payload (string) required" });
+    return;
   }
 
   const paid = await requirePayment(
@@ -486,7 +514,9 @@ router.post("/lease/:id/run", guard(async (req: Request, res: Response) => {
     res,
     "run",
     config.flatRunAtomic,
-    `Execute one job on lease ${lease.id} for a flat ${formatUsdc(config.flatRunAtomic)}.`,
+    `Execute one job in your rented sandbox — a flat ${formatUsdc(config.flatRunAtomic)} per job. ` +
+      `Send the code as \`payload\`; you get its stdout back. The lease is taken from your ` +
+      `\`Authorization: Bearer <leaseToken>\` header, and the job runs before the payment settles.`,
     ROUTES.run,
   );
   if (!paid) return;
@@ -497,13 +527,19 @@ router.post("/lease/:id/run", guard(async (req: Request, res: Response) => {
     result = await runJob(lease.nodeId, lease.id, jobId, payload);
   } catch (err) {
     // Nothing ran, so nothing settles.
-    return res.status(502).json({ error: (err as Error).message });
+    res.status(502).json({ error: (err as Error).message });
+    return;
   }
   if (!(await paid.settle(res))) return;
 
   const body: RunResponse = { jobId, ok: result.ok, result: result.result };
   res.json(body);
-}));
+}
+
+// Canonical; the lease comes from the token.
+router.post("/x402/run", guard(runOnLease));
+// Legacy alias — the `:id` must still match the token, as it always did.
+router.post("/lease/:id/run", guard(runOnLease));
 
 router.get("/lease/:id", guard((req: Request, res: Response) => {
   const lease = requireLease(req, res);
@@ -523,14 +559,19 @@ function requireSession(req: Request, res: Response): string | null {
   return address;
 }
 
-/** Verify the bearer lease token matches the :id route param. */
+/**
+ * The lease this request is for, from the bearer lease token. On the routes that
+ * still carry an `:id` the two must agree; on the parameter-free ones the token
+ * is the only source, which is no weaker — the token was always the thing being
+ * checked, and the path segment only ever had to match it.
+ */
 function requireLease(req: Request, res: Response) {
   const tokenLeaseId = leaseIdFromAuthHeader(req.header("authorization"));
-  if (!tokenLeaseId || tokenLeaseId !== req.params.id) {
+  if (!tokenLeaseId || (req.params.id !== undefined && tokenLeaseId !== req.params.id)) {
     res.status(401).json({ error: "invalid or missing lease token" });
     return null;
   }
-  const lease = getLease(req.params.id);
+  const lease = getLease(tokenLeaseId);
   if (!lease) {
     res.status(404).json({ error: "lease not found" });
     return null;

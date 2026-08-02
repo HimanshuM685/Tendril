@@ -92,7 +92,10 @@ export async function fetchWallet(token: string): Promise<WalletSummary> {
 }
 
 /**
- * Rent a node over x402: `POST /x402/rent/:nodeId?seconds=<n>`.
+ * Rent a node over x402: `POST /x402/rent?nodeId=<id>`.
+ *
+ * The node id is a query parameter, not a path segment, so every rent is the
+ * same resource URL and the Bazaar lists one endpoint instead of one per node.
  *
  * Every rent pays a flat gate fee (0.01 USDC) on-chain via x402 — the wallet
  * always opens. After the gate fee settles, the compute cost is deducted from
@@ -106,7 +109,7 @@ export async function rentNode(
   onStage?: (stage: PayStage) => void,
 ): Promise<X402RentResponse> {
   const res = await payingFetch(address, sign, onStage)(
-    `${REGISTRY_URL}/rent/${nodeId}`,
+    `${REGISTRY_URL}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`,
     {
       method: "POST",
       headers: {
@@ -144,19 +147,21 @@ export async function fetchLease(leaseId: string, leaseToken: string): Promise<L
 }
 
 /**
- * Execute one job in the sandbox: `POST /lease/:id/run`. Flat-priced per call,
- * so this answers 402 and `payingFetch` settles it — one wallet approval per
- * run. The job runs before the payment settles: a job that fails costs nothing.
+ * Execute one job in the sandbox: `POST /x402/run`. Flat-priced per call, so
+ * this answers 402 and `payingFetch` settles it — one wallet approval per run.
+ * The job runs before the payment settles: a job that fails costs nothing.
+ *
+ * The lease is named by `leaseToken`, never by the path — one URL, one Bazaar
+ * entry, however many leases run jobs through it.
  */
 export async function runJob(
-  leaseId: string,
   leaseToken: string,
   payload: string,
   address: string,
   sign: SignTransactions,
   onStage?: (stage: PayStage) => void,
 ): Promise<RunResponse> {
-  const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/lease/${leaseId}/run`, {
+  const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${leaseToken}` },
     body: JSON.stringify({ payload }),

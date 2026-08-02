@@ -18,8 +18,9 @@ import { config } from "../config.js";
 /** Routes that answer 402, and are therefore open to everyone. */
 const PAYABLE_PATHS = [
   /^\/(x402\/)?topup$/, // POST — buy credit, any amount
-  /^\/(x402\/)?rent\/[^/]+$/, // POST — buy a sandbox
-  /^\/lease\/[^/]+\/(run|release)$/, // POST — buy one execution / close early
+  /^\/x402\/(rent|run)$/, // POST — the canonical paid endpoints
+  /^\/(x402\/)?rent\/[^/]+$/, // POST — legacy per-node alias
+  /^\/lease\/[^/]+\/(run|release)$/, // POST — legacy alias / close early
   /^\/x402\/leases\/[^/]+$/, // DELETE — close early
 ];
 

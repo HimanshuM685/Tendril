@@ -17,6 +17,7 @@ import {
 } from "@x402/extensions";
 import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
 import { ROUTES, discoveryExtensions, serviceMetadata } from "./discovery.js";
+import { resourceUrl } from "./server.js";
 
 const service = serviceMetadata();
 
@@ -51,8 +52,42 @@ for (const [name, route] of Object.entries(ROUTES)) {
 }
 console.log("discovery extensions valid");
 
+// ── no route may carry a path parameter ──
+// This is the invariant the catalog actually keys on. A `:param` in the path
+// means one Bazaar row per node id / lease id / whatever, and the endpoint's
+// volume scatters across near-duplicate entries. The variable part belongs in a
+// query parameter or the body. Guarding it here because the damage is invisible
+// from our side — payments keep settling perfectly while the listing fragments.
+for (const [name, route] of Object.entries(ROUTES)) {
+  assert.ok(
+    !/[:*]/.test(route.routeTemplate),
+    `${name}: routeTemplate "${route.routeTemplate}" has a path parameter — ` +
+      `move it to a query parameter or the body`,
+  );
+}
+
+// ── the canonical URL is what we advertise, whichever alias was called ──
+// `challenge()` passes routeTemplate to resourceUrl, so a legacy call to
+// /rent/node_7f2 still declares itself as /x402/rent and folds into that row.
+for (const path of ["/rent/node_7f2", "/x402/rent/node_a91", "/x402/rent?nodeId=node_7f2"]) {
+  const req = { originalUrl: path, protocol: "https", get: () => "api.tendril.xyz" };
+  assert.equal(
+    resourceUrl(req as unknown as Parameters<typeof resourceUrl>[0], ROUTES.rent.routeTemplate),
+    "https://api.tendril.xyz/x402/rent",
+    `${path} did not canonicalise`,
+  );
+}
+// Without a canonical path it falls back to the request URL — which is exactly
+// the behaviour that produced a row per node, so it must stay opt-in.
+assert.equal(
+  resourceUrl(
+    { originalUrl: "/x402/rent/node_7f2", protocol: "https", get: () => "api.tendril.xyz" } as never,
+  ),
+  "https://api.tendril.xyz/x402/rent/node_7f2",
+);
+
 // ── the round trip a real payment makes ──
-const rent = payloadFor(ROUTES.rent, "https://api.tendril.xyz/x402/rent/node_7f2?seconds=900");
+const rent = payloadFor(ROUTES.rent, "https://api.tendril.xyz/x402/rent");
 const discovered = extractDiscoveryInfo(rent, {} as PaymentRequirements) as DiscoveredHTTPResource;
 
 assert.ok(discovered, "rent payload produced no discoverable resource");
@@ -63,21 +98,15 @@ assert.ok(
   `challenge tag missing from catalog entry — got ${JSON.stringify(discovered.tags)}`,
 );
 
-// ── the one that actually bites: per-node URLs must collapse to one resource ──
-// Without `routeTemplate` the facilitator canonicalises on the real pathname, so
-// every node ever rented becomes its own catalog entry and the endpoint's
-// activity is scattered across dozens of near-duplicate rows.
-assert.equal(discovered.resourceUrl, "https://api.tendril.xyz/x402/rent/:nodeId");
+// ── what the catalog ends up keyed on ──
+assert.equal(discovered.resourceUrl, "https://api.tendril.xyz/x402/rent");
 
-const otherNode = extractDiscoveryInfo(
-  payloadFor(ROUTES.rent, "https://api.tendril.xyz/x402/rent/node_a91?seconds=3600"),
+// One job, one row: the lease id rides in the bearer token, not the path.
+const run = extractDiscoveryInfo(
+  payloadFor(ROUTES.run, "https://api.tendril.xyz/x402/run"),
   {} as PaymentRequirements,
 ) as DiscoveredHTTPResource;
-assert.equal(
-  otherNode.resourceUrl,
-  discovered.resourceUrl,
-  "two nodes produced two catalog entries — routeTemplate is not being applied",
-);
+assert.equal(run.resourceUrl, "https://api.tendril.xyz/x402/run");
 
 // Query strings must not split the entry either.
 const topup = extractDiscoveryInfo(

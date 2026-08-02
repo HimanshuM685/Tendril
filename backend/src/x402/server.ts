@@ -162,7 +162,9 @@ export async function challenge(
     // `resource` is copied verbatim onto the payment payload by any v2 client,
     // and it is where the Bazaar reads our name, tags and icon from.
     resource: {
-      url: resourceUrl(req),
+      // Canonical URL, not the one that was called: a legacy path-parameter
+      // alias must not mint its own catalog row. See RouteDiscovery.
+      url: resourceUrl(req, discovery?.routeTemplate),
       description,
       mimeType: "application/json",
       ...serviceMetadata(),
@@ -181,12 +183,18 @@ export async function challenge(
 /**
  * Canonical absolute URL of the resource being paid for.
  *
+ * `canonicalPath` is the endpoint's fixed path. Passing it is what keeps one
+ * endpoint to one catalog entry: without it the URL carries whatever node id,
+ * lease id or `?amount=` this particular call used, and the Bazaar records each
+ * variant as a separate resource. Callers that have no discovery declaration
+ * fall back to the request URL.
+ *
  * Behind a proxy `req.get("host")` is the internal host, which would catalog us
  * under something unreachable — set PUBLIC_BASE_URL in that case.
  */
-export function resourceUrl(req: Request): string {
+export function resourceUrl(req: Request, canonicalPath?: string): string {
   const base = config.publicBaseUrl || `${req.protocol}://${req.get("host") ?? "localhost"}`;
-  return `${base}${req.originalUrl}`;
+  return `${base}${canonicalPath ?? req.originalUrl}`;
 }
 
 /**

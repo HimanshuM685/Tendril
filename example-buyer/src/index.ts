@@ -113,7 +113,10 @@ async function main() {
 
   // No duration to choose: the gate fee opens a metered session that runs for as
   // long as this address's credit can pay for it.
-  const lease = (await postJson(pay, `${REGISTRY}/rent/${node.id}`)) as X402RentResponse;
+  const lease = (await postJson(
+    pay,
+    `${REGISTRY}/x402/rent?nodeId=${encodeURIComponent(node.id)}`,
+  )) as X402RentResponse;
   console.log(
     `[agent] lease ${lease.leaseId} — ${formatUsdcExact(Number(lease.billing.rateAtomicPerHour))}/hr, ` +
       `gate fee ${formatUsdcExact(Number(lease.billing.gateFeeAtomic))}, ` +
@@ -124,7 +127,7 @@ async function main() {
   // 4. Run the training job inside the rented sandbox. Execution is flat-priced
   //    per call, so this is another 402 the wrapper answers on its own.
   console.log("[agent] running training script ...");
-  const run = (await postJson(pay, `${REGISTRY}/lease/${lease.leaseId}/run`, {
+  const run = (await postJson(pay, `${REGISTRY}/x402/run`, {
     headers: { authorization: `Bearer ${lease.leaseToken}` },
     body: JSON.stringify({ payload: TRAINING_SCRIPT }),
   })) as RunResponse;
