@@ -24,7 +24,7 @@ arithmetic on it.
 - **Endpoints**
   - [`POST /topup`](#post-topup) — buy credit, any amount
   - [`POST /x402/rent`](#post-x402rent) — open a metered session
-  - [`POST /x402/run`](#post-x402run) — execute one job, flat price
+  - [`POST /x402/run`](#post-x402run) — run one job, no lease needed
   - [`DELETE /x402/leases/:id`](#delete-x402leasesid) — stop the meter and bill
   - [`GET /lease/:id`](#get-leaseid) — lease status (free)
   - [`GET /platform`](#get-platform) — asset + network discovery (free)
@@ -39,6 +39,8 @@ arithmetic on it.
 > **[api.md](./api.md)**. This document covers only the three that move money.
 
 ---
+
+# Overview
 
 ## How payment works
 
@@ -919,6 +921,8 @@ Nodes available to rent. Free, no auth.
 payouts are recorded but unpaid until they do. The node still rents and still works normally.
 
 ---
+
+# Reference
 
 ## Error index
 

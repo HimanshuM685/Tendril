@@ -39,6 +39,8 @@ export API=http://localhost:4000
 
 ---
 
+# Overview
+
 ## Which endpoints need what
 
 | Endpoint | Auth | Payment | `curl`-able |
@@ -388,6 +390,8 @@ Without a valid token, both lease endpoints answer:
 ```
 
 ---
+
+# Reference
 
 ## Paid endpoints
 
