@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
@@ -13,6 +13,7 @@ import { Metrics } from "./components/Metrics";
 const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
+import { serializeSigner } from "./lib/x402Client";
 
 export type Session = { token: string; address: string };
 
@@ -41,7 +42,24 @@ function storeSession(s: Session | null) {
 }
 
 export function App() {
-  const { activeAddress, signTransactions, isReady } = useWallet();
+  const { activeAddress, signTransactions: rawSign, isReady } = useWallet();
+
+  /**
+   * One queued signer for the whole app.
+   *
+   * A wallet handles one signing request at a time — a second one while a prompt
+   * is open is rejected outright ("Confirmation Failed(4100)"). Signing in signs
+   * a transaction, and so does every paid request, and neither knows about the
+   * other. Queueing here, at the single place the signer enters the app, is what
+   * makes that collision impossible; queueing at the call sites left sign-in
+   * able to race a payment.
+   *
+   * Everything downstream — top up, rent, run — receives this and only this.
+   */
+  const signTransactions = useMemo(
+    () => serializeSigner(rawSign as never),
+    [rawSign],
+  ) as typeof rawSign;
   const location = useLocation();
   const navigate = useNavigate();
   const [lease, setLease] = useState<ActiveLease | null>(null);

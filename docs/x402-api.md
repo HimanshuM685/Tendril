@@ -537,6 +537,12 @@ Sandbox is up, the gate fee has settled, and the meter is running. Carries `PAYM
 every `METER_INTERVAL_MS`, so a session can overrun by up to one tick. That overrun is clamped to the
 balance at billing time and absorbed by the platform, never charged past what the renter holds.
 
+Reaching it does not kill the session outright either. The watchdog re-reads the payer's live balance
+first, so a top-up made mid-session extends the window instead of waiting for the next rent. Only if
+the credit really is spent does it open a **grace window** — `GRACE_ATOMIC` (default 1.00 USDC) of
+runtime at that lease's rate, enough to push your work somewhere — and destroy the sandbox when the
+window closes. `GET /lease/:id` reports it as `graceUntil`. Top up during it and it clears.
+
 ### Responses
 
 | Status | `error` | Meaning |
@@ -773,6 +779,7 @@ Lease status. Free.
     "paymentTxid": "DEF456…",
     "startedAt": 1785542042000,
     "expiresAt": 1785542942000,
+    "graceUntil": null,                 // set once credit runs out — see below
     "createdAt": 1785542040000
   }
 }

@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import type { Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
 import { fundedSeconds, proratedCost } from "@tendril/shared";
 import { recordPayout } from "./db.js";
-import { chargeUsage } from "./x402/credit.js";
+import { chargeUsage, creditBalance } from "./x402/credit.js";
 import { payContributor, payoutsEnabled } from "./payout.js";
 import { getNode } from "./registry.js";
 import { destroyContainer } from "./ws.js";
@@ -39,6 +39,7 @@ export function createLease(args: NewLease): Lease {
     status: "starting",
     startedAt: 0,
     expiresAt: fundedUntil(now, args.fundingAtomic, args.rateAtomicPerHour),
+    graceUntil: null,
     createdAt: now,
     ...args,
   };
@@ -214,9 +215,73 @@ async function watchdogTick(): Promise<void> {
   const now = Date.now();
   for (const lease of leases.values()) {
     if (lease.status !== "active") continue;
-    if (now >= lease.expiresAt) {
-      console.log(`[watchdog] credit exhausted — ending lease ${lease.id}`);
-      await closeLease(lease.id, "credit-exhausted");
+    if (now < lease.expiresAt) continue;
+
+    // `expiresAt` is only a projection made at lease start, so before acting on
+    // it, ask the ledger what the payer actually holds now. A top-up mid-session
+    // lands here and extends the window instead of being ignored until the next
+    // rent — including one made *during* the grace window, which is the whole
+    // point of giving one.
+    const decision = expiredLeaseAction(lease, await creditBalance(lease.payerAddr), now);
+    switch (decision.action) {
+      case "extend":
+        lease.expiresAt = decision.expiresAt;
+        if (lease.graceUntil !== null) {
+          console.log(`[watchdog] lease ${lease.id} topped up — grace cleared`);
+          lease.graceUntil = null;
+        }
+        break;
+      case "grace":
+        lease.graceUntil = decision.graceUntil;
+        console.log(
+          `[watchdog] credit exhausted on lease ${lease.id} — ` +
+            `${Math.round((decision.graceUntil - now) / 1000)}s grace to save work`,
+        );
+        break;
+      case "wait": // grace window still open — leave them to it
+        break;
+      case "close":
+        console.log(`[watchdog] lease ${lease.id} out of time — ending`);
+        await closeLease(lease.id, "credit-exhausted");
+        break;
     }
   }
+}
+
+export type WatchdogAction =
+  | { action: "extend"; expiresAt: number }
+  | { action: "grace"; graceUntil: number }
+  | { action: "wait" }
+  | { action: "close" };
+
+/**
+ * What to do with a lease that has run past `expiresAt`, given the payer's live
+ * balance. Pure, so the money decision can be tested without a ledger.
+ *
+ * Running out of credit does not cut the session off mid-keystroke: the renter
+ * first gets `GRACE_ATOMIC` worth of runtime **at their own rate** to save their
+ * work, and only then is the sandbox destroyed. That time is unfunded and the
+ * platform absorbs it — `chargeUsage` clamps the close to the balance, which by
+ * that point is spent.
+ */
+export function expiredLeaseAction(
+  lease: Pick<Lease, "rateAtomicPerHour" | "startedAt" | "graceUntil">,
+  balanceAtomic: number,
+  now: number,
+): WatchdogAction {
+  const elapsed = Math.max(0, Math.round((now - lease.startedAt) / 1000));
+  const owed = proratedCost(lease.rateAtomicPerHour, elapsed);
+  if (balanceAtomic > owed) {
+    return { action: "extend", expiresAt: fundedUntil(now, balanceAtomic - owed, lease.rateAtomicPerHour) };
+  }
+  if (lease.graceUntil === null) {
+    const seconds = fundedSeconds(config.graceAtomic, lease.rateAtomicPerHour);
+    // A free node never gets here (its window is Infinity); a rate so high that
+    // the grace rounds to nothing gets no window rather than a zero-length one.
+    if (seconds !== null && seconds > 0) return { action: "grace", graceUntil: now + seconds * 1000 };
+    return { action: "close" };
+  }
+  // Grace already running: let it run out. Anything else here would re-grant it
+  // every tick and the session would never end.
+  return now >= lease.graceUntil ? { action: "close" } : { action: "wait" };
 }

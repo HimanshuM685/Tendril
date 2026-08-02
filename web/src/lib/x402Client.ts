@@ -34,10 +34,10 @@ export function payingFetch(
   sign: SignTransactions,
   onStage?: (stage: PayStage) => void,
 ): typeof globalThis.fetch {
-  const scheme = new ExactAvmScheme(
-    { address, signTransactions: serialize(sign) },
-    { algodUrl: ALGOD_URL },
-  );
+  // `sign` must already be serialized — see `serializeSigner`. Wrapping again
+  // here would deadlock: the inner queue would wait on the slot the outer one
+  // is holding.
+  const scheme = new ExactAvmScheme({ address, signTransactions: sign }, { algodUrl: ALGOD_URL });
   // Both spellings of the network's CAIP-2 id are registered against one scheme:
   // @x402/avm uses the 32-char genesis prefix, our shared constant the full
   // hash. Whichever the registry quotes, a scheme is registered for it.
@@ -61,26 +61,55 @@ export function payingFetch(
 /**
  * Wallets take one signing request at a time. Pera and Defly reject a second one
  * outright — "Confirmation Failed(4100) … another transaction request in
- * progress" — and since a paid request can be fired from anywhere in the app
- * (top up here, rent there), two can overlap without either caller knowing.
+ * progress".
  *
- * So the queue lives at the signer, the single point every payment funnels
- * through, rather than in a `busy` flag on each button. A second payment now
- * waits for the wallet instead of failing.
+ * Serialize the signer **once, at the source** (see `App.tsx`), not per call
+ * site. Sign-in signs a transaction too, and so does every paid request; wrapping
+ * only the payment path left sign-in able to collide with it. Wrapping the
+ * signer that comes out of `useWallet()` covers every caller there will ever be,
+ * including ones added later that never think about this.
+ *
+ * Do not wrap a signer twice: the second queue would wait on the slot the first
+ * one holds, and deadlock.
  */
 let walletQueue: Promise<unknown> = Promise.resolve();
 
-function serialize(sign: SignTransactions): SignTransactions {
+/**
+ * How long to wait for a wallet prompt before letting the next request through.
+ * A prompt can legitimately sit for a minute while someone reads it, so this is
+ * generous — it exists only so a prompt that never settles (the user closed the
+ * wallet window rather than answering) cannot wedge the queue for the rest of
+ * the session.
+ */
+const WALLET_PROMPT_TIMEOUT_MS = 180_000;
+
+export function serializeSigner(sign: SignTransactions): SignTransactions {
   return (txns, indexesToSign) => {
-    // `.then(f, f)` rather than `.then(f)`: a rejected predecessor (the user hit
-    // reject) must hand the wallet on, not wedge the queue behind it.
-    const run = walletQueue.then(
-      () => sign(txns, indexesToSign),
-      () => sign(txns, indexesToSign),
-    );
+    const previous = walletQueue;
+    const run = (async () => {
+      await waitForSlot(previous);
+      return sign(txns, indexesToSign);
+    })();
     walletQueue = run.catch(() => undefined);
     return run;
   };
+}
+
+/**
+ * Resolve once the request ahead settles, or after the timeout — whichever comes
+ * first. The timer is cleared on the normal path, so a session of signatures
+ * doesn't accumulate one live three-minute timer per signature.
+ */
+function waitForSlot(previous: Promise<unknown>): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, WALLET_PROMPT_TIMEOUT_MS);
+    void previous
+      .catch(() => undefined)
+      .then(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+  });
 }
 
 /** Turn wallet error codes into something a person can act on. */

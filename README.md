@@ -319,6 +319,10 @@ accounts holding USDC).
   closes, for the seconds it actually ran (`elapsed/3600 × rate`), and the debit is clamped to the
   balance. A watchdog checks every `METER_INTERVAL_MS` whether credit has run out, so worst-case
   overrun is one tick — absorbed by the platform, never billed past what the renter holds.
+- **Running dry doesn't cut you off mid-keystroke:** the watchdog re-reads the live balance first (a
+  mid-session top-up extends the window), and if the credit really is gone it opens a grace window
+  worth `GRACE_ATOMIC` (default 1.00 USDC) of runtime *at that lease's rate* to save work in, then
+  destroys the sandbox. `GET /lease/:id` exposes it as `graceUntil`; topping up clears it.
 - **Settlement ordering:** verify → do the work → settle. A sandbox that fails to start returns
   `503` with **nothing settled**, so a failed rent costs the caller nothing.
 - **Nodes + leases are in-memory:** a registry restart drops live sessions (the sockets die anyway).

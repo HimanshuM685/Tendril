@@ -19,16 +19,35 @@ type SignTransactions = (
 ) => Promise<(Uint8Array | null)[]>;
 
 let walletQueue: Promise<unknown> = Promise.resolve();
+const WALLET_PROMPT_TIMEOUT_MS = 180_000;
 
-function serialize(sign: SignTransactions): SignTransactions {
+function serializeSigner(sign: SignTransactions): SignTransactions {
   return (txns, indexesToSign) => {
-    const run = walletQueue.then(
-      () => sign(txns, indexesToSign),
-      () => sign(txns, indexesToSign),
-    );
+    const previous = walletQueue;
+    const run = (async () => {
+      await waitForSlot(previous);
+      return sign(txns, indexesToSign);
+    })();
     walletQueue = run.catch(() => undefined);
     return run;
   };
+}
+
+/**
+ * Resolve once the request ahead settles, or after the timeout — whichever comes
+ * first. The timer is cleared on the normal path, so a session of signatures
+ * doesn't accumulate one live three-minute timer per signature.
+ */
+function waitForSlot(previous: Promise<unknown>): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, WALLET_PROMPT_TIMEOUT_MS);
+    void previous
+      .catch(() => undefined)
+      .then(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+  });
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -39,7 +58,7 @@ async function main() {
   let maxOpen = 0;
   const order: number[] = [];
 
-  const wallet = serialize(async (txns) => {
+  const wallet = serializeSigner(async (txns) => {
     open += 1;
     maxOpen = Math.max(maxOpen, open);
     order.push(txns[0][0]);
@@ -60,7 +79,7 @@ async function main() {
 
   // ── a rejection must hand the wallet on, not wedge the queue ──
   let ran = false;
-  const flaky = serialize(async (txns) => {
+  const flaky = serializeSigner(async (txns) => {
     if (txns[0][0] === 9) throw new Error("user rejected");
     ran = true;
     return [txns[0]];
@@ -71,12 +90,32 @@ async function main() {
   assert.ok(ran, "a rejected sign must not block the next one");
 
   // ── the queue survives a rejection with nothing awaiting it ──
-  const orphan = serialize(async (txns) => {
+  const orphan = serializeSigner(async (txns) => {
     if (txns[0][0] === 11) throw new Error("dismissed");
     return [txns[0]];
   });
   orphan([Uint8Array.of(11)]).catch(() => undefined);
   await orphan([Uint8Array.of(12)]); // resolves rather than hanging
+
+  // ── the bug this actually shipped with ──
+  // The queue lived inside the payment path, so sign-in — which signs a
+  // transaction through the SAME wallet by a different route — could run
+  // concurrently with a payment and trip 4100. One wrapped signer, shared by
+  // every caller, is what closes that.
+  let liveNow = 0;
+  let peak = 0;
+  const shared = serializeSigner(async (txns) => {
+    liveNow += 1;
+    peak = Math.max(peak, liveNow);
+    await sleep(15);
+    liveNow -= 1;
+    return [txns[0]];
+  });
+
+  const signIn = () => shared([Uint8Array.of(100)]); // App.signIn()
+  const payment = () => shared([Uint8Array.of(101)]); // payingFetch()
+  await Promise.all([signIn(), payment(), payment()]);
+  assert.equal(peak, 1, "sign-in and a payment reached the wallet at the same time");
 
   console.log("wallet queue ok");
 }

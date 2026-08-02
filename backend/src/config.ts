@@ -114,4 +114,10 @@ export const config = {
   sandboxReadyTimeoutMs: Number(process.env.SANDBOX_READY_TIMEOUT_MS ?? 45_000),
   // How often the watchdog checks active leases for expiry (ms).
   meterIntervalMs: Number(process.env.METER_INTERVAL_MS ?? 10_000),
+  // Runtime handed to a renter whose credit has run out, so they can save their
+  // work before the sandbox is destroyed — in atomic units, converted to seconds
+  // at that lease's own rate. A cheap node therefore gets a long window and an
+  // expensive one a short one, which is the same dollar of goodwill either way.
+  // The platform absorbs it: the close bills at most the remaining balance.
+  graceAtomic: Number(process.env.GRACE_ATOMIC ?? 1_000_000), // 1.00 USDC
 };

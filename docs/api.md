@@ -344,13 +344,19 @@ curl -s $API/lease/$LEASE -H "authorization: Bearer $LEASE_TOKEN" | jq
     "status": "active",
     "rateAtomicPerHour": 1000000,
     "startedAt": 1785606951000,
-    "expiresAt": 1785610551000
+    "expiresAt": 1785610551000,
+    "graceUntil": null
   }
 }
 ```
 
 `status` is `starting` | `active` | `ended` | `failed`. `expiresAt` is when credit runs out at this
 rate — top up and it moves out.
+
+Running out of credit does **not** disconnect you on the spot. `graceUntil` turns from `null` into a
+timestamp: `GRACE_ATOMIC` (default 1.00 USDC) of runtime **at your rate**, to save your work in. When
+it passes, the sandbox is destroyed. Top up during the window and `graceUntil` goes back to `null`
+and the session carries on — so poll this endpoint if you care about not losing a buffer.
 
 ## `DELETE /x402/leases/:id`
 

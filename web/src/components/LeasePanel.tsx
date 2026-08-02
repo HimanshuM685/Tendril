@@ -22,6 +22,7 @@ function fmtCountdown(ms: number): string {
 export function LeasePanel({ lease, onRelease }: Props) {
   const [now, setNow] = useState(Date.now());
   const [expiresAt, setExpiresAt] = useState(lease.expiresAt);
+  const [graceUntil, setGraceUntil] = useState<number | null>(null);
   const [status, setStatus] = useState<LeaseStatus>("active");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function LeasePanel({ lease, onRelease }: Props) {
         .then((l) => {
           if (!alive) return;
           setExpiresAt(l.expiresAt);
+          setGraceUntil(l.graceUntil);
           setStatus(l.status);
         })
         .catch(() => {});
@@ -71,7 +73,10 @@ export function LeasePanel({ lease, onRelease }: Props) {
     };
   }, [lease.leaseId, lease.leaseToken, ended]);
 
-  const remainingMs = Math.max(0, expiresAt - now);
+  // Out of credit but not cut off yet: the server hands over a short grace
+  // window to save work in. Count that down instead of a stuck zero, and say so.
+  const inGrace = graceUntil !== null && graceUntil > now;
+  const remainingMs = Math.max(0, (inGrace ? graceUntil : expiresAt) - now);
 
   function copy(label: string, value: string) {
     void writeClipboard(value).then((ok) => {
@@ -116,8 +121,17 @@ export function LeasePanel({ lease, onRelease }: Props) {
             {formatUsdc(Number(lease.billing.gateFeeAtomic))} gate fee paid
           </div>
         </div>
-        <div className="timer" data-expiring={remainingMs < 60_000} title="time left at current balance">
+        <div
+          className="timer"
+          data-expiring={inGrace || remainingMs < 60_000}
+          title={
+            inGrace
+              ? "out of credit — save your work, the sandbox is destroyed when this hits zero"
+              : "time left at current balance"
+          }
+        >
           {fmtCountdown(remainingMs)}
+          {inGrace && <span className="small"> out of credit — save your work</span>}
         </div>
         <div className="lease-actions">
           <button className="btn ghost" disabled={busy || ended} onClick={() => setConfirming(true)}>

@@ -111,6 +111,15 @@ export interface Lease {
    * what the credit can pay for.
    */
   expiresAt: number;
+  /**
+   * Unix ms the sandbox is actually torn down, once credit has run out.
+   *
+   * Hitting `expiresAt` does not kill the session outright — the renter gets a
+   * short grace window (`GRACE_ATOMIC` worth of runtime at their own rate) to
+   * save their work first. `null` while the lease is still funded; top up
+   * during the window and it clears and the session carries on.
+   */
+  graceUntil: number | null;
   createdAt: number;
 }
 
