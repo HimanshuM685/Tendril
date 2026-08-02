@@ -120,6 +120,18 @@ export interface Lease {
    * during the window and it clears and the session carries on.
    */
   graceUntil: number | null;
+  /**
+   * Whether billing this lease may take the payer's balance below zero.
+   *
+   * `false` (the default, and every SSH session): the charge is clamped to the
+   * balance, so watchdog-tick overrun and the grace window come out of the
+   * platform, not the renter.
+   *
+   * `true` (a one-shot `/x402/run`): the job is never killed part-way to protect
+   * a balance, so it can finish owing more than was there. The debt is real and
+   * blocks renting until it is cleared.
+   */
+  allowOverdraft: boolean;
   createdAt: number;
 }
 
@@ -349,6 +361,22 @@ export interface RunResponse {
   jobId: string;
   ok: boolean;
   result: string;
+  /**
+   * Present only on a **leaseless** run (`POST /x402/run` with no lease token),
+   * where the backend picked a machine, ran the code and billed the time itself.
+   * A run inside a lease you already hold bills with that lease, not here.
+   */
+  execution?: {
+    nodeId: string;
+    /** Seconds the sandbox was up — what was billed. */
+    seconds: number;
+    /** Cost of those seconds at the node's rate, in atomic units. */
+    costAtomic: string;
+    /** Balance afterwards. **May be negative** — a run is never cut off part-way
+     *  to protect the balance, so the last one can overdraw. Renting is blocked
+     *  until it is back above zero. */
+    balance: string;
+  };
 }
 
 // ───────────────────────── Wallet auth DTOs ─────────────────────────

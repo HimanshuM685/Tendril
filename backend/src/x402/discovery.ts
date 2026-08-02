@@ -166,11 +166,24 @@ export const ROUTES = {
       input: { payload: "print('hello from the sandbox')" },
       inputSchema: {
         properties: {
-          payload: { type: "string", description: "BODY field: code to execute in the sandbox" },
+          payload: {
+            type: "string",
+            description:
+              "BODY field: Python source to execute. Its stdout comes back in `result`. " +
+              "No lease, no setup: Tendril picks the best-value idle machine, runs it in a " +
+              "throwaway sandbox and bills the seconds it took from your credit.",
+          },
         },
         required: ["payload"],
       },
-      output: { example: { jobId: "a1b2c3", ok: true, result: "hello from the sandbox\n" } },
+      output: {
+        example: {
+          jobId: "a1b2c3",
+          ok: true,
+          result: "hello from the sandbox\n",
+          execution: { nodeId: "wbVu3T-ru3", seconds: 12, costAtomic: "1667", balance: "4998333" },
+        },
+      },
     },
   },
 } as const satisfies Record<string, RouteDiscovery>;

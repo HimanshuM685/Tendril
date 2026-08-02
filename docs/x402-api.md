@@ -552,6 +552,7 @@ window closes. `GET /lease/:id` reports it as `graceUntil`. Top up during it and
 |---|---|---|
 | `402` | *(PaymentRequired body)* | Pay the gate fee, or your payment did not verify. Nothing submitted. |
 | `402` | `insufficient_credit` | Verified, but the payer's credit funds less than `MIN_LEASE_SECONDS` at this node's rate. **Nothing settled** — top up first. Carries `detail`, `creditAtomic`, `rateAtomicPerHour`. |
+| `402` | `credit_exhausted` | The payer's balance is **negative** — an earlier `/x402/run` overdrew it. **Nothing settled.** Top up by at least the amount owed. Carries `creditAtomic`. |
 | `402` | `settlement_failed` | Sandbox came up but the gate fee would not settle. Sandbox torn down, node freed. Carries `detail`. |
 | `400` | `invalid_ssh_key` | `sshPubKey` is not a valid OpenSSH public key line. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
@@ -624,32 +625,58 @@ curl -sS -X POST "$API/x402/rent?nodeId=node_doesnotexist"
 
 ## `POST /x402/run`
 
-Execute one job inside a running sandbox, at a flat price per call.
+Run some code on a Linux machine and get its stdout back. Flat price per job.
 
-The lease is named by the bearer token, so the path carries no lease id — every job goes to the same
-URL and rolls up into one Bazaar entry. **Legacy alias:** `POST /lease/:id/run`, where `:id` must
-match the token, as before.
+**You do not need a lease.** Send no lease token and Tendril picks the best-value idle machine
+itself, starts a throwaway sandbox, runs your code, destroys the sandbox, and bills the seconds it
+took. Nothing to rent, choose or release.
+
+Send a lease token and it runs inside a machine you already hold instead; that time is billed with
+the lease, not here. Both are the same URL, so the endpoint is one entry in the Bazaar.
+**Legacy alias:** `POST /lease/:id/run`, where `:id` must match the token, as before.
 
 **The job runs before the payment settles.** A job that never ran is never paid for.
 
 | | |
 |---|---|
-| **Auth** | lease token, required |
+| **Auth** | none, or a lease token |
 | **CORS** | open |
-| **Price** | `FLAT_RUN_ATOMIC` (default `10000` = 0.01 USDC) |
+| **Price** | `FLAT_RUN_ATOMIC` (default `10000` = 0.01 USDC) **plus** execution time at the chosen node's hourly rate, billed from credit |
+
+### Which machine you get
+
+Not the cheapest — the best value. Nodes are scored `(cores + RAM_GB / 4) / pricePerHourUsd` among
+those online and idle, highest first, ties broken on the lower price. A machine at half the rate that
+takes three times as long is not a saving, and you have no way to see that happen, so the pick
+optimises capability per unit of rate. A free node (`pricePerHourUsd = 0`) always wins.
+
+### Billing, and how you can end up owing money
+
+The gate fee is on-chain. The execution is not: it comes out of your credit balance, charged once
+when the job finishes, at `elapsed / 3600 × rate`.
+
+**A run is never killed part-way to protect your balance.** So if 0.50 USDC of credit meets a job
+that costs 0.60, the job finishes and the balance lands at **−0.10 USDC**. That debt is real:
+
+- `POST /x402/rent` refuses with `402 credit_exhausted` until it is cleared,
+- `POST /x402/run` refuses with `402 insufficient_credit` for the same reason,
+- topping up by at least the amount owed restores both.
+
+You need a **positive** balance to start a leaseless run at all. `RUN_TIMEOUT_MS` (default 120s) caps
+how long one job can run, which is also the cap on how far a single run can overdraw you.
 
 ### Request headers
 
 | Header | Required | Description |
 |---|---|---|
-| `Authorization: Bearer <leaseToken>` | yes | The `leaseToken` from the rent response. This is what identifies the lease. |
+| `Authorization: Bearer <leaseToken>` | no | Runs inside that lease instead of a fresh sandbox. A token that is neither a valid lease nor a valid session is `401 invalid_token` — never silently downgraded to a leaseless run on some other machine. |
 | `PAYMENT-SIGNATURE` | on the retry | |
 
 ### Request body
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `payload` | string | yes | Source to execute in the sandbox. |
+| `payload` | string | yes | Python source to execute. Its stdout comes back in `result`. |
 
 ```jsonc
 { "payload": "print(sum(range(100)))" }
@@ -670,30 +697,70 @@ Carries `PAYMENT-RESPONSE`.
 `ok: false` means the job ran and failed; `result` holds whatever it printed. It is still a `200`,
 and it is still charged — the compute was consumed.
 
+A **leaseless** run carries one extra object naming the machine it found and what the time cost:
+
+```jsonc
+{
+  "jobId": "V1StGXR8Z5",
+  "ok": true,
+  "result": "4950\n",
+  "execution": {
+    "nodeId": "wbVu3T-ru3",
+    "seconds": 12,                      // sandbox uptime — what was billed
+    "costAtomic": "1667",               // 12s at that node's rate
+    "balance": "4998333"                // after the charge; MAY be negative
+  }
+}
+```
+
 ### Responses
 
 | Status | `error` | Meaning |
 |---|---|---|
 | `402` | *(PaymentRequired body)* | Pay `FLAT_RUN_ATOMIC`. |
+| `402` | `insufficient_credit` | Leaseless run with a zero or negative balance. **Nothing settled** — top up first. Carries `creditAtomic`. |
 | `402` | `settlement_failed` | Job ran but the payment would not settle. Carries `detail`. |
 | `400` | `payload (string) required` | Body had no `payload` string. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
-| `401` | `invalid or missing lease token` | Token absent, malformed, or for a different lease. |
+| `401` | `invalid_token` | An `Authorization` header that is neither a lease nor a session token. |
+| `401` | `invalid or missing lease token` | Lease path: token malformed or for a different lease. |
 | `404` | `lease not found` | Token valid but the lease is gone. |
 | `409` | `lease not active` | Lease has not started, or has already ended. |
 | `409` | `payment_already_used` | That payment already bought something. Carries `txid`. |
-| `502` | *(message from the agent)* | Job timed out or the node dropped. **Nothing settled.** |
+| `503` | `no_node_available` | Leaseless run and every machine is busy or offline. **Nothing settled.** |
+| `503` | `provisioning_failed` | The sandbox did not come up. **Nothing settled.** |
+| `502` | *(message from the agent)* | Job timed out or the node dropped. **Nothing settled, nothing billed.** |
 
-### Example
+### Example — no lease, no setup
 
-The lease token authenticates; the payment buys the execution. Both headers are required.
+Two commands and you have run code on somebody else's machine.
 
 ```bash
 RUN=$(jq -n '{payload:"print(sum(range(100)))"}')
 SIG=$(curl -sS -X POST "$API/x402/run" \
-        -H "authorization: Bearer $LEASE_TOKEN" \
         -H 'content-type: application/json' -d "$RUN" | node sign.mjs)
 
+curl -sS -X POST "$API/x402/run" \
+     -H 'content-type: application/json' \
+     -H "PAYMENT-SIGNATURE: $SIG" \
+     -d "$RUN" | jq
+```
+
+```json
+{
+  "jobId": "a1b2c3d4e5",
+  "ok": true,
+  "result": "4950\n",
+  "execution": { "nodeId": "wbVu3T-ru3", "seconds": 9, "costAtomic": "1250", "balance": "4998750" }
+}
+```
+
+### Example — inside a lease you hold
+
+Add the lease token and the job goes to your own machine; the time is billed with the lease when you
+release it, so there is no `execution` block.
+
+```bash
 curl -sS -X POST "$API/x402/run" \
      -H "authorization: Bearer $LEASE_TOKEN" \
      -H 'content-type: application/json' \
@@ -705,8 +772,8 @@ curl -sS -X POST "$API/x402/run" \
 { "jobId": "a1b2c3d4e5", "ok": true, "result": "4950\n" }
 ```
 
-If you have an SSH session open you do not need this endpoint at all — `/run` exists for clients
-that want one-shot execution without holding a shell.
+If you have an SSH session open you do not need this endpoint at all — `/x402/run` exists for
+clients that want one-shot execution without holding a shell.
 
 ---
 
@@ -725,8 +792,14 @@ payout      = charged × (1 − PLATFORM_FEE_PCT/100)  -> contributor, on-chain 
 ```
 
 `charged` is clamped to the balance because the watchdog only ticks every `METER_INTERVAL_MS`, so a
-session can legitimately overrun its funding by up to one tick. The platform absorbs that; the
-contributor is paid out of what was collected, never out of what was merely owed.
+session can legitimately overrun its funding by up to one tick — and because of the grace window,
+which is deliberately unfunded. The platform absorbs both; the contributor is paid out of what was
+collected, never out of what was merely owed.
+
+The clamp is what makes a **session** different from a leaseless `POST /x402/run`. A session can be
+stopped at any second, so it is, and your balance floors at zero. A one-shot run cannot be stopped
+part-way, so it bills in full and can leave you owing — see
+[the run endpoint](#post-x402run).
 
 | | |
 |---|---|
@@ -921,7 +994,9 @@ Server-side environment variables that change what clients see.
 | `MAX_TOPUP_ATOMIC` | `1000000000` | 1000 USDC |
 | `DEFAULT_TOPUP_ATOMIC` | `1000000` | Used when `?amount=` is omitted. |
 | `FLAT_RENT_ATOMIC` | `10000` | Gate fee to open a session on `POST /x402/rent`. |
-| `FLAT_RUN_ATOMIC` | `10000` | Price of one job execution. |
+| `FLAT_RUN_ATOMIC` | `10000` | Gate fee for one job on `POST /x402/run`. Execution time is billed on top, from credit. |
+| `RUN_TIMEOUT_MS` | `120000` | Hard ceiling on one job — and so on how far a single leaseless run can overdraw a balance. |
+| `GRACE_ATOMIC` | `1000000` | Runtime given to a session whose credit ran out, so work can be saved. Converted to seconds at that lease's rate. Platform absorbs it. |
 | `MIN_LEASE_SECONDS` | `60` | Least credit (as seconds of runtime) needed to open a session. |
 | `SANDBOX_READY_TIMEOUT_MS` | `45000` | Wait before `provisioning_failed`. |
 | `CORS_ORIGIN` | `*` | Guards everything **except** the payable routes. |

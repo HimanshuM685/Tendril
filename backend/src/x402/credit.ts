@@ -64,6 +64,12 @@ export async function creditTopUp(
  * That is a rounding error the platform absorbs, not a reason to fail a close
  * and leave the sandbox billed-but-not-torn-down.
  *
+ * `allowOverdraft` lifts the clamp and lets the balance go **negative**. It is
+ * for the one-shot `/x402/run`, where there is no watchdog to stop the work
+ * early: the job is billed for what it actually took even if that is more than
+ * the caller had. The debt is real — renting is refused until it is cleared —
+ * and the contributor is still paid, so the platform carries it in the interim.
+ *
  * Idempotent per lease: `charges.lease_id` is unique, so a concurrent release
  * and watchdog tick cannot bill the same session twice.
  */
@@ -73,6 +79,7 @@ export async function chargeUsage(args: {
   payToAddr: string;
   usedAtomic: number;
   usedSeconds: number;
+  allowOverdraft?: boolean;
 }): Promise<{ charged: number; balance: number }> {
   const { address, leaseId, payToAddr, usedAtomic, usedSeconds } = args;
   return inTransaction(async (client) => {
@@ -81,7 +88,9 @@ export async function chargeUsage(args: {
       [address],
     );
     const balance = Number(cur.rows[0]?.amount_atomic ?? 0);
-    const charged = Math.max(0, Math.min(usedAtomic, balance));
+    const charged = args.allowOverdraft
+      ? Math.max(0, usedAtomic)
+      : Math.max(0, Math.min(usedAtomic, balance));
 
     const ins = await client.query(
       `INSERT INTO charges (address, lease_id, pay_to, amount_micro, asset_id, seconds, created_at)

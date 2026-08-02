@@ -112,6 +112,9 @@ export const config = {
   // How long to wait for a contributor's sandbox to come up before giving up
   // and returning 503 — the payment is never settled if this elapses.
   sandboxReadyTimeoutMs: Number(process.env.SANDBOX_READY_TIMEOUT_MS ?? 45_000),
+  // Hard ceiling on one `/x402/run` job. It is also the cost ceiling on a
+  // leaseless run, since the sandbox is destroyed the moment the job ends.
+  runTimeoutMs: Number(process.env.RUN_TIMEOUT_MS ?? 120_000),
   // How often the watchdog checks active leases for expiry (ms).
   meterIntervalMs: Number(process.env.METER_INTERVAL_MS ?? 10_000),
   // Runtime handed to a renter whose credit has run out, so they can save their

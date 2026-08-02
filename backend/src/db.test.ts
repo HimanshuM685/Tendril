@@ -13,7 +13,7 @@
  */
 import assert from "node:assert/strict";
 import { initDb, q } from "./db.js";
-import { creditBalance, creditTopUp } from "./x402/credit.js";
+import { chargeUsage, creditBalance, creditTopUp } from "./x402/credit.js";
 import { config } from "./config.js";
 
 const other = config.network === "testnet" ? "mainnet" : "testnet";
@@ -73,9 +73,41 @@ const [{ n }] = await q<{ n: string }>(
 );
 assert.equal(n, "1", "top-up history did not survive re-running initDb");
 
+// ── the overdraft rule ──
+// A metered SSH session is clamped to the balance (watchdog overrun and the
+// grace window are the platform's problem). A one-shot /x402/run is not: it
+// cannot be stopped part-way, so it bills what it took and the balance goes
+// negative. Getting these two the wrong way round either hands out free compute
+// or kills someone's session to save a fraction of a cent.
+const balanceNow = await creditBalance(ADDR); // 4321 from above
+
+const clamped = await chargeUsage({
+  address: ADDR,
+  leaseId: `selfcheck-clamp-${Date.now()}`,
+  payToAddr: "PAYTO",
+  usedAtomic: balanceNow + 5000,
+  usedSeconds: 60,
+});
+assert.equal(clamped.charged, balanceNow, "a lease charge was not clamped to the balance");
+assert.equal(clamped.balance, 0, "clamped charge left a non-zero balance");
+
+await creditTopUp(ADDR, 1000, `${txid}-overdraft`);
+const overdrawn = await chargeUsage({
+  address: ADDR,
+  leaseId: `selfcheck-overdraft-${Date.now()}`,
+  payToAddr: "PAYTO",
+  usedAtomic: 1600,
+  usedSeconds: 60,
+  allowOverdraft: true,
+});
+assert.equal(overdrawn.charged, 1600, "an overdraft run was clamped — it must bill in full");
+assert.equal(overdrawn.balance, -600, "balance did not go negative on an overdraft run");
+
+await q("DELETE FROM charges WHERE address = $1", [ADDR]);
 await q("DELETE FROM topups WHERE address = $1", [ADDR]);
 await q("DELETE FROM credits WHERE address = $1", [ADDR]);
 
 console.log(`ledger isolation ok (${config.network} write invisible to ${other})`);
 console.log("restart-safe ok (initDb preserves balances + history)");
+console.log("overdraft ok (lease clamps, one-shot run goes negative)");
 process.exit(0);

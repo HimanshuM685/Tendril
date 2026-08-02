@@ -41,7 +41,7 @@ import {
   verifyWalletNonce,
 } from "./auth.js";
 import { metrics, walletSummary } from "./db.js";
-import { getNode, listNodesByOwner, listOnlineNodes } from "./registry.js";
+import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode } from "./registry.js";
 import { abandonLease, closeLease, createLease, getLease, nodeBusy } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected, runJob, startContainer } from "./ws.js";
@@ -335,6 +335,18 @@ async function rent(req: Request, res: Response) {
   // cannot fund a single minute, and taking a gate fee for a session that would
   // be killed on the next watchdog tick is just theft with extra steps.
   const credit = await creditBalance(renter);
+  // A negative balance is a debt from a `/x402/run` that overdrew. No new
+  // machine until it is cleared — otherwise the hole just gets deeper.
+  if (credit < 0) {
+    return res.status(402).json({
+      error: "credit_exhausted",
+      detail:
+        `this address owes ${formatUsdc(-credit)} from earlier usage. ` +
+        `Top up at least that much before renting again.`,
+      creditAtomic: String(credit),
+      rateAtomicPerHour: String(rate),
+    });
+  }
   const funded = fundedSeconds(credit, rate);
   if (funded !== null && funded < config.minLeaseSeconds) {
     return res.status(402).json({
@@ -487,44 +499,68 @@ async function releaseLease(req: Request, res: Response): Promise<void> {
 router.delete("/x402/leases/:id", guard(releaseLease));
 router.post("/lease/:id/release", guard(releaseLease));
 
-// ─────────────────────── lease-token-gated: run / status ───────────────────────
-// Pay a flat `FLAT_RUN_ATOMIC` to execute one job, then the ordinary flow: ship
-// the payload to the contributor over the websocket and return what it printed.
-// The job runs BEFORE the payment settles, so a job that never ran is never paid
-// for.
+// ═══════════════════════ POST /x402/run ═══════════════════════
 //
-// The lease is named by the bearer lease token, so the path needs no parameter
-// at all — which is also what keeps every job in one Bazaar catalog entry
-// instead of one per lease id ever run.
-async function runOnLease(req: Request, res: Response): Promise<void> {
+// Execute one job for a flat `FLAT_RUN_ATOMIC`. Two ways in, one endpoint:
+//
+//   with a lease token  -> runs in the sandbox you already rented, and the time
+//                          is billed with that lease when you release it.
+//   without one         -> **no lease needed.** The backend picks the best-value
+//                          idle machine, starts a throwaway sandbox, runs the
+//                          code, tears it down, and bills the seconds it took.
+//
+// The second is the interesting one: "here is some Python, run it somewhere" with
+// nothing to rent, choose or release first. Both live at one URL so the Bazaar
+// sees a single endpoint.
+//
+// The job runs BEFORE the payment settles, so a job that never ran is never
+// paid for.
+const RUN_DESCRIPTION =
+  `Run code on a rented Linux machine and get its stdout back. Flat ` +
+  `${formatUsdc(config.flatRunAtomic)} per job. POST \`{"payload": "<python>"}\` and, with no ` +
+  `lease token, Tendril picks the best-value idle machine, executes it in a throwaway sandbox and ` +
+  `bills the seconds it took from your credit. Send a lease token instead to run it inside a ` +
+  `machine you already hold.`;
+
+async function run(req: Request, res: Response): Promise<void> {
+  const payload = (req.body as RunRequest)?.payload;
+  if (typeof payload !== "string") {
+    res.status(400).json({ error: "payload (string) required" });
+    return;
+  }
+  // A lease token in hand means "run it in my machine". No header at all, or a
+  // session token, takes the leaseless path — there the payment is the only
+  // identity that matters.
+  const auth = req.header("authorization");
+  if (req.params.id !== undefined || leaseIdFromAuthHeader(auth) !== null) {
+    return runInLease(req, res, payload);
+  }
+  // A token that decodes to nothing is refused rather than quietly downgraded:
+  // an expired lease token must not silently become a job on some other machine
+  // that the caller then gets billed for.
+  if (auth && !addressFromSession(auth)) {
+    res.status(401).json({ error: "invalid_token", detail: "not a valid lease or session token" });
+    return;
+  }
+  return runAnywhere(req, res, payload);
+}
+
+/** The classic path: a job inside a sandbox the caller already rented. */
+async function runInLease(req: Request, res: Response, payload: string): Promise<void> {
   const lease = requireLease(req, res);
   if (!lease) return;
   if (lease.status !== "active") {
     res.status(409).json({ error: "lease not active" });
     return;
   }
-  const payload = (req.body as RunRequest)?.payload;
-  if (typeof payload !== "string") {
-    res.status(400).json({ error: "payload (string) required" });
-    return;
-  }
 
-  const paid = await requirePayment(
-    req,
-    res,
-    "run",
-    config.flatRunAtomic,
-    `Execute one job in your rented sandbox — a flat ${formatUsdc(config.flatRunAtomic)} per job. ` +
-      `Send the code as \`payload\`; you get its stdout back. The lease is taken from your ` +
-      `\`Authorization: Bearer <leaseToken>\` header, and the job runs before the payment settles.`,
-    ROUTES.run,
-  );
+  const paid = await requirePayment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
   if (!paid) return;
 
   const jobId = nanoid(10);
   let result;
   try {
-    result = await runJob(lease.nodeId, lease.id, jobId, payload);
+    result = await runJob(lease.nodeId, lease.id, jobId, payload, config.runTimeoutMs);
   } catch (err) {
     // Nothing ran, so nothing settles.
     res.status(502).json({ error: (err as Error).message });
@@ -536,10 +572,125 @@ async function runOnLease(req: Request, res: Response): Promise<void> {
   res.json(body);
 }
 
-// Canonical; the lease comes from the token.
-router.post("/x402/run", guard(runOnLease));
-// Legacy alias — the `:id` must still match the token, as it always did.
-router.post("/lease/:id/run", guard(runOnLease));
+/**
+ * No lease, no node to pick, nothing to release: throw code at Tendril and get
+ * its output back.
+ *
+ * Internally it is still a lease — that is what a running container *is* — but
+ * one that is created, used and closed inside this single request, so the caller
+ * never sees it. The billing is the ordinary lease billing: seconds the sandbox
+ * was up, at that node's rate, charged once at the end.
+ *
+ * Two rules make this safe to hand to strangers:
+ *   - credit must be **positive** to start. The gate fee is on-chain, but the
+ *     execution comes out of credit, and an address with none would be running
+ *     compute nobody has paid for.
+ *   - the charge at the end **may overdraw**. A job is never killed part-way to
+ *     protect a balance, so a run can end owing more than was there. That debt
+ *     then blocks renting until it is cleared.
+ */
+async function runAnywhere(req: Request, res: Response, payload: string): Promise<void> {
+  // The 402 comes first, before any check that could fail for reasons the caller
+  // cannot see: an agent that has never called this endpoint must always be able
+  // to ask what it costs, even at a moment when every machine happens to be busy.
+  const paid = await requirePayment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
+  if (!paid) return;
+
+  // Everything below is after verify and before settle, so each of these bails
+  // out with the caller having paid nothing.
+  const payer = paid.facts.payer;
+  const credit = await creditBalance(payer);
+  if (credit <= 0) {
+    res.status(402).json({
+      error: "insufficient_credit",
+      detail:
+        credit < 0
+          ? `this address owes ${formatUsdc(-credit)}; top up before running anything else.`
+          : "top up first — execution time is billed from credit.",
+      creditAtomic: String(credit),
+    });
+    return;
+  }
+
+  const node = pickBestValueNode((id) => isNodeConnected(id) && !nodeBusy(id));
+  if (!node) {
+    res.status(503).json({ error: "no_node_available", detail: "every machine is busy or offline" });
+    return;
+  }
+
+  const rate = atomicPerHour(node.pricePerHourUsd);
+  const lease = createLease({
+    nodeId: node.id,
+    renterAddr: payer,
+    payerAddr: payer,
+    payToAddr: node.payToAddr,
+    rateAtomicPerHour: rate,
+    gateFeeAtomic: config.flatRunAtomic,
+    fundingAtomic: credit,
+    paymentTxid: paid.facts.txid,
+    allowOverdraft: true,
+  });
+
+  try {
+    await startContainer({
+      nodeId: node.id,
+      leaseId: lease.id,
+      image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+      limits: {
+        memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
+        cpus: Math.min(node.cpuCores, 4),
+        gpus: node.gpu ? "all" : "",
+      },
+      // Nobody is going to SSH into this one, but it is still reachable over the
+      // tunnel — so give it a password nobody has rather than letting the
+      // sandbox fall back to its default.
+      sshPassword: nanoid(32),
+      sshPubKey: null,
+    });
+  } catch (err) {
+    abandonLease(lease.id);
+    res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
+    return;
+  }
+
+  const jobId = nanoid(10);
+  let result;
+  try {
+    result = await runJob(node.id, lease.id, jobId, payload, config.runTimeoutMs);
+  } catch (err) {
+    // The job never produced a result, so nothing settles and nothing is billed
+    // — abandon rather than close, or the caller pays for a job they never got.
+    abandonLease(lease.id);
+    res.status(502).json({ error: (err as Error).message });
+    return;
+  }
+
+  if (!(await paid.settle(res))) {
+    abandonLease(lease.id);
+    return;
+  }
+
+  // Tear down and bill the seconds it took. This is the only debit.
+  const settled = await closeLease(lease.id, "run-complete");
+  const body: RunResponse = {
+    jobId,
+    ok: result.ok,
+    result: result.result,
+    execution: {
+      nodeId: node.id,
+      seconds: settled?.usedSeconds ?? 0,
+      costAtomic: String(settled?.usedAtomic ?? 0),
+      balance: String(settled?.balance ?? (await creditBalance(payer))),
+    },
+  };
+  res.json(body);
+}
+
+// Canonical. Lease token optional — with it you run in your own machine, without
+// it Tendril finds one for you.
+router.post("/x402/run", guard(run));
+// Legacy alias — lease-only, and `:id` must still match the token, as it always did.
+router.post("/lease/:id/run", guard(run));
 
 router.get("/lease/:id", guard((req: Request, res: Response) => {
   const lease = requireLease(req, res);

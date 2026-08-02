@@ -71,6 +71,12 @@ no longer pay for the next second — and only then is the time you used billed,
 charge. The contributor is paid on-chain in USDC out of what was collected, minus `PLATFORM_FEE_PCT`.
 Signing in still exists, but its job has shrunk to reading your balance.
 
+Or skip renting entirely: `POST /x402/run` takes some code, finds the best-value idle machine, runs
+it in a throwaway sandbox and gives you the output. No lease to open, choose or release. The
+execution time comes out of credit — and because a job is never killed part-way to protect a
+balance, that one charge **can leave you owing**. A negative balance blocks renting and further runs
+until it is topped back up.
+
 ## The payable endpoints
 
 `GET /explorer` is **free**, so an agent can survey live nodes (specs + price) and choose for itself.
@@ -91,7 +97,7 @@ session. 402, pay, done, normal flow underneath.
 | Endpoint | Price | What you get |
 |---|---|---|
 | `POST /x402/rent` | `FLAT_RENT_ATOMIC` (0.01 USDC) gate fee | opens a **metered** session — container up, SSH + lease token returned, then billed by the second from credit |
-| `POST /x402/run` | `FLAT_RUN_ATOMIC` (0.01 USDC) | one job execution — payload shipped to the contributor, output returned |
+| `POST /x402/run` | `FLAT_RUN_ATOMIC` (0.01 USDC) + the seconds it takes | **one job, no lease needed** — Tendril picks the best-value idle machine, runs your code in a throwaway sandbox, returns stdout, and bills the execution time from credit |
 
 **Free.**
 

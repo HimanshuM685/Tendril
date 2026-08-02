@@ -55,7 +55,7 @@ export API=http://localhost:4000
 | `DELETE /x402/leases/:id` | lease token | free | yes |
 | `POST /topup` | none | **x402** | quote only |
 | `POST /x402/rent` | none | **x402** | quote only |
-| `POST /x402/run` | lease token | **x402** | quote only |
+| `POST /x402/run` | none (lease token optional) | **x402** | quote only |
 
 "Quote only" means an unpaid `curl` gets back the `402` naming the exact price — useful, but paying
 it needs a signed Algorand transaction group. See [x402-api.md](./x402-api.md).
@@ -398,7 +398,7 @@ guarantees and error semantics: **[x402-api.md](./x402-api.md)**.
 |---|---|---|
 | `POST /topup?amount=<atomic>` | what you ask for | credit on the **paying** address |
 | `POST /x402/rent` | `FLAT_RENT_ATOMIC` gate fee | a metered SSH session |
-| `POST /x402/run` | `FLAT_RUN_ATOMIC` | one job execution |
+| `POST /x402/run` | `FLAT_RUN_ATOMIC` + execution time | one job on a machine Tendril picks — no lease needed |
 
 You can still get a **price quote** with plain `curl` — an unpaid request returns the `402`:
 

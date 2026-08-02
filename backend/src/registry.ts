@@ -88,6 +88,31 @@ export function listNodesByOwner(ownerAddr: string): ComputeNode[] {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
+/**
+ * Best value-for-money node that is free right now, or null if none is.
+ *
+ * "Cheapest" on its own picks a slow machine that then takes longer to run the
+ * job and costs more than a faster one would have — the rate is per hour, so
+ * what actually matters is capability *per* unit of rate. The score is
+ * `(cores + RAM_GB / 4) / price`: RAM is worth something but a core is worth
+ * more, and a free node (`price <= 0`) beats everything, which is correct — it
+ * costs the caller nothing however long it takes.
+ *
+ * `isFree` is passed in rather than imported to keep this module free of the
+ * lease/ws cycle it would otherwise create.
+ */
+export function pickBestValueNode(isFree: (nodeId: string) => boolean): ComputeNode | null {
+  const candidates = [...nodes.values()].map(withStatus).filter((n) => n.status === "online" && isFree(n.id));
+  if (candidates.length === 0) return null;
+  const score = (n: ComputeNode) =>
+    n.pricePerHourUsd <= 0
+      ? Number.POSITIVE_INFINITY
+      : (n.cpuCores + n.ramMb / 1024 / 4) / n.pricePerHourUsd;
+  // Ties break on the lower absolute price, so an equal-value cheaper machine
+  // wins and a caller with little credit is not sent to an expensive one.
+  return candidates.sort((a, b) => score(b) - score(a) || a.pricePerHourUsd - b.pricePerHourUsd)[0];
+}
+
 export function listOnlineNodes(): ExplorerNode[] {
   return [...nodes.values()]
     .map(withStatus)

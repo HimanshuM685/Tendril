@@ -29,6 +29,8 @@ export interface NewLease {
   /** The payer's credit at lease start — what the funding window is computed from. */
   fundingAtomic: number;
   paymentTxid: string | null;
+  /** See `Lease.allowOverdraft`. Off unless the caller says otherwise. */
+  allowOverdraft?: boolean;
 }
 
 export function createLease(args: NewLease): Lease {
@@ -42,6 +44,7 @@ export function createLease(args: NewLease): Lease {
     graceUntil: null,
     createdAt: now,
     ...args,
+    allowOverdraft: args.allowOverdraft ?? false,
   };
   leases.set(lease.id, lease);
   return lease;
@@ -159,6 +162,7 @@ export async function closeLease(
       payToAddr: lease.payToAddr,
       usedAtomic,
       usedSeconds,
+      allowOverdraft: lease.allowOverdraft,
     });
     console.log(
       `[bill] lease ${lease.id} (${reason}): ran ${usedSeconds}s = ${usedAtomic}, ` +
