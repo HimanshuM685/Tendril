@@ -13,7 +13,15 @@
  */
 import assert from "node:assert/strict";
 import { initDb, q } from "./db.js";
-import { chargeUsage, creditBalance, creditTopUp } from "./x402/credit.js";
+import {
+  chargeUsage,
+  creditBalance,
+  creditEarnings,
+  creditTopUp,
+  debitAllEarnings,
+  earningsBalance,
+  refundEarnings,
+} from "./x402/credit.js";
 import { config } from "./config.js";
 
 const other = config.network === "testnet" ? "mainnet" : "testnet";
@@ -103,11 +111,47 @@ const overdrawn = await chargeUsage({
 assert.equal(overdrawn.charged, 1600, "an overdraft run was clamped — it must bill in full");
 assert.equal(overdrawn.balance, -600, "balance did not go negative on an overdraft run");
 
+// ── the earnings ledger ──
+// A lease credits a withdrawable balance instead of sending on-chain, so two
+// things have to hold: the same lease can never credit twice (a release racing
+// the watchdog would otherwise pay a contributor double), and a withdrawal
+// below the floor must take nothing at all rather than a partial amount.
+const earnLease = `selfcheck-earn-${Date.now()}`;
+const earned = await creditEarnings(ADDR, earnLease, 3_000_000);
+assert.equal(earned, 3_000_000, "earnings were not credited");
+assert.equal(
+  await creditEarnings(ADDR, earnLease, 3_000_000),
+  3_000_000,
+  "the same lease credited earnings twice",
+);
+
+assert.equal(
+  await debitAllEarnings(ADDR, 5_000_000),
+  0,
+  "a withdrawal under the minimum took money anyway",
+);
+assert.equal(await earningsBalance(ADDR), 3_000_000, "a refused withdrawal moved the balance");
+
+await creditEarnings(ADDR, `${earnLease}-b`, 2_500_000);
+assert.equal(
+  await debitAllEarnings(ADDR, 5_000_000),
+  5_500_000,
+  "a withdrawal over the minimum did not take the whole balance",
+);
+assert.equal(await earningsBalance(ADDR), 0, "withdrawal left earnings behind");
+
+// A failed on-chain send must give it all back.
+await refundEarnings(ADDR, 5_500_000);
+assert.equal(await earningsBalance(ADDR), 5_500_000, "a refunded withdrawal was lost");
+
 await q("DELETE FROM charges WHERE address = $1", [ADDR]);
 await q("DELETE FROM topups WHERE address = $1", [ADDR]);
 await q("DELETE FROM credits WHERE address = $1", [ADDR]);
+await q("DELETE FROM payouts WHERE to_addr = $1", [ADDR]);
+await q("DELETE FROM earnings WHERE address = $1", [ADDR]);
 
 console.log(`ledger isolation ok (${config.network} write invisible to ${other})`);
 console.log("restart-safe ok (initDb preserves balances + history)");
 console.log("overdraft ok (lease clamps, one-shot run goes negative)");
+console.log("earnings ok (credited once per lease, withdrawal floor holds, refund restores)");
 process.exit(0);

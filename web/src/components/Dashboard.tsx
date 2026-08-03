@@ -132,7 +132,11 @@ export function Dashboard({
             <Stat label="Lease time" value={fmtDuration(stats.totalLeaseSeconds)} />
             <Stat label="Leases taken" value={String(stats.leaseCount)} />
             {stats.payoutCount > 0 && (
-              <AlgoStat label="Earned (contributor)" atomic={stats.totalEarnedAtomic} />
+              <>
+                <AlgoStat label="Earned (contributor)" atomic={stats.totalEarnedAtomic} />
+                {/* What is left to cash out — withdraw it from the Contribute tab. */}
+                <AlgoStat label="Withdrawable" atomic={wallet.earningsAtomic ?? 0} />
+              </>
             )}
           </div>
 

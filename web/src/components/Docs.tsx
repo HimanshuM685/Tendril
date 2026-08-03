@@ -115,11 +115,15 @@ export function Docs() {
 
         <h3>Contributing compute</h3>
         <p>
-          Run the contributor daemon on the machine you want to share — it advertises specs, proves
-          ownership by signing a nonce, heartbeats, and launches sandboxes on demand:
+          Mint an API key on the <strong>Contribute</strong> page, then run the daemon on the machine
+          you want to share — it advertises specs, heartbeats, and launches sandboxes on demand:
         </p>
-        <pre className="cmd">AVM_PRIVATE_KEY=&lt;your-key&gt; PRICE_PER_HOUR_USD=1.0 npm run contributor</pre>
-        <p>Renters reach the box through a bore tunnel that runs inside the sandbox — nothing to open on your host.</p>
+        <pre className="cmd">TENDRIL_API_KEY=&lt;your-key&gt; PRICE_PER_HOUR_USD=1.0 npm run contributor</pre>
+        <p>
+          The machine holds no wallet key: the wallet that minted the API key owns the node and
+          collects its earnings. Renters reach the box through a bore tunnel that runs inside the
+          sandbox — nothing to open on your host.
+        </p>
 
         <h3>Safety</h3>
         <ul>
@@ -132,7 +136,8 @@ export function Docs() {
         <ul>
           <li>
             <strong>Custodial:</strong> top-ups pool at one platform address and balances live as an
-            off-chain ledger in Neon. There's no on-chain withdrawal path yet.
+            off-chain ledger in Neon. Renter credit has no withdrawal path — it is spent on compute.
+            Contributor earnings do: withdraw them to your wallet, $5 minimum.
           </li>
           <li>
             <strong>Metering granularity:</strong> charges land at close; a depleted balance is caught

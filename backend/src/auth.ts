@@ -1,53 +1,8 @@
-import algosdk from "algosdk";
 import jwt from "jsonwebtoken";
-import { nanoid } from "nanoid";
 import { config } from "./config.js";
 
-// ─────────────────────────── nonce challenge ───────────────────────────
-// A contributor agent proves control of its owner address by signing a
-// short-lived nonce with algosdk.signBytes (which the registry verifies with
-// algosdk.verifyBytes — same "MX" domain separation on both sides).
-
-interface NonceEntry {
-  nonce: string;
-  expiresAt: number;
-}
-
-const NONCE_TTL_MS = 5 * 60_000;
-const nonces = new Map<string, NonceEntry>();
-
-export function issueNonce(address: string): string {
-  const nonce = `tendril-auth:${nanoid(24)}`;
-  nonces.set(address, { nonce, expiresAt: Date.now() + NONCE_TTL_MS });
-  return nonce;
-}
-
-/**
- * Verify an agent's `hello`: the signature must be a valid algosdk.signBytes
- * signature over the most recently issued nonce for `ownerAddr`.
- */
-export function verifyAgentHello(
-  ownerAddr: string,
-  nonce: string,
-  signatureB64: string,
-): boolean {
-  const entry = nonces.get(ownerAddr);
-  if (!entry) return false;
-  if (entry.nonce !== nonce) return false;
-  if (Date.now() > entry.expiresAt) {
-    nonces.delete(ownerAddr);
-    return false;
-  }
-  let sig: Uint8Array;
-  try {
-    sig = new Uint8Array(Buffer.from(signatureB64, "base64"));
-  } catch {
-    return false;
-  }
-  const ok = algosdk.verifyBytes(new TextEncoder().encode(nonce), sig, ownerAddr);
-  if (ok) nonces.delete(ownerAddr); // one-time use
-  return ok;
-}
+// Contributor agents authenticate with an API key, not a key pair — see
+// `ownerOfApiKey` in db.ts. Everything here is the renter/browser side.
 
 // ─────────────────────────── lease tokens ───────────────────────────
 // /rent returns a lease-scoped JWT. /run, /release and GET /lease/:id require

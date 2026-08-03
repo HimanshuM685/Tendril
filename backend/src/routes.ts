@@ -4,12 +4,14 @@ import {
   atomicPerHour,
   formatUsdc,
   fundedSeconds,
+  type CreateApiKeyResponse,
   type LeaseCloseResponse,
   type PlatformInfo,
   type RunRequest,
   type RunResponse,
   type SandboxLimits,
   type WalletLoginResponse,
+  type WithdrawResponse,
   type X402RentResponse,
   type X402TopUpResponse,
 } from "@tendril/shared";
@@ -30,17 +32,30 @@ import {
 } from "./x402/server.js";
 import { requirePayment, type PaidRequest } from "./x402/paywall.js";
 import { ROUTES } from "./x402/discovery.js";
-import { creditBalance, creditTopUp } from "./x402/credit.js";
+import {
+  creditBalance,
+  creditTopUp,
+  debitAllEarnings,
+  earningsBalance,
+  refundEarnings,
+} from "./x402/credit.js";
 import {
   addressFromSession,
   issueLeaseToken,
-  issueNonce,
   issueSession,
   issueWalletNonce,
   leaseIdFromAuthHeader,
   verifyWalletNonce,
 } from "./auth.js";
-import { metrics, walletSummary } from "./db.js";
+import {
+  createApiKey,
+  listApiKeys,
+  metrics,
+  recordWithdrawal,
+  revokeApiKey,
+  walletSummary,
+} from "./db.js";
+import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
 import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode } from "./registry.js";
 import { abandonLease, closeLease, createLease, getLease, nodeBusy } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
@@ -79,15 +94,9 @@ router.get("/platform", guard((_req, res) => {
     facilitatorUrl: config.facilitatorUrl,
     minTopUpAtomic: config.minTopUpAtomic,
     maxTopUpAtomic: config.maxTopUpAtomic,
+    minWithdrawAtomic: config.minWithdrawAtomic,
   };
   res.json(info);
-}));
-
-// ─────────────────────── contributor agent auth (WS hello) ───────────────────────
-router.get("/auth/nonce", guard((req: Request, res: Response) => {
-  const address = String(req.query.address ?? "");
-  if (!address) return res.status(400).json({ error: "address required" });
-  res.json({ nonce: issueNonce(address) });
 }));
 
 // ─────────────────────── wallet login (web users) ───────────────────────
@@ -146,6 +155,83 @@ router.get("/wallet", guard(async (req: Request, res: Response) => {
   const address = requireSession(req, res);
   if (!address) return;
   res.json(await walletSummary(address));
+}));
+
+// ═══════════════════════ contributor keys (session-gated) ═══════════════════════
+//
+// A contributor's whole setup is one of these keys. It is what the agent
+// authenticates with, and the wallet that minted it is where the earnings go —
+// so running a node needs no Algorand key, no payout address and no registry URL
+// in the contributor's environment.
+
+router.get("/keys", guard(async (req: Request, res: Response) => {
+  const address = requireSession(req, res);
+  if (!address) return;
+  res.json({ keys: await listApiKeys(address) });
+}));
+
+router.post("/keys", guard(async (req: Request, res: Response) => {
+  const address = requireSession(req, res);
+  if (!address) return;
+  const label = String((req.body as { label?: string })?.label ?? "").slice(0, 64);
+  // The secret is in this response and nowhere else afterwards — only its hash
+  // is stored, so a lost key is re-minted rather than recovered.
+  const created: CreateApiKeyResponse = await createApiKey(address, label);
+  res.json(created);
+}));
+
+router.delete("/keys/:id", guard(async (req: Request, res: Response) => {
+  const address = requireSession(req, res);
+  if (!address) return;
+  const ok = await revokeApiKey(address, Number(req.params.id));
+  if (!ok) return res.status(404).json({ error: "no such key" });
+  res.json({ ok: true });
+}));
+
+// ═══════════════════════ POST /withdraw ═══════════════════════
+//
+// Cash a contributor's earnings out to their own wallet, in one on-chain
+// transfer. Leases credit a balance rather than paying per session, so this is
+// the only place contributor money moves on-chain.
+//
+// All-or-nothing and floored at MIN_WITHDRAW_ATOMIC: an ASA transfer costs the
+// same whether it moves five dollars or five cents, and a per-lease trickle of
+// dust would be worth less than the attention it takes.
+router.post("/withdraw", guard(async (req: Request, res: Response) => {
+  const address = requireSession(req, res);
+  if (!address) return;
+  if (!payoutsEnabled()) {
+    return res.status(503).json({ error: "withdrawals are not configured on this deployment" });
+  }
+  // Checked before debiting: an ASA transfer to an address that has not opted in
+  // fails outright, and there is no point emptying the balance to find that out.
+  if (!(await hasOptedIn(address))) {
+    return res
+      .status(409)
+      .json({ error: `opt ${address} into asset ${config.assetId} before withdrawing` });
+  }
+
+  const amountAtomic = await debitAllEarnings(address, config.minWithdrawAtomic);
+  if (amountAtomic <= 0) {
+    const have = await earningsBalance(address);
+    return res.status(400).json({
+      error: `minimum withdrawal is ${formatUsdc(config.minWithdrawAtomic)} — you have ${formatUsdc(have)}`,
+    });
+  }
+
+  try {
+    const txid = await payContributor(address, amountAtomic);
+    await recordWithdrawal(address, amountAtomic, txid);
+    const body: WithdrawResponse = { amountAtomic, txid, earningsAtomic: await earningsBalance(address) };
+    console.log(`[withdraw] ${amountAtomic} → ${address} (txid ${txid})`);
+    res.json(body);
+  } catch (err) {
+    // The send failed, so the debit above was wrong — put it back.
+    await refundEarnings(address, amountAtomic);
+    await recordWithdrawal(address, amountAtomic, null);
+    console.error(`[withdraw] failed for ${address}: ${(err as Error).message}`);
+    res.status(502).json({ error: `withdrawal failed: ${(err as Error).message}` });
+  }
 }));
 
 // ═══════════════════════ POST /topup?amount=<atomic> ═══════════════════════

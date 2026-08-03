@@ -1,5 +1,7 @@
 import type {
+  ApiKeyInfo,
   ComputeNode,
+  CreateApiKeyResponse,
   ExplorerNode,
   Lease,
   LeaseBilling,
@@ -9,6 +11,7 @@ import type {
   RunResponse,
   SandboxAccess,
   WalletSummary,
+  WithdrawResponse,
   X402RentResponse,
 } from "@tendril/shared";
 import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Client";
@@ -88,6 +91,47 @@ export async function fetchWallet(token: string): Promise<WalletSummary> {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw await apiError(res, "wallet");
+  return res.json();
+}
+
+// ─────────────────────── contributor keys + earnings ───────────────────────
+// All session-gated: the key belongs to the signed-in wallet, and so do the
+// earnings it accrues.
+
+export async function fetchApiKeys(token: string): Promise<ApiKeyInfo[]> {
+  const res = await fetch(`${REGISTRY_URL}/keys`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "keys");
+  return (await res.json()).keys as ApiKeyInfo[];
+}
+
+/** Mint a key. The secret comes back exactly once — show it and don't refetch. */
+export async function createApiKey(token: string, label: string): Promise<CreateApiKeyResponse> {
+  const res = await fetch(`${REGISTRY_URL}/keys`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ label }),
+  });
+  if (!res.ok) throw await apiError(res, "create key");
+  return res.json();
+}
+
+export async function revokeApiKey(token: string, id: number): Promise<void> {
+  const res = await fetch(`${REGISTRY_URL}/keys/${id}`, {
+    method: "DELETE",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "revoke key");
+}
+
+/** Cash the whole earnings balance out to the signed-in wallet, on-chain. */
+export async function withdrawEarnings(token: string): Promise<WithdrawResponse> {
+  const res = await fetch(`${REGISTRY_URL}/withdraw`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "withdraw");
   return res.json();
 }
 

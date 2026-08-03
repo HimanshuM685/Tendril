@@ -886,7 +886,8 @@ pays — though you do not need it to pay, since the 402 challenge carries `payT
   "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" },
   "facilitatorUrl": "https://facilitator.goplausible.xyz",
   "minTopUpAtomic": 100000,
-  "maxTopUpAtomic": 1000000000
+  "maxTopUpAtomic": 1000000000,
+  "minWithdrawAtomic": 5000000       // least a contributor may withdraw at once
 }
 ```
 
@@ -917,8 +918,8 @@ Nodes available to rent. Free, no auth.
 }
 ```
 
-`payoutBlocked: true` means the contributor's address has not opted into the payment asset, so their
-payouts are recorded but unpaid until they do. The node still rents and still works normally.
+`payoutBlocked: true` means the contributor's address has not opted into the payment asset. They
+still earn normally — the opt-in is only required to **withdraw** those earnings.
 
 ---
 

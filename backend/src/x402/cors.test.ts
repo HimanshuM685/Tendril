@@ -33,7 +33,8 @@ for (const path of [
   "/metrics",
   "/explorer",
   "/nodes",
-  "/auth/nonce",
+  "/keys",
+  "/withdraw",
   "/auth/wallet-nonce",
   "/auth/wallet-login",
   "/lease/lease_9k2m", // GET lease status is free, so it is not open

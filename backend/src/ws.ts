@@ -12,7 +12,7 @@ import {
   type SandboxLimits,
   type StartContainerMsg,
 } from "@tendril/shared";
-import { verifyAgentHello } from "./auth.js";
+import { ownerOfApiKey } from "./db.js";
 import { config } from "./config.js";
 import { markOffline, touchHeartbeat, upsertNode } from "./registry.js";
 import { activateLease, closeLease, getLease, leasesForNode, setLeaseStatus } from "./leases.js";
@@ -44,15 +44,23 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
     let boundNodeId: string | null = null;
 
     socket.on(WS.hello, async (msg: AgentHelloMsg) => {
-      if (!verifyAgentHello(msg.ownerAddr, msg.nonce, msg.signature)) {
-        socket.emit("error-message", "hello rejected: bad signature/nonce");
+      // The API key is the whole of the agent's identity: the wallet that minted
+      // it owns the node and earns for it. A contributor cannot claim someone
+      // else's address by editing their .env, because they never name one.
+      const ownerAddr = await ownerOfApiKey(msg.apiKey);
+      if (!ownerAddr) {
+        socket.emit("error-message", "hello rejected: unknown or revoked API key");
         socket.disconnect(true);
         return;
       }
-      const node = await upsertNode({ id: msg.nodeId, ...msg.spec });
+      const node = await upsertNode({ id: msg.nodeId, ownerAddr, payToAddr: ownerAddr, ...msg.spec });
       boundNodeId = node.id;
       agentSockets.set(node.id, socket);
-      const ack: HelloAckMsg = { nodeId: node.id };
+      const ack: HelloAckMsg = {
+        nodeId: node.id,
+        ownerAddr,
+        bore: { server: config.boreServer, secret: config.boreSecret },
+      };
       socket.emit(WS.helloAck, ack);
       console.log(`[ws] node online: ${node.id} (${node.label}) owner=${node.ownerAddr}`);
     });

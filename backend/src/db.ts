@@ -1,7 +1,18 @@
+import { createHash } from "node:crypto";
+import { nanoid } from "nanoid";
 import pg from "pg";
-import type { Charge, Metrics, Payout, TopUp, WalletStats, WalletSummary } from "@tendril/shared";
+import type {
+  ApiKeyInfo,
+  Charge,
+  Metrics,
+  Payout,
+  TopUp,
+  WalletStats,
+  WalletSummary,
+  Withdrawal,
+} from "@tendril/shared";
 import { config } from "./config.js";
-import { creditBalance } from "./x402/credit.js";
+import { creditBalance, earningsBalance } from "./x402/credit.js";
 
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
 // Only money state lives here: wallets + their history. Nodes and leases are
@@ -110,6 +121,8 @@ export async function initDb(): Promise<void> {
       created_at   BIGINT NOT NULL
     );
 
+    -- What a contributor earned per lease, after the platform fee. Credited to
+    -- the earnings table, never sent on its own — see withdrawals.
     CREATE TABLE IF NOT EXISTS payouts (
       id           BIGSERIAL PRIMARY KEY,
       to_addr      TEXT NOT NULL,
@@ -120,6 +133,39 @@ export async function initDb(): Promise<void> {
       created_at   BIGINT NOT NULL
     );
 
+    -- Withdrawable contributor earnings. Deliberately NOT the same ledger as
+    -- credits: money earned is cashed out to a wallet, money topped up is spent
+    -- on rent, and mixing them would let one be used as the other.
+    CREATE TABLE IF NOT EXISTS earnings (
+      address       TEXT PRIMARY KEY,
+      amount_atomic BIGINT NOT NULL DEFAULT 0,
+      updated_at    BIGINT NOT NULL
+    );
+
+    -- Cash-outs of an earnings balance to the contributor's wallet, on-chain.
+    CREATE TABLE IF NOT EXISTS withdrawals (
+      id           BIGSERIAL PRIMARY KEY,
+      to_addr      TEXT NOT NULL,
+      amount_micro BIGINT NOT NULL,
+      asset_id     BIGINT NOT NULL,
+      txid         TEXT,
+      status       TEXT NOT NULL,
+      created_at   BIGINT NOT NULL
+    );
+
+    -- Contributor API keys, minted in the web UI by a signed-in wallet. Only the
+    -- sha256 of the key is stored, so a database leak cannot impersonate a node.
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id           BIGSERIAL PRIMARY KEY,
+      owner_addr   TEXT NOT NULL,
+      key_hash     TEXT UNIQUE NOT NULL,
+      preview      TEXT NOT NULL,
+      label        TEXT NOT NULL DEFAULT '',
+      created_at   BIGINT NOT NULL,
+      last_used_at BIGINT,
+      revoked_at   BIGINT
+    );
+
     -- One charge per lease: usage is billed once, when the lease closes, and a
     -- concurrent release + watchdog tick must not bill the same session twice.
     -- Dedupe legacy rows first so an existing database adopts this without a
@@ -127,30 +173,34 @@ export async function initDb(): Promise<void> {
     DELETE FROM charges a USING charges b WHERE a.lease_id = b.lease_id AND a.id > b.id;
     CREATE UNIQUE INDEX IF NOT EXISTS charges_lease_uniq ON charges (lease_id);
 
+    -- Same for earnings: a lease credits the contributor exactly once, and the
+    -- insert is what makes creditEarnings idempotent. Dedupe legacy rows first.
+    DELETE FROM payouts a USING payouts b WHERE a.lease_id = b.lease_id AND a.id > b.id;
+    CREATE UNIQUE INDEX IF NOT EXISTS payouts_lease_uniq ON payouts (lease_id);
+
     CREATE INDEX IF NOT EXISTS topups_address_idx ON topups (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS charges_address_idx ON charges (address, created_at DESC);
     CREATE INDEX IF NOT EXISTS payouts_addr_idx ON payouts (to_addr, created_at DESC);
+    CREATE INDEX IF NOT EXISTS withdrawals_addr_idx ON withdrawals (to_addr, created_at DESC);
+    CREATE INDEX IF NOT EXISTS api_keys_owner_idx ON api_keys (owner_addr, created_at DESC);
     CREATE INDEX IF NOT EXISTS x402_payments_payer_idx ON x402_payments (payer, created_at DESC);
   `);
 }
 
-/** Record a contributor payout (txid null if the on-chain send failed/skipped). */
-export async function recordPayout(
-  toAddr: string,
-  leaseId: string,
-  amountAtomic: number,
-  txid: string | null,
-): Promise<void> {
-  await q(
-    `INSERT INTO payouts (to_addr, lease_id, amount_micro, asset_id, txid, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [toAddr, leaseId, amountAtomic, Number(config.assetId), txid, Date.now()],
-  );
-}
-
 export async function walletSummary(address: string): Promise<WalletSummary> {
-  const [balance, topupRows, chargeRows, payoutRows, chargeAgg, topupAgg, payoutAgg] = await Promise.all([
+  const [
+    balance,
+    earnings,
+    topupRows,
+    chargeRows,
+    payoutRows,
+    withdrawalRows,
+    chargeAgg,
+    topupAgg,
+    payoutAgg,
+  ] = await Promise.all([
     creditBalance(address),
+    earningsBalance(address),
     q<{ txid: string; address: string; amount_micro: number; created_at: number }>(
       "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
       [address],
@@ -161,6 +211,10 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     ),
     q<{ id: number; to_addr: string; lease_id: string; amount_micro: number; txid: string | null; created_at: number }>(
       "SELECT * FROM payouts WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
+      [address],
+    ),
+    q<{ id: number; to_addr: string; amount_micro: number; txid: string | null; status: string; created_at: number }>(
+      "SELECT * FROM withdrawals WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
       [address],
     ),
     // Lifetime aggregates (not capped by the history LIMITs above). SUM(bigint)
@@ -205,6 +259,14 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     txid: p.txid,
     createdAt: p.created_at,
   }));
+  const withdrawals: Withdrawal[] = withdrawalRows.map((w) => ({
+    id: w.id,
+    toAddr: w.to_addr,
+    amountAtomic: w.amount_micro,
+    txid: w.txid,
+    status: w.status === "sent" ? "sent" : "failed",
+    createdAt: w.created_at,
+  }));
   const stats: WalletStats = {
     totalSpentAtomic: chargeAgg[0]?.spent ?? 0,
     totalToppedUpAtomic: topupAgg[0]?.topped ?? 0,
@@ -213,7 +275,97 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     totalEarnedAtomic: payoutAgg[0]?.earned ?? 0,
     payoutCount: payoutAgg[0]?.pcnt ?? 0,
   };
-  return { address, balanceAtomic: balance, topups, charges, payouts, stats };
+  return {
+    address,
+    balanceAtomic: balance,
+    earningsAtomic: earnings,
+    topups,
+    charges,
+    payouts,
+    withdrawals,
+    stats,
+  };
+}
+
+// ─────────────────────────── contributor API keys ───────────────────────────
+// The key replaces the private key a contributor used to keep in their .env:
+// the agent authenticates with it, and the wallet that minted it is the node's
+// owner and payout address. Only the hash is stored, so the plaintext exists in
+// exactly two places — the contributor's .env and the one response that made it.
+
+const hashKey = (secret: string) => createHash("sha256").update(secret).digest("hex");
+
+/** Mint a key for `ownerAddr`. Returns the row plus the plaintext, shown once. */
+export async function createApiKey(
+  ownerAddr: string,
+  label: string,
+): Promise<{ key: ApiKeyInfo; secret: string }> {
+  const secret = `tnd_${nanoid(32)}`;
+  const preview = `${secret.slice(0, 8)}…${secret.slice(-4)}`;
+  const rows = await q<{ id: number; created_at: number }>(
+    `INSERT INTO api_keys (owner_addr, key_hash, preview, label, created_at)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, created_at`,
+    [ownerAddr, hashKey(secret), preview, label, Date.now()],
+  );
+  return {
+    secret,
+    key: { id: rows[0].id, label, preview, createdAt: rows[0].created_at, lastUsedAt: null },
+  };
+}
+
+export async function listApiKeys(ownerAddr: string): Promise<ApiKeyInfo[]> {
+  const rows = await q<{
+    id: number;
+    label: string;
+    preview: string;
+    created_at: number;
+    last_used_at: number | null;
+  }>(
+    `SELECT id, label, preview, created_at, last_used_at FROM api_keys
+      WHERE owner_addr = $1 AND revoked_at IS NULL ORDER BY created_at DESC`,
+    [ownerAddr],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    label: r.label,
+    preview: r.preview,
+    createdAt: r.created_at,
+    lastUsedAt: r.last_used_at,
+  }));
+}
+
+/** Revoke one of `ownerAddr`'s keys. Scoped by owner so an id guess is useless. */
+export async function revokeApiKey(ownerAddr: string, id: number): Promise<boolean> {
+  const rows = await q<{ id: number }>(
+    "UPDATE api_keys SET revoked_at = $1 WHERE id = $2 AND owner_addr = $3 AND revoked_at IS NULL RETURNING id",
+    [Date.now(), id, ownerAddr],
+  );
+  return rows.length > 0;
+}
+
+/** The wallet a live API key belongs to, or null. Also stamps `last_used_at`. */
+export async function ownerOfApiKey(secret: string): Promise<string | null> {
+  if (!secret) return null;
+  const rows = await q<{ owner_addr: string }>(
+    `UPDATE api_keys SET last_used_at = $1
+      WHERE key_hash = $2 AND revoked_at IS NULL
+      RETURNING owner_addr`,
+    [Date.now(), hashKey(secret)],
+  );
+  return rows[0]?.owner_addr ?? null;
+}
+
+/** Record a withdrawal attempt (txid null when the on-chain send failed). */
+export async function recordWithdrawal(
+  toAddr: string,
+  amountAtomic: number,
+  txid: string | null,
+): Promise<void> {
+  await q(
+    `INSERT INTO withdrawals (to_addr, amount_micro, asset_id, txid, status, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [toAddr, amountAtomic, Number(config.assetId), txid, txid ? "sent" : "failed", Date.now()],
+  );
 }
 
 // ─────────────────────────────── platform metrics ───────────────────────────────

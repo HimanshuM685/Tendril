@@ -88,6 +88,10 @@ export const config = {
   // All in atomic units of the asset above.
   minTopUpAtomic: Number(process.env.MIN_TOPUP_ATOMIC ?? 100_000), // 0.10 USDC
   maxTopUpAtomic: Number(process.env.MAX_TOPUP_ATOMIC ?? 1_000_000_000), // 1000 USDC
+  // Least a contributor may withdraw at once. Earnings accrue as a balance and
+  // move on-chain only here, so a floor keeps one transfer from costing more in
+  // fees + attention than it is worth.
+  minWithdrawAtomic: Number(process.env.MIN_WITHDRAW_ATOMIC ?? 5_000_000), // 5.00 USDC
   // Floor on what an *unauthenticated* rent must pay on-chain, no matter how
   // much credit the hinted address has. Paying proves control of that address;
   // without this floor, `?payer=<victim>` would drain a stranger's balance.
@@ -103,6 +107,14 @@ export const config = {
   // Top-up is NOT flat — the caller names any amount within the bounds below.
   // This is only the fallback for a request that omits `?amount=`.
   defaultTopUpAtomic: Number(process.env.DEFAULT_TOPUP_ATOMIC ?? 1_000_000), // 1.00 USDC
+
+  // ────────────────────── Sandbox tunnel (sent to agents) ──────────────────────
+  // The bore server a contributor's sandbox dials out to, to expose SSH. Handed
+  // to the agent in the hello ack so a contributor never configures a tunnel:
+  // the platform picks it, and can move everyone at once.
+  boreServer: process.env.BORE_SERVER ?? "bore.pub",
+  // Shared secret for a self-hosted bore server; empty for the public bore.pub.
+  boreSecret: process.env.BORE_SECRET ?? "",
 
   // ─────────────────────────── Lease bounds ───────────────────────────
   // Least credit a renter must hold to open a session, as seconds of runtime at

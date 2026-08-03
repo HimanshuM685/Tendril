@@ -62,7 +62,13 @@ export function Marketplace({
             onLeased={onLeased}
           />
         ) : (
-          <Contribute address={activeAddress} />
+          <Contribute
+            address={activeAddress}
+            session={session}
+            wallet={wallet}
+            onWalletChanged={onWalletChanged}
+            onError={onError}
+          />
         )}
 
         {lease && <LeasePanel lease={lease} onRelease={() => onLeased(null)} />}

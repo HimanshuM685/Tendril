@@ -6,8 +6,9 @@ Tendril is a lean, agent-first take on Akash / io.net, but for *individuals* ins
 centers. Anyone can rent out their PC's CPU/RAM/GPU. A human (or an autonomous AI agent) pays for
 what it wants over **x402** — an HTTP 402 names an exact price in **USDC**, the client signs, and the
 backend does the thing. Renting starts a **metered SSH session** — click once, the clock runs, and
-only the seconds you actually used are billed when you release. The contributor is **paid on-chain in USDC**
-when the lease ends, minus a small platform fee.
+only the seconds you actually used are billed when you release. The contributor **earns USDC** on
+every closed lease, minus a small platform fee, and **withdraws that balance to their wallet**
+whenever they like.
 
 Because the facilitator sponsors the network fee, **a client needs USDC and zero ALGO** — and
 because payment *is* the identity, a brand-new address can pay on its very first request with no
@@ -37,19 +38,19 @@ Tendril just makes it prepaid and individual-scale.
  │ contributor agent│◄──────────►│ GET  /explorer   (free)│◄──►│ browser (Explore UI)│
  │  docker run ...  │            │ POST /x402/topup       │    │   or                │
  │  (nodes/leases   │            │ POST /x402/rent         │    │ autonomous agent    │
- │   in memory)     │            │ watchdog + payout      │    └────────────────────┘
+ │   in memory)     │            │ watchdog + earnings    │    └────────────────────┘
  └──────────────────┘            └──────────┬─────────────┘   both are x402 clients
         │ bore tunnel (SSH)        ┌─────────┴────────┬──────────────┐
         ▼                          │                  │              │
   sandboxed SSH shell     Neon (Postgres)      x402 facilitator   Algorand
                     credits·payments·charges  (verify/settle,   (contributor
-                          ·payouts             sponsors fees)     payouts)
+                    ·earnings·withdrawals    sponsors fees)    withdrawals)
 ```
 
 | Folder | What it is |
 |---|---|
-| `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, and **on-chain USDC payout** to the contributor when the lease ends. Only money state hits the DB. |
-| `contributor/` | **The contributor script.** The daemon a contributor runs. Proves node ownership by signing a nonce, heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
+| `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
+| `contributor/` | **The contributor script.** The daemon a contributor runs. Authenticates with an API key minted in the web app (no wallet key on the machine), heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
 | `web/` | **The website.** Vite + React + `@txnlab/use-wallet` (Pera/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
@@ -68,7 +69,8 @@ Because the facilitator sponsors the network fee, **a client needs USDC and zero
 
 Renting opens an **open-ended metered session**. It ends when you release it, or when your credit can
 no longer pay for the next second — and only then is the time you used billed, from credit, in one
-charge. The contributor is paid on-chain in USDC out of what was collected, minus `PLATFORM_FEE_PCT`.
+charge. The contributor is credited out of what was collected, minus `PLATFORM_FEE_PCT`, and
+withdraws that balance on-chain in one transfer ($5 minimum) rather than one per lease.
 Signing in still exists, but its job has shrunk to reading your balance.
 
 Or skip renting entirely: `POST /x402/run` takes some code, finds the best-value idle machine, runs
@@ -156,9 +158,9 @@ cp .env.example .env            # set DATABASE_URL (Neon), PLATFORM_PAYTO + PLAT
 #    needs DATABASE_URL (Neon) + PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY set in .env
 npm run backend                 # …or:  cd backend     && npm run dev
 
-# 2. Contributor agent — generate + fund a key first
-npm run keygen                  # prints Address + AVM_PRIVATE_KEY  (cd contributor && npm run keygen)
-AVM_PRIVATE_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd contributor && npm run dev
+# 2. Contributor agent — mint an API key in the web app (CONTRIBUTE → MINT API KEY) first.
+#    No wallet key on this machine: the key names the wallet that earns for the node.
+TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd contributor && npm run dev
 #   tip: the SSH sandbox image builds locally on the FIRST rent, then is cached.
 #        that build compiles `bore` from source for your CPU arch (~30s), so the
 #        tunnel works on both x86_64 and arm64 (bore ships no arm64-linux binary).
@@ -178,8 +180,8 @@ Each top-level folder is a self-contained piece you can `cd` into: **`backend/`*
 ## Run with Docker
 
 Each piece is its own Compose service, run independently. The backend usually lives on a server; a
-contributor runs on each machine sharing compute and points at that backend via **`REGISTRY_URL`**
-in `.env`. The **web app is not dockerized** (it's a static Vite SPA — see [Web app](#web-app-static-spa) below).
+contributor runs on each machine sharing compute and needs only a **`TENDRIL_API_KEY`** in `.env`
+(`REGISTRY_URL` only when self-hosting). The **web app is not dockerized** (it's a static Vite SPA — see [Web app](#web-app-static-spa) below).
 
 ```bash
 cp .env.example .env                     # then set REGISTRY_URL to your backend
@@ -193,7 +195,8 @@ docker compose run  --rm   buyer         # one-shot autonomous buyer
 
 The contributor **doesn't run a Docker of its own**: it mounts the host Docker socket and launches
 each rented sandbox as a sibling container on the host daemon, so there's nothing extra to install
-or start. Just set `REGISTRY_URL` in `.env` (e.g. `http://YOUR_SERVER_IP:4000`) and bring it up.
+or start. Just set `TENDRIL_API_KEY` in `.env` (plus `REGISTRY_URL` if the backend isn't the hosted
+one, e.g. `http://YOUR_SERVER_IP:4000`) and bring it up.
 The first rent then builds the SSH sandbox image on the host (compiles `bore` for the host arch,
 ~30s) and caches it — later rents are instant.
 
@@ -248,7 +251,7 @@ rather than inheriting the other's rows.
 > `SELECT * FROM testnet.credits`, or switch the console's schema.
 
 Before switching to mainnet, check that `PLATFORM_PAYTO` has opted into **mainnet** USDC and holds
-a little ALGO for payout fees, that your facilitator's `/supported` advertises the mainnet CAIP-2
+a little ALGO for withdrawal fees, that your facilitator's `/supported` advertises the mainnet CAIP-2
 id (if it doesn't, every payment fails to verify), and that node prices are what you want to charge
 in real dollars.
 
@@ -301,8 +304,9 @@ curl -s "https://facilitator.goplausible.xyz/discovery/resources?includeTestnets
    agent tops up over x402, rents the cheapest node, runs a tiny training loop *on someone else's
    machine*, prints the falling loss, then releases and shows the refund landing back as credit.
 5. Show `docker ps` during the lease (a hardened, mount-less container) and that it's **gone** after
-   release. On a testnet explorer, confirm the top-up *and* the **payout to the contributor**; in
-   Neon, the single `testnet.charges` row (with the billed seconds) and the `testnet.payouts` row.
+   release. On a testnet explorer, confirm the top-up; in Neon, the single `testnet.charges` row
+   (with the billed seconds) and the `testnet.payouts` row that credited the contributor. Then hit
+   **WITHDRAW** on the contributor's wallet and confirm that transfer on-chain.
 
 ## What's verified vs. what needs your machine
 
@@ -310,7 +314,7 @@ Compiles + builds clean (full `npm run typecheck`, web production build). Requir
 to run end-to-end: a **Neon** database (`DATABASE_URL`), a **platform account** (`PLATFORM_PAYTO` +
 `PLATFORM_PRIVATE_KEY`), the Docker sandbox lifecycle (a running Docker daemon), outbound network for
 the bore tunnel, an SSH client, a reachable **x402 facilitator** (`X402_FACILITATOR_URL`) to verify
-and settle payments, and Algod for asset opt-in checks + contributor payouts (funded testnet
+and settle payments, and Algod for asset opt-in checks + contributor withdrawals (funded testnet
 accounts holding USDC).
 
 ## Notes & limitations
@@ -318,9 +322,10 @@ accounts holding USDC).
 - **Custodial model:** payments pool at one platform address and credit is an off-chain ledger in
   Neon, in a schema per network (`testnet.*` / `mainnet.*`). Every payment is recorded by `txid`
   (idempotent — replaying one can't credit twice).
-  Contributor earnings **are** settled on-chain in USDC on lease end (needs `PLATFORM_PRIVATE_KEY`);
-  if it's unset — or the payout address never opted into the asset — payouts are recorded as unpaid
-  (`txid` null) instead, and the node is flagged `payoutBlocked`.
+  Contributor earnings are **credited to a balance** on lease end, post-fee, and cashed out on-chain
+  by `POST /withdraw` — one transfer per withdrawal rather than one per lease, with a **$5 minimum**
+  (`MIN_WITHDRAW_ATOMIC`) so fees never outweigh what moves. Withdrawing needs
+  `PLATFORM_PRIVATE_KEY` and an address opted into the asset; earning needs neither.
 - **Billing:** nothing is charged for compute up front. A session is billed **once**, when it
   closes, for the seconds it actually ran (`elapsed/3600 × rate`), and the debit is clamped to the
   balance. A watchdog checks every `METER_INTERVAL_MS` whether credit has run out, so worst-case

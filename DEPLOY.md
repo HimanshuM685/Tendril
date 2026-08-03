@@ -10,7 +10,7 @@ component. For the project overview and the demo script, see [README.md](./READM
 | Tool | Why | Install |
 |---|---|---|
 | Node 20+ & npm | runs everything | https://nodejs.org |
-| **Neon** Postgres | stores wallets, top-ups, charges, payouts (`DATABASE_URL`) — *not* nodes/leases | https://neon.tech (free tier) |
+| **Neon** Postgres | stores wallets, top-ups, charges, earnings, withdrawals, API keys (`DATABASE_URL`) — *not* nodes/leases | https://neon.tech (free tier) |
 | Docker (daemon running) | the contributor agent's SSH sandboxes | https://docs.docker.com |
 | SSH client | renters connect to a rented box (public exposure uses an in-container **bore** tunnel — nothing to install on the contributor) | built into macOS/Linux/Windows |
 | Algorand **testnet** accounts | platform (receives top-ups **+ pays contributors**), contributor, consumer (pays) | see below |
@@ -20,20 +20,21 @@ component. For the project overview and the demo script, see [README.md](./READM
 Payments are **native ALGO**, so there's no USDC and no ASA opt-in. Users **top up** a prepaid
 balance by sending ALGO to the **platform custodial address** (`PLATFORM_PAYTO`); the registry
 confirms each deposit on-chain and credits an off-chain ledger in Neon. On lease end it bills the
-usage once and **pays the contributor on-chain** from the platform account.
+usage once and **credits the contributor's earnings balance**, which they withdraw on-chain from the
+platform account (minimum `MIN_WITHDRAW_ATOMIC`, default 5 USDC).
 
 - **Platform account (`PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY`):** generate a key with
-  `npm run keygen`; use its **Address** as `PLATFORM_PAYTO` and its **`AVM_PRIVATE_KEY`** as
-  `PLATFORM_PRIVATE_KEY` (the registry signs payouts with it). Fund it with enough ALGO to cover
-  payouts + txn fees — it's the pool that holds every user's prepaid balance.
+  `npm run keygen`; use its **Address** as `PLATFORM_PAYTO` and the key it prints as
+  `PLATFORM_PRIVATE_KEY` (the registry signs contributor withdrawals with it). Fund it with enough
+  ALGO to cover withdrawals + txn fees — it's the pool that holds every user's prepaid balance.
 - **Consumer accounts:** funded with ALGO to cover top-ups + the ~0.001 ALGO deposit txn fee.
 
-1. **Generate a key** (prints `Address` + `AVM_PRIVATE_KEY`):
+1. **Generate the platform key** (prints `Address` + `PLATFORM_PRIVATE_KEY`):
    ```bash
    npm run keygen
    ```
 2. **Fund with testnet ALGO:** https://bank.testnet.algorand.network/ (paste the address).
-3. Keep each `AVM_PRIVATE_KEY` secret. The base64 value is a 64-byte key (seed + public key).
+3. Keep every private key secret. The base64 value is a 64-byte key (seed + public key).
 
 ---
 
@@ -53,7 +54,7 @@ Run each piece in its own terminal:
 
 ```bash
 npm run backend       # http://localhost:4000  (needs DATABASE_URL + PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY)
-npm run contributor   # contributor daemon (needs AVM_PRIVATE_KEY + Docker running)
+npm run contributor   # contributor daemon (needs TENDRIL_API_KEY + Docker running)
 npm run web           # http://localhost:5173
 npm run client        # the autonomous consumer agent (needs its own funded AVM_PRIVATE_KEY)
 ```
@@ -75,7 +76,7 @@ site), **contributor** (runs on each contributor's own machine). The autonomous 
 ### 3a. Backend / registry (central API)
 
 Requirements: a long-running Node host with **WebSocket** support, a **Neon** Postgres database
-(`DATABASE_URL`), outbound HTTPS to an **Algod** endpoint (to confirm top-ups **and send payouts**),
+(`DATABASE_URL`), outbound HTTPS to an **Algod** endpoint (to confirm top-ups **and send withdrawals**),
 and (if the web app is HTTPS) **TLS**. No local disk/volume — only money state lives in Neon; nodes
 and leases are in-memory.
 
@@ -119,7 +120,7 @@ Registry env vars:
 | `REGISTRY_PORT` | `4000` | |
 | `DATABASE_URL` | — | **required** — Neon Postgres connection string (keep `?sslmode=require`) |
 | `PLATFORM_PAYTO` | — | **required** — custodial Algorand address that receives top-ups |
-| `PLATFORM_PRIVATE_KEY` | — | **required for payouts** — base64 64-byte key for `PLATFORM_PAYTO`; signs on-chain contributor payouts. If unset, payouts are recorded as unpaid |
+| `PLATFORM_PRIVATE_KEY` | — | **required for withdrawals** — base64 64-byte key for `PLATFORM_PAYTO`; signs contributor withdrawals. If unset, earnings still accrue but `POST /withdraw` returns 503 |
 | `PLATFORM_FEE_PCT` | `10` | platform's % cut of each charge; the rest is paid to the contributor |
 | `JWT_SECRET` | dev value | **set a strong secret in prod** (signs wallet-session + lease tokens) |
 | `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated |
@@ -132,7 +133,7 @@ Registry env vars:
 | `MIN_LEASE_SECONDS` / `MAX_LEASE_SECONDS` / `LEASE_SECONDS_GRANULARITY` | `60` / `14400` / `60` | Bounds on a prepaid block |
 | `SANDBOX_READY_TIMEOUT_MS` | `45000` | How long to wait for a sandbox before 503 — nothing is settled if it elapses |
 | `METER_INTERVAL_MS` | `10000` | how often the **watchdog** checks active leases for balance exhaustion (no per-tick billing) |
-| `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algod used to confirm top-ups + send payouts |
+| `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algod used to confirm top-ups + send withdrawals |
 
 ### 3b. Web app (static SPA)
 
@@ -159,10 +160,15 @@ The agent is *not* centrally deployed — each contributor runs it on the machin
 share. It needs Docker locally; SSH is exposed by a **bore** tunnel that runs *inside* each sandbox
 (it dials out), so there's nothing extra to install or open.
 
+A contributor needs **no Algorand key**. They connect their wallet in the web app, sign in, open
+**CONTRIBUTE** and mint an API key — that key identifies the node and names the wallet its earnings
+go to. Contributors can clone the standalone
+[TendrilContributor](https://github.com/) repo instead of the monorepo; it's the agent alone.
+
 ```bash
 # on the contributor's machine
 git clone <repo> tendril && cd tendril && npm install
-AVM_PRIVATE_KEY=<their-key> \
+TENDRIL_API_KEY=<key from the web app> \
 REGISTRY_URL=https://api.your-tendril-domain.com \
 NODE_LABEL="ryzen-3090-box" PRICE_PER_HOUR_USD=2.0 SANDBOX_GPUS=all \
   npm run contributor
@@ -170,13 +176,12 @@ NODE_LABEL="ryzen-3090-box" PRICE_PER_HOUR_USD=2.0 SANDBOX_GPUS=all \
 
 Keep it alive with **pm2** (`pm2 start "npm run contributor" --name tendril-contributor`) or a systemd unit.
 The renter gets an `ssh root@<bore-host> -p <port>` command (password = the renter's wallet address).
-`PAYTO_ADDR` (defaults to the signing address) is where this node's **on-chain payouts** land. To run
-your own bore server instead of the public `bore.pub`, point `BORE_SERVER` at it.
 
-Agent env vars: `AVM_PRIVATE_KEY` (required), `REGISTRY_URL`, `NODE_LABEL`, `PRICE_PER_HOUR_USD`,
-`PAYTO_ADDR` (defaults to the signing address — receives payouts), `SANDBOX_IMAGE` (defaults to the
-locally-built `tendril-ssh-sandbox`), `SANDBOX_MEMORY`, `SANDBOX_CPUS`, `SANDBOX_GPUS` (`all` to pass
-GPUs), `TUNNEL_MODE` (`bore`|`local`), `BORE_SERVER` (default `bore.pub`).
+Agent env vars: `TENDRIL_API_KEY` (required), `NODE_LABEL`, `PRICE_PER_HOUR_USD`, `SANDBOX_IMAGE`
+(defaults to the locally-built `tendril-ssh-sandbox`), `SANDBOX_MEMORY`, `SANDBOX_CPUS`,
+`SANDBOX_GPUS` (`all` to pass GPUs), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
+backend isn't the hosted one). `BORE_SERVER`/`BORE_SECRET` are set on the **backend** and pushed to
+every agent, so a self-hosted bore server is one change in one place.
 
 ### 3d. Autonomous consumer agent
 
@@ -199,14 +204,14 @@ matching node, runs its job, and releases — reporting how much balance it drew
       control and **funded** (it pays out every contributor); `PLATFORM_FEE_PCT` reviewed.
 - [ ] `CORS_ORIGIN` locked to your web origin.
 - [ ] Registry + web both HTTPS (avoid mixed-content blocking); WebSocket upgrades proxied.
-- [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + payouts) and clients.
+- [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
 - [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.
 - [ ] `X402_NETWORK` matches the facilitator's `/supported` byte for byte; `METER_INTERVAL_MS` reviewed.
 - [ ] `VITE_REGISTRY_URL` + `VITE_ALGOD_URL` baked into the web build.
 - [ ] Contributors pre-build `SANDBOX_IMAGE` (`docker build -t tendril-ssh-sandbox contributor/sandbox-ssh`);
       agents kept alive (pm2/systemd) with Docker running + outbound network for bore.
 - [ ] Consumer accounts hold **ALGO** for top-ups (+ txn fees). No USDC / ASA opt-in needed.
-- [ ] Safeguard `PLATFORM_PRIVATE_KEY` — it custodies user top-ups *and* signs every payout.
+- [ ] Safeguard `PLATFORM_PRIVATE_KEY` — it custodies user top-ups *and* signs every withdrawal.
 
 ## 5. Known limitations
 
@@ -220,9 +225,10 @@ matching node, runs its job, and releases — reporting how much balance it drew
   deliberate — it keeps Postgres out of the heartbeat/watchdog hot path. For HA, persist + externalize.
 - **SSH auth** is a per-lease password (the renter's wallet address) on a throwaway root container —
   fine for ephemeral compute, but use a key-based flow for anything sensitive.
-- Contributor payout addresses must opt into `X402_ASSET_ID`; a node whose address has not is accepted
-  but flagged `payoutBlocked`, and its payouts are recorded unpaid until it opts in.
+- Contributors earn whether or not they've opted into `X402_ASSET_ID` — the opt-in is only checked at
+  **withdrawal**, which is refused (409) until it's done. A node whose address hasn't opted in is
+  still flagged `payoutBlocked` as a heads-up.
 - A single registry instance owns the WebSocket hub *and* the in-memory state; for horizontal scale
   externalize both (e.g. a socket.io Redis adapter + shared store).
-- The public `bore.pub` server is best-effort/rate-limited; run your own `BORE_SERVER` for anything
-  beyond demos.
+- The public `bore.pub` server is best-effort/rate-limited; run your own and set `BORE_SERVER` on the
+  backend (it reaches every agent from there) for anything beyond demos.

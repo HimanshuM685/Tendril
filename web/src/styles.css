@@ -508,6 +508,8 @@ main { display: block; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn.ghost { background: transparent; color: var(--cream); border-color: var(--cream); }
 .btn.ghost:hover { background: var(--cream); color: var(--green); }
+/* Inline action inside a list row (e.g. revoking one API key). */
+.btn.small { font-size: 10px; padding: 3px 8px; }
 
 /* Buttons sitting on a CREAM surface need inverted (green) styling. */
 .card .btn,

@@ -12,6 +12,10 @@
  *
  * Both endpoints and the sign-in balance reader go through here so there is a
  * single definition of "what does this address have".
+ *
+ * The contributor side of the money lives here too, in its own `earnings`
+ * ledger: a closed lease credits the contributor's post-fee share, and they
+ * withdraw it to their wallet in one on-chain transfer.
  */
 import type { PoolClient } from "pg";
 import pool, { q } from "../db.js";
@@ -107,6 +111,74 @@ export async function chargeUsage(args: {
   });
 }
 
+// ─────────────────────────── contributor earnings ───────────────────────────
+// A second ledger, deliberately separate from `credits`. What a contributor
+// earns is cashed out to their wallet; what a renter tops up is spent on rent.
+// One balance for both would let earnings be spent as credit (and vice versa).
+
+/** Withdrawable earnings for a contributor address, in atomic units. */
+export async function earningsBalance(address: string): Promise<number> {
+  const rows = await q<{ amount_atomic: number }>(
+    "SELECT amount_atomic FROM earnings WHERE address = $1",
+    [address],
+  );
+  return rows[0]?.amount_atomic ?? 0;
+}
+
+/**
+ * Credit a closed lease's post-fee share to the contributor's earnings balance.
+ * Nothing goes on-chain here — that happens once, at withdrawal.
+ *
+ * Idempotent per lease: the `payouts` row is the record *and* the lock, so a
+ * concurrent release and watchdog tick can't pay the same lease twice.
+ */
+export async function creditEarnings(
+  toAddr: string,
+  leaseId: string,
+  amountAtomic: number,
+): Promise<number> {
+  return inTransaction(async (client) => {
+    const ins = await client.query(
+      `INSERT INTO payouts (to_addr, lease_id, amount_micro, asset_id, txid, created_at)
+       VALUES ($1,$2,$3,$4,NULL,$5) ON CONFLICT (lease_id) DO NOTHING RETURNING id`,
+      [toAddr, leaseId, amountAtomic, Number(config.assetId), Date.now()],
+    );
+    if (ins.rowCount === 0) {
+      const cur = await client.query("SELECT amount_atomic FROM earnings WHERE address = $1", [
+        toAddr,
+      ]);
+      return Number(cur.rows[0]?.amount_atomic ?? 0);
+    }
+    return addEarnings(client, toAddr, amountAtomic);
+  });
+}
+
+/**
+ * Take the whole earnings balance for a withdrawal, atomically. Returns the
+ * amount debited, or 0 if it is below `min` (or nothing is there).
+ *
+ * Debiting *before* the on-chain send is deliberate: a crash mid-send loses the
+ * balance rather than paying it twice, and the caller refunds explicitly when
+ * the send is known to have failed.
+ */
+export async function debitAllEarnings(address: string, min: number): Promise<number> {
+  return inTransaction(async (client) => {
+    const cur = await client.query(
+      "SELECT amount_atomic FROM earnings WHERE address = $1 FOR UPDATE",
+      [address],
+    );
+    const balance = Number(cur.rows[0]?.amount_atomic ?? 0);
+    if (balance < min || balance <= 0) return 0;
+    await addEarnings(client, address, -balance);
+    return balance;
+  });
+}
+
+/** Put a failed withdrawal back. */
+export async function refundEarnings(address: string, amountAtomic: number): Promise<void> {
+  await inTransaction((client) => addEarnings(client, address, amountAtomic));
+}
+
 // ─────────────────────────────── internals ───────────────────────────────
 
 async function addCredit(client: PoolClient, address: string, deltaAtomic: number): Promise<number> {
@@ -121,6 +193,22 @@ async function addCredit(client: PoolClient, address: string, deltaAtomic: numbe
   return Number(res.rows[0].amount_atomic);
 }
 
+
+async function addEarnings(
+  client: PoolClient,
+  address: string,
+  deltaAtomic: number,
+): Promise<number> {
+  const res = await client.query(
+    `INSERT INTO earnings (address, amount_atomic, updated_at)
+     VALUES ($1,$2,$3)
+     ON CONFLICT (address) DO UPDATE SET
+       amount_atomic = earnings.amount_atomic + $2, updated_at = $3
+     RETURNING amount_atomic`,
+    [address, deltaAtomic, Date.now()],
+  );
+  return Number(res.rows[0].amount_atomic);
+}
 
 async function inTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();

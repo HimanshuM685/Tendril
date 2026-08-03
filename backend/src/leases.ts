@@ -1,10 +1,7 @@
 import { nanoid } from "nanoid";
 import type { Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
 import { fundedSeconds, proratedCost } from "@tendril/shared";
-import { recordPayout } from "./db.js";
-import { chargeUsage, creditBalance } from "./x402/credit.js";
-import { payContributor, payoutsEnabled } from "./payout.js";
-import { getNode } from "./registry.js";
+import { chargeUsage, creditBalance, creditEarnings } from "./x402/credit.js";
 import { destroyContainer } from "./ws.js";
 import { config } from "./config.js";
 
@@ -132,7 +129,7 @@ export interface LeaseSettlement {
  *   usedSeconds = wall-clock seconds the sandbox was up
  *   usedAtomic  = prorated cost of those seconds
  *   charged     = min(usedAtomic, balance)   -> taken from the payer's credit
- *   payout      = charged minus the platform fee -> contributor, on-chain USDC
+ *   payout      = charged minus the platform fee -> contributor's earnings balance
  *
  * There is no refund step, because nothing was taken up front. The sandbox is
  * always torn down, even if the money side throws.
@@ -178,32 +175,24 @@ export async function closeLease(
   }
 }
 
-/** Pay the contributor their share of what was collected; record it either way. */
+/**
+ * Credit the contributor their share of what was collected.
+ *
+ * Nothing goes on-chain per lease. A minute of compute is worth fractions of a
+ * cent, and one ASA transfer per lease would spend more in fees and attention
+ * than it moves — so the share accrues to a withdrawable balance the contributor
+ * cashes out in one transfer (see `POST /withdraw`). That also means an
+ * unopted-in address can still earn: the opt-in is only needed to withdraw.
+ */
 async function payoutContributor(lease: Lease, chargedAtomic: number): Promise<void> {
   const fee = Math.floor((chargedAtomic * config.platformFeePct) / 100);
   const contributorCut = chargedAtomic - fee;
   if (contributorCut <= 0) return;
 
-  // Two ways a payout can't go out: we hold no signing key, or the contributor
-  // never opted into the asset. Both record the debt rather than dropping it.
-  const blocked = getNode(lease.nodeId)?.payoutBlocked ?? false;
-  if (!payoutsEnabled() || blocked) {
-    console.warn(
-      `[payout] ${blocked ? `${lease.payToAddr} has not opted into asset ${config.assetId}` : "PLATFORM_PRIVATE_KEY not set"}` +
-        ` — recording unpaid ${contributorCut} to ${lease.payToAddr}`,
-    );
-    await recordPayout(lease.payToAddr, lease.id, contributorCut, null);
-    return;
-  }
-
-  try {
-    const txid = await payContributor(lease.payToAddr, contributorCut);
-    await recordPayout(lease.payToAddr, lease.id, contributorCut, txid);
-    console.log(`[payout] ${contributorCut} → ${lease.payToAddr} (fee ${fee}, txid ${txid})`);
-  } catch (err) {
-    await recordPayout(lease.payToAddr, lease.id, contributorCut, null);
-    console.error(`[payout] failed to pay ${lease.payToAddr}: ${(err as Error).message}`);
-  }
+  const balance = await creditEarnings(lease.payToAddr, lease.id, contributorCut);
+  console.log(
+    `[earn] +${contributorCut} to ${lease.payToAddr} (fee ${fee}, balance ${balance})`,
+  );
 }
 
 /**

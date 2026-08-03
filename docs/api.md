@@ -31,6 +31,11 @@ export API=http://localhost:4000
   - [`GET /auth/wallet-nonce`](#get-authwallet-nonce)
   - [`POST /auth/wallet-login`](#post-authwallet-login)
   - [`GET /wallet`](#get-wallet)
+- **Contributor** (session-gated)
+  - [`GET /keys`](#get-keys)
+  - [`POST /keys`](#post-keys)
+  - [`DELETE /keys/:id`](#delete-keysid)
+  - [`POST /withdraw`](#post-withdraw)
 - **Lease** (free, lease-token gated)
   - [`GET /lease/:id`](#get-leaseid)
   - [`DELETE /x402/leases/:id`](#delete-x402leasesid)
@@ -53,6 +58,10 @@ export API=http://localhost:4000
 | `GET /auth/wallet-nonce` | none | — | yes |
 | `POST /auth/wallet-login` | signature | — | needs a signer |
 | `GET /wallet` | session token | — | yes, once you have a token |
+| `GET /keys` | session token | — | yes, once you have a token |
+| `POST /keys` | session token | — | yes, once you have a token |
+| `DELETE /keys/:id` | session token | — | yes, once you have a token |
+| `POST /withdraw` | session token | — | yes, once you have a token |
 | `GET /lease/:id` | lease token | — | yes |
 | `DELETE /x402/leases/:id` | lease token | free | yes |
 | `POST /topup` | none | **x402** | quote only |
@@ -68,12 +77,18 @@ Three independent credentials. None of them is required to *pay* — payment ide
 
 | Credential | How you get it | Header | Grants |
 |---|---|---|---|
-| **Session token** | Sign a nonce with your wallet (`/auth/wallet-nonce` → `/auth/wallet-login`) | `authorization: Bearer <token>` | Reading your own credit balance and history |
+| **Session token** | Sign a nonce with your wallet (`/auth/wallet-nonce` → `/auth/wallet-login`) | `authorization: Bearer <token>` | Reading your own balances and history; minting API keys; withdrawing earnings |
+| **API key** | `POST /keys` with a session token | sent in the agent's WebSocket `hello` | Registering a contributor node under the minting wallet |
 | **Lease token** | Returned by a successful rent | `authorization: Bearer <token>` | Status, job execution and release **for that one lease** |
 | **Payment** | A settled x402 transaction | `PAYMENT-SIGNATURE` | The paid action itself; the payer is the transaction's sender |
 
-A session is *not* needed to rent or top up. Its only job is letting you read a balance that
-otherwise has no owner to prove.
+A session is *not* needed to rent or top up. It exists for the things that are tied to *you*:
+reading a balance that otherwise has no owner to prove, and the contributor side — API keys and
+withdrawals.
+
+The **API key replaces a private key** on a contributor's machine. The wallet that minted it owns
+every node registered with it and is the address its earnings go to, so the agent never holds an
+Algorand key and cannot name a payout address of its own.
 
 ---
 
@@ -108,7 +123,8 @@ curl -s $API/platform | jq
   "asset": { "id": "10458941", "decimals": 6, "symbol": "USDC" },
   "facilitatorUrl": "https://facilitator.goplausible.xyz",
   "minTopUpAtomic": 100000,
-  "maxTopUpAtomic": 1000000000
+  "maxTopUpAtomic": 1000000000,
+  "minWithdrawAtomic": 5000000
 }
 ```
 
@@ -119,6 +135,7 @@ curl -s $API/platform | jq
 | `asset` | The ASA all prices are denominated in. |
 | `facilitatorUrl` | Who verifies, settles, and sponsors the network fee. |
 | `minTopUpAtomic` / `maxTopUpAtomic` | Bounds enforced by `POST /topup`. |
+| `minWithdrawAtomic` | Floor enforced by `POST /withdraw`. |
 
 ## `GET /explorer`
 
@@ -151,7 +168,7 @@ curl -s $API/explorer | jq
 `{"nodes":[]}` with no contributor running is normal, not an error.
 
 `payoutBlocked: true` means the contributor's address has not opted into the payment ASA. The node
-still runs and still earns; the payout is recorded unpaid until they opt in.
+still runs and still earns — the opt-in is only checked when they withdraw.
 
 Pick the cheapest node with enough RAM:
 
@@ -293,9 +310,11 @@ curl -s $API/wallet -H "authorization: Bearer $TOKEN" | jq
 {
   "address": "YOUR7ADDRESS7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "balanceAtomic": 0,
+  "earningsAtomic": 0,
   "topups": [],
   "charges": [],
   "payouts": [],
+  "withdrawals": [],
   "stats": {
     "totalSpentAtomic": 0,
     "totalToppedUpAtomic": 0,
@@ -307,8 +326,12 @@ curl -s $API/wallet -H "authorization: Bearer $TOKEN" | jq
 }
 ```
 
-`topups`, `charges` and `payouts` are the 50 most recent each; `stats` is lifetime and uncapped.
-`payouts` is what you have **earned as a contributor**, not what you spent.
+`topups`, `charges`, `payouts` and `withdrawals` are the 50 most recent each; `stats` is lifetime
+and uncapped. `payouts` is what you have **earned as a contributor** per lease, not what you spent.
+
+Two balances, and they are not interchangeable. `balanceAtomic` is prepaid credit — it is spent on
+compute and has no withdrawal path. `earningsAtomic` is what you have earned contributing, and it
+only leaves via [`POST /withdraw`](#post-withdraw).
 
 Without a token:
 
@@ -323,6 +346,96 @@ curl -s $API/wallet
 > A headless client typically has no session and therefore cannot call this. Credit surfaces to it
 > two other ways: `billing.creditAtomic` in a successful rent response, and the
 > `402 insufficient_credit` body when it is too low.
+
+---
+
+# Contributor
+
+Everything a contributor needs, all gated by a **session token** — so it is all tied to the wallet
+that signed in.
+
+## `GET /keys`
+
+Your live API keys. The secrets are never returned; only a preview to tell them apart.
+
+```bash
+curl -s $API/keys -H "authorization: Bearer $TOKEN" | jq
+```
+
+```json
+{
+  "keys": [
+    {
+      "id": 12,
+      "label": "",
+      "preview": "tnd_a1b2…z9y8",
+      "createdAt": 1750000000000,
+      "lastUsedAt": 1750000600000
+    }
+  ]
+}
+```
+
+## `POST /keys`
+
+Mint a key. **The secret is in this response and nowhere else** — only its sha256 is stored, so a
+lost key is re-minted, never recovered.
+
+```bash
+curl -s -X POST $API/keys \
+  -H "authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"label":"ryzen box"}' | jq
+```
+
+```json
+{
+  "key": { "id": 13, "label": "ryzen box", "preview": "tnd_c3d4…w7v6", "createdAt": 1750000000000, "lastUsedAt": null },
+  "secret": "tnd_c3d4………………w7v6"
+}
+```
+
+Put `secret` in the agent's `.env` as `TENDRIL_API_KEY`. Anyone holding it can register a node as
+you — but not spend your credit, withdraw your earnings, or sign anything on-chain.
+
+## `DELETE /keys/:id`
+
+Revoke one of your keys. Any agent still using it is rejected at its next `hello`.
+
+```bash
+curl -s -X DELETE $API/keys/13 -H "authorization: Bearer $TOKEN"
+```
+
+```json
+{"ok":true}
+```
+
+Revoking a key you do not own is a `404`, not a `403` — an id guess tells you nothing.
+
+## `POST /withdraw`
+
+Cash your whole earnings balance out to the signed-in wallet, on-chain, in one transfer.
+
+```bash
+curl -s -X POST $API/withdraw -H "authorization: Bearer $TOKEN" | jq
+```
+
+```json
+{
+  "amountAtomic": 5500000,
+  "txid": "ABCD…",
+  "earningsAtomic": 0
+}
+```
+
+All-or-nothing, with a floor of `minWithdrawAtomic` (5 USDC by default, see
+[`GET /platform`](#get-platform)). Leases credit a balance rather than paying out per session, and
+an ASA transfer costs the same whether it moves five dollars or five cents — so small amounts wait
+rather than trickling out as dust.
+
+You must be **opted into the payment asset** first; a transfer to an address that has not opted in
+fails outright, so this is checked before anything is debited. If the send fails after the debit,
+the balance is refunded and the attempt is recorded as `failed`.
 
 ---
 
@@ -437,7 +550,8 @@ Every error is `{"error": "<code>"}`, some with `detail` or extra fields.
 | `400` | `amount_below_minimum` | `/topup` | Carries `minimum`. |
 | `400` | `amount_above_maximum` | `/topup` | Carries `maximum`. |
 | `400` | `invalid_ssh_key` | `/rent` | Not a valid OpenSSH public key line. |
-| `401` | `sign in with your wallet first` | `/wallet` | No/invalid session token. |
+| `400` | `minimum withdrawal is …` | `/withdraw` | Earnings below `minWithdrawAtomic`; nothing was debited. |
+| `401` | `sign in with your wallet first` | `/wallet`, `/keys`, `/withdraw` | No/invalid session token. |
 | `401` | `stale or invalid login challenge` | `/auth/wallet-login` | Nonce expired. |
 | `401` | `signature did not verify for this address` | `/auth/wallet-login` | Wrong signer. |
 | `401` | `invalid or missing lease token` | `/lease/*` | Token absent or for another lease. |
@@ -446,8 +560,12 @@ Every error is `{"error": "<code>"}`, some with `detail` or extra fields.
 | `402` | `settlement_failed` | paid routes | Carries `detail`. |
 | `404` | `node_not_found` | `/rent` | No such node. |
 | `404` | `lease not found` | `/lease/*` | Already gone. |
+| `404` | `no such key` | `/keys/:id` | Not yours, or already revoked. |
+| `409` | `opt … into asset …` | `/withdraw` | Opt into the payment asset first. |
 | `409` | `node_unavailable` | `/rent` | Offline or missed heartbeats. |
 | `409` | `node_busy` | `/rent` | Taken — nothing settled. |
+| `502` | `withdrawal failed: …` | `/withdraw` | On-chain send failed; the balance was refunded. |
+| `503` | `withdrawals are not configured on this deployment` | `/withdraw` | No `PLATFORM_PRIVATE_KEY`. |
 | `409` | `payment_already_used` | paid routes | Carries `txid`. |
 | `500` | `metrics failed: …` | `/metrics` | Database unreachable. |
 | `502` | `facilitator_unavailable` | paid routes | Nothing submitted. |

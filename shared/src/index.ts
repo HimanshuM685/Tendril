@@ -169,16 +169,58 @@ export interface Charge {
   createdAt: number;
 }
 
-/** An on-chain payout to a contributor for compute they provided. */
+/**
+ * One lease's earnings for a contributor, after the platform fee.
+ *
+ * Nothing is sent on-chain per lease — the amount is added to the contributor's
+ * withdrawable earnings balance, and `txid` is therefore always null here. The
+ * on-chain movement happens once, at withdrawal (see `Withdrawal`).
+ */
 export interface Payout {
   id: number;
-  /** Contributor address that received the payout. */
+  /** Contributor address that earned it. */
   toAddr: string;
   leaseId: string;
   amountAtomic: number;
-  /** On-chain transaction id of the payout, or null if it failed/skipped. */
+  /** Always null: per-lease earnings are credited, not sent. */
   txid: string | null;
   createdAt: number;
+}
+
+/** A contributor cashing their earnings balance out to their wallet, on-chain. */
+export interface Withdrawal {
+  id: number;
+  toAddr: string;
+  amountAtomic: number;
+  /** On-chain txid, or null while pending / if the send failed (then refunded). */
+  txid: string | null;
+  status: "sent" | "failed";
+  createdAt: number;
+}
+
+/** A contributor API key, as shown in the web UI. The secret is never returned. */
+export interface ApiKeyInfo {
+  id: number;
+  label: string;
+  /** First and last few characters, e.g. `tnd_abc…xyz`, to tell keys apart. */
+  preview: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+/** POST /keys → the one and only time the full key is returned. */
+export interface CreateApiKeyResponse {
+  key: ApiKeyInfo;
+  /** The secret. Shown once; only its hash is stored. */
+  secret: string;
+}
+
+/** POST /withdraw → what actually left the earnings balance. */
+export interface WithdrawResponse {
+  amountAtomic: number;
+  txid: string;
+  /** Earnings balance after the withdrawal (0 — withdrawals are all-or-nothing). */
+  earningsAtomic: number;
 }
 
 /** Lifetime aggregates for an address (computed server-side, not capped). */
@@ -201,10 +243,15 @@ export interface WalletStats {
 export interface WalletSummary {
   address: string;
   balanceAtomic: number;
+  /** Withdrawable contributor earnings, in atomic units. Separate from credit:
+   *  what you earn is cashed out to your wallet, not spent as rent. */
+  earningsAtomic: number;
   topups: TopUp[];
   charges: Charge[];
-  /** Payouts received as a contributor (earnings history). */
+  /** Per-lease earnings credited as a contributor. */
   payouts: Payout[];
+  /** Cash-outs of that balance to the wallet. */
+  withdrawals: Withdrawal[];
   stats: WalletStats;
 }
 
@@ -256,22 +303,32 @@ export interface SandboxLimits {
 /**
  * agent -> registry: authenticate the socket, registering (or re-attaching to)
  * a node. Carries the node's advertised specs so registration + auth happen in
- * one signed message.
+ * one message.
+ *
+ * Auth is an API key minted in the web UI by a signed-in wallet. The agent
+ * therefore holds no Algorand private key: the key's owner *is* the node's owner
+ * and payout address, so neither can be spoofed from the contributor's env.
  */
 export interface AgentHelloMsg {
   /** Existing node id to re-attach to, or omit/empty to create a new one. */
   nodeId?: string;
-  ownerAddr: string;
-  /** Base64 algosdk.signBytes signature over `nonce`, proving ownership of ownerAddr. */
-  signature: string;
-  nonce: string;
+  /** Contributor API key (`tnd_…`) from the web UI's contributor section. */
+  apiKey: string;
   /** Advertised node specs. */
   spec: RegisterNodeRequest;
 }
 
-/** registry -> agent: hello accepted; the canonical node id to use henceforth. */
+/**
+ * registry -> agent: hello accepted. Carries the canonical node id plus the
+ * settings the contributor no longer configures locally — the backend owns the
+ * tunnel and the payout address.
+ */
 export interface HelloAckMsg {
   nodeId: string;
+  /** Wallet that minted the API key — earns for this node. */
+  ownerAddr: string;
+  /** Reverse-tunnel settings for the sandbox, chosen by the backend. */
+  bore: { server: string; secret: string };
 }
 
 /** agent -> registry: periodic liveness ping. */
@@ -343,9 +400,11 @@ export const WS = {
 
 // ───────────────────────────── HTTP DTOs ─────────────────────────────
 
+/**
+ * What a node advertises about itself. Owner and payout address are deliberately
+ * absent — both come from the API key the agent authenticates with.
+ */
 export interface RegisterNodeRequest {
-  ownerAddr: string;
-  payToAddr: string;
   label: string;
   cpuCores: number;
   ramMb: number;
@@ -383,7 +442,7 @@ export interface RunResponse {
 // Signing in proves address control so an existing credit balance can be read
 // and spent. It is NOT how money gets in — that is x402 only (see below).
 
-/** GET /auth/nonce → a short-lived challenge to sign for wallet login. */
+/** GET /auth/wallet-nonce → a short-lived challenge to sign for wallet login. */
 export interface WalletNonceResponse {
   nonce: string;
 }
@@ -416,6 +475,8 @@ export interface PlatformInfo {
   /** Top-up bounds, in atomic units, enforced by POST /x402/topup. */
   minTopUpAtomic: number;
   maxTopUpAtomic: number;
+  /** Least a contributor may withdraw at once — a floor on dust payouts. */
+  minWithdrawAtomic: number;
 }
 
 // ───────────────────────── x402 endpoint DTOs ─────────────────────────
