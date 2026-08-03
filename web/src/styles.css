@@ -35,7 +35,42 @@ body {
 }
 
 a { color: inherit; text-decoration: none; }
+/* Selection has to invert with the surface it sits on. With only two colours, a
+   single global rule is invisible on half the site: cream highlight on a cream
+   panel reads as "nothing happened". Default below is for the green page; the
+   cream panels flip it; the green blocks nested inside those panels flip back.
+   Each block needs both `X::selection` (the element's own text) and
+   `X ::selection` (its descendants) — they are not the same selector. */
 ::selection { background: var(--cream); color: var(--green); }
+
+.terminal::selection, .terminal ::selection,
+.panel::selection, .panel ::selection,
+.stat::selection, .stat ::selection,
+.card::selection, .card ::selection,
+.modal::selection, .modal ::selection,
+.wallet-menu::selection, .wallet-menu ::selection,
+.wallet-panel::selection, .wallet-panel ::selection,
+.lease-panel::selection, .lease-panel ::selection,
+.error::selection, .error ::selection {
+  background: var(--green);
+  color: var(--cream);
+}
+
+/* Green-on-cream islands — code, commands, badges — invert once more. Same
+   specificity as the rule above, so these must stay after it to win. */
+.cmd::selection, .cmd ::selection,
+.codeblock::selection, .codeblock ::selection,
+.ssh-code::selection, .ssh-code ::selection,
+.badge::selection, .badge ::selection,
+.arch::selection, .arch ::selection,
+.tab::selection, .tab ::selection,
+.wm-item::selection, .wm-item ::selection,
+.wallet-choice::selection, .wallet-choice ::selection,
+.board-tab::selection, .board-tab ::selection,
+.board-row::selection, .board-row ::selection {
+  background: var(--cream);
+  color: var(--green);
+}
 
 /* global CRT scanline wash — slowly drifts + faintly flickers for a live-tube feel */
 .scanlines {
