@@ -101,6 +101,18 @@ export function leasesForNode(nodeId: string): Lease[] {
 }
 
 /**
+ * Sessions whose meter is running right now, for the platform metrics series.
+ * A charge row is only written at close, so these are invisible to the DB —
+ * without them the active-users chart flatlines while the platform is busy.
+ * "starting" leases are excluded: their sandbox isn't up, so `startedAt` is 0.
+ */
+export function liveSessions(): { address: string; start: number; end: null }[] {
+  return [...leases.values()]
+    .filter((l) => l.status === "active" && l.startedAt > 0)
+    .map((l) => ({ address: l.renterAddr, start: l.startedAt, end: null }));
+}
+
+/**
  * True if the node already has a lease starting or running on it. Creating a
  * lease *is* the reservation — there is no separate hold, so a caller who is
  * away paying a 402 challenge can lose the node to someone faster. That is the

@@ -57,7 +57,14 @@ import {
 } from "./db.js";
 import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
 import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode } from "./registry.js";
-import { abandonLease, closeLease, createLease, getLease, nodeBusy } from "./leases.js";
+import {
+  abandonLease,
+  closeLease,
+  createLease,
+  getLease,
+  liveSessions,
+  nodeBusy,
+} from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected, runJob, startContainer } from "./ws.js";
 import { config } from "./config.js";
@@ -138,7 +145,7 @@ router.get("/explorer", guard((_req, res) => {
 // Public platform metrics — growth series + leaderboards.
 router.get("/metrics", guard(async (_req, res) => {
   try {
-    res.json(await metrics());
+    res.json(await metrics(liveSessions()));
   } catch (err) {
     res.status(500).json({ error: `metrics failed: ${(err as Error).message}` });
   }

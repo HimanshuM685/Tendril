@@ -4,6 +4,7 @@ import pg from "pg";
 import type {
   ApiKeyInfo,
   Charge,
+  MetricPoint,
   Metrics,
   Payout,
   TopUp,
@@ -375,20 +376,87 @@ export async function recordWithdrawal(
  * buckets collapse a young platform into a single point (and a flat chart);
  * a point per change plots the same way whether growth spans hours or years.
  */
-function cumulativeByChange(firsts: number[]): { t: number; count: number }[] {
+function cumulativeByChange(firsts: number[]): MetricPoint[] {
   let running = 0;
   return [...firsts].sort((a, b) => a - b).map((t) => ({ t, count: ++running }));
+}
+
+/** A session on compute: who, when it started, when it ended (null = still running). */
+export interface ActiveWindow {
+  address: string;
+  start: number;
+  end: number | null;
+}
+
+/**
+ * How many distinct users were on compute at each moment something changed.
+ *
+ * This is a concurrency series, not a cumulative one: it goes down when a
+ * session ends. That distinction is the whole point of the chart — a running
+ * total of everyone who ever rented can only ever rise, so it says nothing
+ * about how busy the platform is *now*.
+ *
+ * Counted per address, not per lease, so one user holding two sandboxes is one
+ * active user: an address only moves the running total when its own depth
+ * crosses 0. Ends are applied after starts at the same instant, so a user who
+ * closes one lease and opens another in the same millisecond never dips to 0.
+ */
+export function activeUsersByChange(windows: ActiveWindow[]): MetricPoint[] {
+  const events = windows.flatMap((w) =>
+    w.end === null
+      ? [{ t: w.start, delta: 1, address: w.address }]
+      : [
+          { t: w.start, delta: 1, address: w.address },
+          { t: w.end, delta: -1, address: w.address },
+        ],
+  );
+  events.sort((a, b) => a.t - b.t || b.delta - a.delta);
+
+  const depth = new Map<string, number>();
+  const points: MetricPoint[] = [];
+  let running = 0;
+  for (const e of events) {
+    const before = depth.get(e.address) ?? 0;
+    const after = before + e.delta;
+    depth.set(e.address, after);
+    // Only a 0↔1 crossing changes the user count; a user's second overlapping
+    // lease is already represented.
+    if (before === 0 && after === 1) running += 1;
+    else if (before === 1 && after === 0) running -= 1;
+    else continue;
+    const last = points[points.length - 1];
+    if (last && last.t === e.t) last.count = running;
+    else points.push({ t: e.t, count: running });
+  }
+  return points;
 }
 
 /**
  * Platform-wide leaderboards + growth series, all derived from topups/charges.
  * Public (no PII beyond the addresses users already broadcast on-chain).
  */
-export async function metrics(): Promise<Metrics> {
-  const [userFirsts, activeFirsts, topup, leaseTime, leaseSpan, timeServed, timesServed] =
+export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
+  const [userFirsts, closedWindows, topup, leaseTime, leaseSpan, timeServed, timesServed] =
     await Promise.all([
-      q<{ first: number }>("SELECT MIN(created_at)::bigint AS first FROM topups GROUP BY address"),
-      q<{ first: number }>("SELECT MIN(created_at)::bigint AS first FROM charges GROUP BY address"),
+      // A user is anyone who has ever paid us, whether that was a top-up or a
+      // lease paid for directly — counting only top-ups misses the second kind
+      // entirely and undercounts the platform.
+      q<{ first: number }>(
+        `SELECT MIN(created_at)::bigint AS first FROM (
+           SELECT address, created_at FROM topups
+           UNION ALL
+           SELECT address, created_at FROM charges
+         ) paid GROUP BY address`,
+      ),
+      // A charge is written once, at close, and carries the billed duration —
+      // so the session's window is [close - seconds, close]. `seconds` is int4
+      // and must be widened before the multiply or a ~25-day lease overflows it.
+      q<{ address: string; start: number; finish: number }>(
+        `SELECT address,
+                (created_at - seconds::bigint * 1000)::bigint AS start,
+                created_at::bigint AS finish
+           FROM charges`,
+      ),
       q<{ address: string; value: number }>(
         "SELECT address, SUM(amount_micro)::bigint AS value FROM topups GROUP BY address ORDER BY value DESC LIMIT 20",
       ),
@@ -407,12 +475,18 @@ export async function metrics(): Promise<Metrics> {
     ]);
 
   const usersOverTime = cumulativeByChange(userFirsts.map((r) => r.first));
-  const activeOverTime = cumulativeByChange(activeFirsts.map((r) => r.first));
+  // Closed sessions come from the ledger; the ones running right now only exist
+  // in memory, and without them the series stops at the last close and a busy
+  // platform reads as empty.
+  const activeOverTime = activeUsersByChange([
+    ...closedWindows.map((r) => ({ address: r.address, start: r.start, end: r.finish })),
+    ...live,
+  ]);
   return {
     usersOverTime,
     activeOverTime,
     totalUsers: usersOverTime.at(-1)?.count ?? 0,
-    totalActive: activeOverTime.at(-1)?.count ?? 0,
+    totalActive: new Set(live.map((w) => w.address)).size,
     topUsers: { topup, leaseTime, leaseSpan },
     topContributors: { timeServed, timesServed },
   };

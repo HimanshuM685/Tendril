@@ -1,3 +1,5 @@
+import { network } from "../lib/network";
+
 /** Static about page — presentational only. */
 export function About() {
   return (
@@ -40,9 +42,10 @@ export function About() {
 
         <h3>Stack</h3>
         <p>
-          TypeScript everywhere. Vite + React + <code>@txnlab/use-wallet</code> (Pera/Defly) on the
-          web; Express + socket.io + Neon Postgres for the registry; Docker + bore for sandboxes;
-          algosdk for native-ALGO payments and on-chain payouts. Algorand testnet.
+          TypeScript everywhere. Vite + React + <code>@txnlab/use-wallet</code> on the web —
+          Pera/Lute/Defly, or a Magic email login for people without a wallet; Express + socket.io
+          + Neon Postgres for the registry; Docker + bore for sandboxes;
+          algosdk for native-ALGO payments and on-chain payouts. Algorand {network.network}.
         </p>
 
         <p className="muted small">Open source · no tracking · HTML / CSS / TS</p>

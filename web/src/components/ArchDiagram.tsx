@@ -1,3 +1,5 @@
+import { network } from "../lib/network";
+
 /**
  * Architecture diagram — hand-drawn inline SVG so it stays on-palette
  * (cream boxes / cream flows on the green field) with no extra deps.
@@ -103,7 +105,7 @@ export function ArchDiagram() {
           <rect className="box-fill" x="300" y="470" width="200" height="90" />
           <rect className="box-edge" x="304" y="474" width="192" height="82" />
           <text className="b-title" x="400" y="510" textAnchor="middle">ALGORAND</text>
-          <text className="b-sub" x="400" y="532" textAnchor="middle">ALGOD · TESTNET</text>
+          <text className="b-sub" x="400" y="532" textAnchor="middle">ALGOD · {network.network.toUpperCase()}</text>
         </g>
       </svg>
       <figcaption className="arch-cap">

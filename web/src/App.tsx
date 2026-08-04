@@ -9,11 +9,13 @@ import { Docs } from "./components/Docs";
 import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
+import { MagicCallback } from "./components/MagicCallback";
 // ~90KB of markdown compiles into this page; keep it out of the landing bundle.
 const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
+import { network } from "./lib/network";
 
 export type Session = { token: string; address: string };
 
@@ -300,6 +302,7 @@ export function App() {
           />
           <Route path="/docs" element={<Docs />} />
           <Route path="/about" element={<About />} />
+          <Route path="/callback" element={<MagicCallback />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -311,7 +314,7 @@ export function App() {
         <span className="foot-mid">
           EPHEMERAL DOCKER SANDBOX &bull; NO HOST MOUNT &bull; DESTROYED ON LEASE END
         </span>
-        <span>ALGORAND&nbsp;TESTNET</span>
+        <span>ALGORAND&nbsp;{network.network.toUpperCase()}</span>
       </footer>
     </div>
   );

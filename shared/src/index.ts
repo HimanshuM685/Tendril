@@ -266,7 +266,7 @@ export interface Job {
 
 // ───────────────────────── Platform metrics (GET /metrics) ─────────────────────────
 
-/** One step of a cumulative growth series — one point per change, not per day. */
+/** One step of a metrics series — one point per change, not per day. */
 export interface MetricPoint {
   t: number; // epoch ms of the change
   count: number;
@@ -279,9 +279,12 @@ export interface RankRow {
 }
 
 export interface Metrics {
+  /** Cumulative distinct addresses that have ever paid — only ever rises. */
   usersOverTime: MetricPoint[];
+  /** Distinct users on compute at each change — a concurrency series, so it falls too. */
   activeOverTime: MetricPoint[];
   totalUsers: number;
+  /** Distinct users on compute right now, not all-time. */
   totalActive: number;
   /** Renter leaderboards. topup=atomic units, leaseTime=seconds, leaseSpan=lease count. */
   topUsers: { topup: RankRow[]; leaseTime: RankRow[]; leaseSpan: RankRow[] };

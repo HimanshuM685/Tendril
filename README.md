@@ -51,7 +51,7 @@ Tendril just makes it prepaid and individual-scale.
 |---|---|
 | `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
 | `contributor/` | **The contributor script.** The daemon a contributor runs. Authenticates with an API key minted in the web app (no wallet key on the machine), heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
-| `web/` | **The website.** Vite + React + `@txnlab/use-wallet` (Pera/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
+| `web/` | **The website.** Vite + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly) or sign in with an email via **Magic**, which custodies an Algorand account for renters who have no wallet. **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
 
@@ -168,7 +168,7 @@ TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd 
 
 # 3a. Web UI                                      # http://localhost:5173
 cp web/.env.example web/.env    # set VITE_REGISTRY_URL (defaults to localhost:4000)
-npm run web                     # connect Pera → Sign in → Top up → Rent → copy the ssh command
+npm run web                     # connect (wallet or email) → Sign in → Top up → Rent → ssh
 
 # 3b. …or the autonomous agent (its own funded key — signs in, tops up, rents)
 AVM_PRIVATE_KEY=<buyer-key> npm run client       # …or:  cd example-buyer && npm run start

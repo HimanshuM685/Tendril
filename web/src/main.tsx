@@ -6,8 +6,11 @@ import {
   WalletId,
   WalletManager,
   WalletProvider,
+  type SupportedWallet,
 } from "@txnlab/use-wallet-react";
 import { App } from "./App";
+import { isMagicEnabled, MAGIC_ICON } from "./lib/magic";
+import { createMagicWalletProvider } from "./lib/magicWalletProvider";
 import { network } from "./lib/network";
 import "./styles.css";
 
@@ -15,12 +18,25 @@ import "./styles.css";
 // Connecting a wallet is the auth layer; the same wallet signs x402 payments.
 // The network comes from VITE_ALGORAND_NETWORK so the wallet can't end up on a
 // different chain than the one the registry quotes prices on.
+const wallets: SupportedWallet[] = [
+  { id: WalletId.LUTE, options: { siteName: "Tendril" } },
+  WalletId.PERA,
+  WalletId.DEFLY,
+];
+
+// Magic: social sign-in (Google + email OTP) custodies an Algorand account for
+// the user. Custom provider wraps Magic SDK directly — built-in MagicAuth only
+// supports deprecated magic-link email. No key → no social branch in the modal.
+if (isMagicEnabled) {
+  wallets.push({
+    id: WalletId.CUSTOM,
+    options: { provider: createMagicWalletProvider() },
+    metadata: { name: "Magic", icon: MAGIC_ICON },
+  });
+}
+
 const walletManager = new WalletManager({
-  wallets: [
-    { id: WalletId.LUTE, options: { siteName: "Tendril" } },
-    WalletId.PERA,
-    WalletId.DEFLY,
-  ],
+  wallets,
   defaultNetwork: network.network === "mainnet" ? NetworkId.MAINNET : NetworkId.TESTNET,
 });
 
