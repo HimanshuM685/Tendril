@@ -1,11 +1,7 @@
-import { dirname, resolve } from "node:path";
-import { createRequire } from "node:module";
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
-
-const require = createRequire(import.meta.url);
-const resolvePkg = (name: string) => dirname(require.resolve(name));
 
 // algosdk expects a few Node globals (Buffer, etc.) in the browser; nodePolyfills
 // provides them. @tendril/shared is aliased to its TS source so Vite transpiles
@@ -15,12 +11,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@tendril/shared": resolve(__dirname, "../shared/src/index.ts"),
-      // use-wallet nests magic-sdk@29; resolve web's hoisted v33 instead.
-      "magic-sdk": resolvePkg("magic-sdk"),
-      "@magic-ext/algorand": resolvePkg("@magic-ext/algorand"),
-      "@magic-ext/oauth2": resolvePkg("@magic-ext/oauth2"),
-      "@magic-sdk/provider": resolvePkg("@magic-sdk/provider"),
     },
+    // use-wallet nests magic-sdk@29; root package.json overrides pin v33.
     dedupe: ["magic-sdk", "@magic-ext/algorand", "@magic-ext/oauth2", "@magic-sdk/provider"],
   },
   server: {
