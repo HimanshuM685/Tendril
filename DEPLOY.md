@@ -145,8 +145,10 @@ VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
 ```
 
 **Vercel / Netlify / Cloudflare Pages:**
-- Build command: `npm install && npm run build -w web`
-- Output directory: `web/dist`
+- **Vercel:** use either setup (both ship `vercel.json` configs):
+  - Root Directory = repo root → root `vercel.json`: `npm install`, `npm run build -w web`, output `web/dist`.
+  - Root Directory = `web` → `web/vercel.json`: `cd .. && npm install` (workspace lockfile), then `npm run build`, output `dist`.
+- **Netlify / Cloudflare Pages:** build command `npm install && npm run build -w web`, output `web/dist`.
 - Env var: `VITE_REGISTRY_URL = https://api.your-tendril-domain.com`
 - SPA rewrite: serve `index.html` for all routes (Netlify `_redirects`: `/* /index.html 200`;
   Vercel/CF Pages handle SPAs automatically).
