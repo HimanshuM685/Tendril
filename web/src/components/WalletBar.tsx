@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { WalletId, useWallet } from "@txnlab/use-wallet-react";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
-import { consumeAutoSignIn, isMagicEnabled, markAutoSignIn } from "../lib/magic";
+import { consumeAutoSignIn, isMagicEnabled, markAutoSignIn } from "../lib/magicConfig";
 
 interface Props {
   signedIn: boolean;

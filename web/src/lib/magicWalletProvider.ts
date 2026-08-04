@@ -1,7 +1,8 @@
 import algosdk from "algosdk";
 import type { CustomProvider } from "@txnlab/use-wallet";
 import type { WalletAccount } from "@txnlab/use-wallet";
-import { getMagic, OAUTH_REDIRECT } from "./magic";
+import { getMagic } from "./magic";
+import { OAUTH_REDIRECT } from "./magicConfig";
 
 function toB64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
@@ -30,9 +31,8 @@ function isSignedTxn(decoded: unknown): boolean {
 }
 
 async function accountFromMagic(): Promise<WalletAccount> {
-  const magic = getMagic();
+  const magic = await getMagic();
   const ext = magic.algorand;
-  // v28+ uses multichain getPublicAddress; algod_getWallet is legacy.
   const address =
     typeof ext.getPublicAddress === "function"
       ? await ext.getPublicAddress()
@@ -57,7 +57,7 @@ export function createMagicWalletProvider(): CustomProvider {
 
   return {
     async connect(args) {
-      const magic = getMagic();
+      const magic = await getMagic();
 
       if (args?.provider === "google") {
         await magic.oauth2.loginWithRedirect({
@@ -85,11 +85,12 @@ export function createMagicWalletProvider(): CustomProvider {
 
     async disconnect() {
       cachedAddress = null;
-      await getMagic().user.logout();
+      const magic = await getMagic();
+      await magic.user.logout();
     },
 
     async resumeSession() {
-      const magic = getMagic();
+      const magic = await getMagic();
       if (!(await magic.user.isLoggedIn())) return;
       const account = await accountFromMagic();
       cachedAddress = account.address;
@@ -97,7 +98,7 @@ export function createMagicWalletProvider(): CustomProvider {
     },
 
     async signTransactions(txnGroup, indexesToSign) {
-      const magic = getMagic();
+      const magic = await getMagic();
       const address = await resolveAddress();
       const addresses = [address];
 

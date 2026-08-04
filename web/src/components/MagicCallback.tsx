@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { WalletId, useWallet } from "@txnlab/use-wallet-react";
-import { consumeAutoSignIn, getMagic, isMagicEnabled, markAutoSignIn } from "../lib/magic";
+import { consumeAutoSignIn, isMagicEnabled, markAutoSignIn } from "../lib/magicConfig";
+import { getMagic } from "../lib/magic";
 
 /**
  * OAuth redirect landing page. Google login sends users here; we finish the Magic
@@ -25,7 +26,8 @@ export function MagicCallback() {
 
     (async () => {
       try {
-        await getMagic().oauth2.getRedirectResult();
+        const magic = await getMagic();
+        await magic.oauth2.getRedirectResult();
         const magicWallet = wallets.find((w) => w.id === WalletId.CUSTOM);
         if (!magicWallet) throw new Error("Magic wallet is not configured.");
 
