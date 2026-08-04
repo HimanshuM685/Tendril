@@ -1,7 +1,6 @@
 import { Magic } from "magic-sdk";
 import { AlgorandExtension } from "@magic-ext/algorand";
 import { OAuthExtension } from "@magic-ext/oauth2";
-import { ALGOD_URL } from "./network";
 
 export const MAGIC_API_KEY = import.meta.env.VITE_MAGIC_API_KEY as string | undefined;
 export const isMagicEnabled = Boolean(MAGIC_API_KEY);
@@ -29,7 +28,7 @@ export function getMagic(): MagicClient {
   if (!magicInstance) {
     magicInstance = new Magic(MAGIC_API_KEY, {
       extensions: {
-        algorand: new AlgorandExtension({ rpcUrl: ALGOD_URL }),
+        algorand: new AlgorandExtension({ rpcUrl: "" }),
         oauth2: new OAuthExtension(),
       },
     }) as MagicClient;

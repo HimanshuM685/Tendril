@@ -31,7 +31,12 @@ function isSignedTxn(decoded: unknown): boolean {
 
 async function accountFromMagic(): Promise<WalletAccount> {
   const magic = getMagic();
-  const address = (await magic.algorand.getWallet()) as string;
+  const ext = magic.algorand;
+  // v28+ uses multichain getPublicAddress; algod_getWallet is legacy.
+  const address =
+    typeof ext.getPublicAddress === "function"
+      ? await ext.getPublicAddress()
+      : ((await ext.getWallet()) as string);
   const info = await magic.user.getInfo();
   return {
     name: info.email ?? "Magic Wallet",

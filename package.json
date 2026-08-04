@@ -21,5 +21,18 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "@txnlab/use-wallet": {
+      "magic-sdk": "33.10.0",
+      "@magic-ext/algorand": "28.8.0"
+    },
+    "@txnlab/use-wallet-react": {
+      "magic-sdk": "33.10.0",
+      "@magic-ext/algorand": "28.8.0"
+    },
+    "magic-sdk": "33.10.0",
+    "@magic-ext/algorand": "28.8.0",
+    "@magic-ext/oauth2": "15.11.0"
   }
 }
