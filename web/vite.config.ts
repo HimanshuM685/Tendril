@@ -12,6 +12,11 @@ export default defineConfig({
     alias: {
       "@tendril/shared": resolve(__dirname, "../shared/src/index.ts"),
     },
+    // use-wallet and the app must share one lute-connect — v2 breaks signing.
+    dedupe: ["lute-connect"],
+  },
+  optimizeDeps: {
+    include: ["lute-connect"],
   },
   server: {
     port: 5173,

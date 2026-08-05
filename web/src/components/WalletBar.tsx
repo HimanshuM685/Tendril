@@ -56,8 +56,10 @@ export function WalletBar({ signedIn, canSignIn, signingIn, onSignIn, balanceAto
     try {
       await w.connect();
       setPicking(false);
-    } catch {
+    } catch (e) {
       autoSignIn.current = false;
+      const msg = (e as Error)?.message ?? "Could not connect.";
+      if (!/cancel|reject|closed/i.test(msg)) console.error("[wallet]", e);
     }
   }
 
