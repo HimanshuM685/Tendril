@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ApiKeyInfo, ComputeNode, WalletSummary } from "@tendril/shared";
+import type { ApiKeyInfo, ComputeNode, CreateApiKeyResponse, WalletSummary } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
 import {
   createApiKey,
@@ -10,12 +10,15 @@ import {
   withdrawEarnings,
 } from "../api";
 import { writeClipboard } from "../clipboard";
+import { useCustodialSign } from "../context/CustodialSignContext";
+import type { PayStage, SignTransactions } from "../lib/x402Client";
 import type { Session } from "../App";
 
 interface Props {
   address: string | null;
   session: Session | null;
   wallet: WalletSummary | null;
+  signTransactions: SignTransactions;
   onWalletChanged: () => void;
   onError: (e: string | null) => void;
 }
@@ -26,15 +29,27 @@ interface Props {
  * machine you share never holds a private key: the wallet that minted the key
  * owns the node and is where its earnings land.
  */
-export function Contribute({ address, session, wallet, onWalletChanged, onError }: Props) {
+export function Contribute({
+  address,
+  session,
+  wallet,
+  signTransactions,
+  onWalletChanged,
+  onError,
+}: Props) {
+  const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ComputeNode[]>([]);
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   /** The plaintext of a key just minted. The server never returns it again. */
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
+  const [mintStage, setMintStage] = useState<PayStage | "confirming" | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [minWithdraw, setMinWithdraw] = useState(5_000_000);
+  const [mintKeyFee, setMintKeyFee] = useState(100_000);
   const [copied, setCopied] = useState<string | null>(null);
+
+  const isGoogle = session?.authType === "google";
 
   useEffect(() => {
     if (!address) {
@@ -67,22 +82,36 @@ export function Contribute({ address, session, wallet, onWalletChanged, onError 
 
   useEffect(() => {
     fetchPlatform()
-      .then((p) => setMinWithdraw(p.minWithdrawAtomic))
+      .then((p) => {
+        setMinWithdraw(p.minWithdrawAtomic);
+        setMintKeyFee(p.flatMintKeyAtomic);
+      })
       .catch(() => {});
   }, []);
 
   async function mint() {
-    if (!session) return;
+    if (!session || !address) return;
     setMinting(true);
+    setMintStage(null);
     onError(null);
     try {
-      const { key, secret } = await createApiKey(session.token, "");
-      setKeys((k) => [key, ...k]);
-      setNewSecret(secret);
+      let created: CreateApiKeyResponse;
+      if (isGoogle) {
+        setMintStage("confirming");
+        created = (await runCustodialAction(session.token, {
+          action: "mintkey",
+          label: "",
+        })) as CreateApiKeyResponse;
+      } else {
+        created = await createApiKey(session.token, address, signTransactions, "", setMintStage);
+      }
+      setKeys((k) => [created.key, ...k]);
+      setNewSecret(created.secret);
     } catch (err) {
-      onError((err as Error).message);
+      if ((err as Error).message !== "cancelled") onError((err as Error).message);
     } finally {
       setMinting(false);
+      setMintStage(null);
     }
   }
 
@@ -113,6 +142,12 @@ export function Contribute({ address, session, wallet, onWalletChanged, onError 
 
   const earnings = wallet?.earningsAtomic ?? 0;
   const canWithdraw = !!session && earnings >= minWithdraw;
+
+  const mintStageLabel: Record<string, string> = {
+    signing: "Approve in wallet…",
+    settling: "Settling on-chain…",
+    confirming: "Confirm in dialog…",
+  };
 
   // The key is the only secret in a contributor's setup — the rest is what the
   // machine is worth per hour and what to call it.
@@ -147,12 +182,17 @@ docker compose up --build contributor`;
         {session && (
           <>
             <p className="muted small">
-              The key identifies your node and links it to <code>{session.address.slice(0, 8)}…</code>{" "}
-              — the wallet earnings are paid to. Keep it secret; anyone holding it can register a
-              node as you.
+              Minting costs <strong>{formatUsdc(mintKeyFee)}</strong> on-chain via x402. The key
+              identifies your node and links it to <code>{session.address.slice(0, 8)}…</code> — the
+              wallet earnings are paid to. Keep it secret; anyone holding it can register a node as
+              you.
             </p>
             <button className="btn" type="button" onClick={() => void mint()} disabled={minting}>
-              {minting ? "MINTING…" : "MINT API KEY"}
+              {minting
+                ? mintStage
+                  ? mintStageLabel[mintStage]
+                  : "MINTING…"
+                : `MINT API KEY (${formatUsdc(mintKeyFee)})`}
             </button>
 
             {newSecret && (

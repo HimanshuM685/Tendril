@@ -117,6 +117,7 @@ router.get("/platform", guard((_req, res) => {
     minTopUpAtomic: config.minTopUpAtomic,
     maxTopUpAtomic: config.maxTopUpAtomic,
     minWithdrawAtomic: config.minWithdrawAtomic,
+    flatMintKeyAtomic: config.flatMintKeyAtomic,
   };
   res.json(info);
 }));
@@ -257,15 +258,38 @@ router.get("/keys", guard(async (req: Request, res: Response) => {
   res.json({ keys: await listApiKeys(address) });
 }));
 
-router.post("/keys", guard(async (req: Request, res: Response) => {
+// Mint a contributor API key. Session + x402: payer must be the signed-in address.
+async function mintKey(req: Request, res: Response) {
   const address = requireSession(req, res);
   if (!address) return;
+
   const label = String((req.body as { label?: string })?.label ?? "").slice(0, 64);
-  // The secret is in this response and nowhere else afterwards — only its hash
-  // is stored, so a lost key is re-minted rather than recovered.
+  const fee = config.flatMintKeyAtomic;
+
+  const paid = await requirePayment(
+    req,
+    res,
+    "mintkey",
+    fee,
+    `Mint a contributor API key (${formatUsdc(fee)} on-chain). Earnings pay to the signed-in wallet.`,
+    ROUTES.mintkey,
+  );
+  if (!paid) return;
+
+  if (paid.facts.payer !== address) {
+    return res.status(403).json({
+      error: "payer_mismatch",
+      detail: "Payment must come from the signed-in wallet address.",
+    });
+  }
+
   const created: CreateApiKeyResponse = await createApiKey(address, label);
+  if (!(await paid.settle(res))) return;
   res.json(created);
-}));
+}
+
+router.post("/x402/keys", guard(mintKey));
+router.post("/keys", guard(mintKey));
 
 router.delete("/keys/:id", guard(async (req: Request, res: Response) => {
   const address = requireSession(req, res);

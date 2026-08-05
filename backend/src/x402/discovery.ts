@@ -186,6 +186,30 @@ export const ROUTES = {
       },
     },
   },
+  mintkey: {
+    routeTemplate: "/x402/keys",
+    method: "POST",
+    spec: {
+      bodyType: "json",
+      input: { label: "my-machine" },
+      inputSchema: {
+        properties: {
+          label: {
+            type: "string",
+            description:
+              "BODY field: optional display label for the key (max 64 chars). " +
+              "Requires a signed-in session (`Authorization: Bearer <session>`).",
+          },
+        },
+      },
+      output: {
+        example: {
+          key: { id: 1, preview: "tdr_…abc", label: "my-machine", createdAt: 1720000000000 },
+          secret: "tdr_live_…",
+        },
+      },
+    },
+  },
 } as const satisfies Record<string, RouteDiscovery>;
 
 export function discoveryExtensions(route: RouteDiscovery): Record<string, unknown> {

@@ -67,6 +67,7 @@ export function Marketplace({
             address={activeAddress}
             session={session}
             wallet={wallet}
+            signTransactions={signTransactions as never}
             onWalletChanged={onWalletChanged}
             onError={onError}
           />

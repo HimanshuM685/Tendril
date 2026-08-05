@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import algosdk from "algosdk";
 import { formatUsdc } from "@tendril/shared";
 import type { SignPrepareResponse } from "@tendril/shared";
+import { issueGoogleSession } from "./auth.js";
 import { config } from "./config.js";
 import { accountFromUser } from "./custodialWallet.js";
 import { custodialPayingFetchForUser, internalRegistryUrl } from "./custodialX402.js";
@@ -17,7 +18,8 @@ export type PrepareAction =
   | { action: "optin" }
   | { action: "rent"; nodeId: string; sshPubKey?: string | null }
   | { action: "run"; code: string; minRamMb?: number }
-  | { action: "release"; leaseId: string; leaseToken: string };
+  | { action: "release"; leaseId: string; leaseToken: string }
+  | { action: "mintkey"; label?: string };
 
 interface PendingRequest {
   userId: string;
@@ -142,6 +144,31 @@ export async function prepareCustodialSign(
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error((err as { error?: string }).error ?? `release failed (${res.status})`);
+        }
+        return res.json();
+      };
+      break;
+    }
+    case "mintkey": {
+      const label = String(body.label ?? "").slice(0, 64);
+      const fee = formatUsdc(config.flatMintKeyAtomic);
+      summary = `Mint contributor API key`;
+      details = `One-time ${fee} on-chain fee. Earnings pay to your custodial wallet.`;
+      const sessionToken = issueGoogleSession(user.id, user.address, user.email);
+      const url = `${internalRegistryUrl()}/x402/keys`;
+      run = async () => {
+        const pay = custodialPayingFetchForUser(user);
+        const res = await pay(url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${sessionToken}`,
+          },
+          body: JSON.stringify({ label }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as { error?: string }).error ?? `mint key failed (${res.status})`);
         }
         return res.json();
       };

@@ -106,11 +106,20 @@ export async function fetchApiKeys(token: string): Promise<ApiKeyInfo[]> {
   return (await res.json()).keys as ApiKeyInfo[];
 }
 
-/** Mint a key. The secret comes back exactly once — show it and don't refetch. */
-export async function createApiKey(token: string, label: string): Promise<CreateApiKeyResponse> {
-  const res = await fetch(`${REGISTRY_URL}/keys`, {
+/** Mint a key. Pays flatMintKeyAtomic on-chain via x402. Secret shown once. */
+export async function createApiKey(
+  token: string,
+  address: string,
+  sign: SignTransactions,
+  label: string,
+  onStage?: (stage: PayStage) => void,
+): Promise<CreateApiKeyResponse> {
+  const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/keys`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ label }),
   });
   if (!res.ok) throw await apiError(res, "create key");

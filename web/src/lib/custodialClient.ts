@@ -10,7 +10,8 @@ export type CustodialAction =
   | { action: "optin" }
   | { action: "rent"; nodeId: string; sshPubKey?: string | null }
   | { action: "run"; code: string; minRamMb?: number }
-  | { action: "release"; leaseId: string; leaseToken: string };
+  | { action: "release"; leaseId: string; leaseToken: string }
+  | { action: "mintkey"; label?: string };
 
 export async function fetchGoogleEnabled(): Promise<boolean> {
   try {

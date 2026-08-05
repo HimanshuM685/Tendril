@@ -104,6 +104,7 @@ export const config = {
   // /x402/rent is unchanged and still there for callers who want prorating.
   flatRentAtomic: Number(process.env.FLAT_RENT_ATOMIC ?? 10_000), // 0.01 USDC
   flatRunAtomic: Number(process.env.FLAT_RUN_ATOMIC ?? 10_000), // 0.01 USDC per job
+  flatMintKeyAtomic: Number(process.env.FLAT_MINT_KEY_ATOMIC ?? 100_000), // 0.10 USDC
   // Top-up is NOT flat — the caller names any amount within the bounds below.
   // This is only the fallback for a request that omits `?amount=`.
   defaultTopUpAtomic: Number(process.env.DEFAULT_TOPUP_ATOMIC ?? 1_000_000), // 1.00 USDC

@@ -259,7 +259,7 @@ export function fail(res: Response, err: unknown): void {
 
 // ───────────────────────── payment records ─────────────────────────
 
-export type PaymentRoute = "topup" | "rent" | "run";
+export type PaymentRoute = "topup" | "rent" | "run" | "mintkey";
 
 export interface PaymentRow {
   txid: string;

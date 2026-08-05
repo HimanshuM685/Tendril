@@ -513,6 +513,8 @@ export interface PlatformInfo {
   maxTopUpAtomic: number;
   /** Least a contributor may withdraw at once — a floor on dust payouts. */
   minWithdrawAtomic: number;
+  /** On-chain fee to mint a contributor API key (`POST /x402/keys`). */
+  flatMintKeyAtomic: number;
 }
 
 // ───────────────────────── x402 endpoint DTOs ─────────────────────────
