@@ -2,17 +2,26 @@ import type { WalletSummary } from "@tendril/shared";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 import { TopUpControl } from "./TopUpControl";
 import type { SignTransactions } from "../lib/x402Client";
+import type { Session } from "../App";
 
 interface Props {
   wallet: WalletSummary | null;
   address: string;
+  session?: Session | null;
   signTransactions: SignTransactions;
   onChanged: () => void;
   onError: (msg: string) => void;
 }
 
 /** Prepaid balance + a top-up control + deposit/spend history. */
-export function WalletPanel({ wallet, address, signTransactions, onChanged, onError }: Props) {
+export function WalletPanel({
+  wallet,
+  address,
+  session,
+  signTransactions,
+  onChanged,
+  onError,
+}: Props) {
   const balance = wallet?.balanceAtomic ?? 0;
 
   return (
@@ -24,6 +33,7 @@ export function WalletPanel({ wallet, address, signTransactions, onChanged, onEr
 
       <TopUpControl
         address={address}
+        session={session}
         signTransactions={signTransactions}
         onChanged={onChanged}
         onError={onError}

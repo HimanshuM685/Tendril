@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import type { ExplorerNode } from "@tendril/shared";
+import type { ExplorerNode, X402RentResponse } from "@tendril/shared";
 import { atomicPerHour, formatUsdc, fundedSeconds } from "@tendril/shared";
 import { type ActiveLease, fetchExplorer, rentNode, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
+import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 
 interface Props {
   session: Session | null;
-  /** The connected wallet — rent pays from here, with or without a session. */
+  /** Connected wallet or custodial address — rent pays from here. */
   activeAddress: string | null;
   signTransactions: SignTransactions;
   balanceAtomic: number;
@@ -21,12 +22,13 @@ export function Explore({
   balanceAtomic,
   onLeased,
 }: Props) {
+  const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
-  const [stage, setStage] = useState<PayStage | null>(null);
-
+  const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
+  const isGoogle = session?.authType === "google";
 
   // Poll the node list, pausing while the tab is hidden — same pattern as the
   // balance poll in App. A stale "can't reach backend" error clears itself on
@@ -70,23 +72,36 @@ export function Explore({
 
   async function rent(node: ExplorerNode) {
     if (!activeAddress) {
-      setError("Connect a wallet to rent.");
+      setError(isGoogle ? "Sign in to rent." : "Connect a wallet to rent.");
+      return;
+    }
+    if (isGoogle && !session) {
+      setError("Sign in to rent.");
       return;
     }
     setRenting(node.id);
     setStage(null);
     setError(null);
     try {
-      const res = await rentNode(
-        session?.token ?? null,
-        activeAddress,
-        signTransactions,
-        node.id,
-        setStage,
-      );
+      let res: X402RentResponse;
+      if (isGoogle && session) {
+        setStage("confirming");
+        res = (await runCustodialAction(session.token, {
+          action: "rent",
+          nodeId: node.id,
+        })) as X402RentResponse;
+      } else {
+        res = await rentNode(
+          session?.token ?? null,
+          activeAddress,
+          signTransactions,
+          node.id,
+          setStage,
+        );
+      }
       onLeased(toActiveLease(res, node.label));
     } catch (e) {
-      setError((e as Error).message);
+      if ((e as Error).message !== "cancelled") setError((e as Error).message);
     } finally {
       setRenting(null);
       setStage(null);
@@ -102,10 +117,15 @@ export function Explore({
     return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
   }
 
-  const STAGE_LABEL: Record<PayStage, string> = {
+  const STAGE_LABEL: Record<string, string> = {
     signing: "Approve in wallet…",
     settling: "Settling + starting sandbox…",
+    confirming: "Confirm in dialog…",
   };
+
+  const connectHint = isGoogle
+    ? !session && "Sign in with Google to rent."
+    : !activeAddress && "Connect your wallet to rent.";
 
   return (
     <div>
@@ -115,7 +135,7 @@ export function Explore({
         release. No fixed block — the session lasts as long as your credit covers it.
       </p>
       {error && <div className="error">{error}</div>}
-      {!activeAddress && <p className="muted">Connect your wallet to rent.</p>}
+      {connectHint && <p className="muted">{connectHint}</p>}
 
       {loading && nodes.length === 0 && <p className="muted">Scanning for nodes…</p>}
       {!loading && nodes.length === 0 && (
@@ -125,6 +145,7 @@ export function Explore({
         {nodes.map((n) => {
           const rate = atomicPerHour(n.pricePerHourUsd);
           const runtime = runtimeFor(n.pricePerHourUsd);
+          const canRent = !!activeAddress && (!isGoogle || !!session);
           return (
             <div className="card" key={n.id}>
               <div className="card-head">
@@ -147,8 +168,8 @@ export function Explore({
               </div>
               <button
                 className="btn"
-                disabled={!activeAddress || renting !== null}
-                title={activeAddress ? "" : "Connect a wallet to rent"}
+                disabled={!canRent || renting !== null}
+                title={canRent ? "" : connectHint ?? "Sign in to rent"}
                 onClick={() => rent(n)}
               >
                 {renting === n.id ? (stage ? STAGE_LABEL[stage] : "Starting…") : "Rent"}

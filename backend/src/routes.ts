@@ -45,6 +45,7 @@ import {
   issueSession,
   issueWalletNonce,
   leaseIdFromAuthHeader,
+  sessionFromAuthHeader,
   verifyWalletNonce,
 } from "./auth.js";
 import {
@@ -68,6 +69,20 @@ import {
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected, runJob, startContainer } from "./ws.js";
 import { config } from "./config.js";
+import {
+  confirmCustodialSign,
+  exportMnemonicForUser,
+  googleAccountInfo,
+  prepareCustodialSign,
+  checkExportRateLimit,
+  type PrepareAction,
+} from "./custodialSign.js";
+import {
+  googleCallback,
+  googleSessionExchange,
+  googleStart,
+  isGoogleAuthEnabled,
+} from "./googleAuth.js";
 
 export const router = Router();
 
@@ -135,6 +150,71 @@ router.post("/auth/wallet-login", guard(async (req: Request, res: Response) => {
     balanceAtomic: await creditBalance(address),
   };
   res.json(body);
+}));
+
+// ─────────────────────── Google OAuth (custodial login) ───────────────────────
+router.get("/auth/google", guard(googleStart));
+router.get("/auth/google/callback", guard(googleCallback));
+router.post("/auth/google/session", guard(googleSessionExchange));
+router.get("/auth/google/enabled", guard((_req, res) => {
+  res.json({ enabled: isGoogleAuthEnabled() });
+}));
+
+router.get("/auth/google/account", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session") {
+    return res.status(403).json({ error: "Google account endpoint requires Google sign-in" });
+  }
+  res.json(await googleAccountInfo(session.address));
+}));
+
+router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session" || !session.userId) {
+    return res.status(403).json({ error: "custodial signing requires Google sign-in" });
+  }
+  try {
+    const body = req.body as PrepareAction;
+    if (!body?.action) return res.status(400).json({ error: "action required" });
+    res.json(await prepareCustodialSign(session.userId, body));
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+  }
+}));
+
+router.post("/auth/google/confirm", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session" || !session.userId) {
+    return res.status(403).json({ error: "custodial signing requires Google sign-in" });
+  }
+  const { requestId } = (req.body ?? {}) as { requestId?: string };
+  if (!requestId) return res.status(400).json({ error: "requestId required" });
+  try {
+    res.json(await confirmCustodialSign(session.userId, requestId));
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+  }
+}));
+
+router.post("/auth/google/export-key", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session" || !session.userId) {
+    return res.status(403).json({ error: "export requires Google sign-in" });
+  }
+  const { confirmed } = (req.body ?? {}) as { confirmed?: boolean };
+  if (!confirmed) return res.status(400).json({ error: "confirmation required" });
+  if (!checkExportRateLimit(session.userId)) {
+    return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+  }
+  try {
+    res.json({ mnemonic: await exportMnemonicForUser(session.userId) });
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
 }));
 
 // ─────────────────────── discovery (free) ───────────────────────
@@ -795,12 +875,18 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 
 /** The session address (from `Authorization: Bearer <session>`), or 401. */
 function requireSession(req: Request, res: Response): string | null {
-  const address = addressFromSession(req.header("authorization"));
-  if (!address) {
-    res.status(401).json({ error: "sign in with your wallet first" });
+  const info = requireSessionInfo(req, res);
+  return info?.address ?? null;
+}
+
+/** Wallet or Google session — both can use /wallet and /keys. */
+function requireSessionInfo(req: Request, res: Response) {
+  const info = sessionFromAuthHeader(req.header("authorization"));
+  if (!info) {
+    res.status(401).json({ error: "sign in first" });
     return null;
   }
-  return address;
+  return info;
 }
 
 /**

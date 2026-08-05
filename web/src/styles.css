@@ -584,6 +584,42 @@ main { display: block; }
 }
 .wm-item:hover { background: var(--green); color: var(--cream); }
 .wm-danger { border-top: 1px solid rgba(8, 46, 29, 0.2); }
+.wm-user {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(8, 46, 29, 0.2);
+}
+.wm-addr { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+.wm-warn {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(8, 46, 29, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wm-hint {
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid rgba(8, 46, 29, 0.2);
+  line-height: 1.4;
+}
+.wallet-menu-google { min-width: 260px; }
+.wallet-choice-google {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(8, 46, 29, 0.15);
+}
+.modal-err { color: #8b1a1a; font-size: 12px; margin: 8px 0 0; }
+.export-mnemonic {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 8px;
+  resize: vertical;
+}
 
 /* ---- wallet picker modal ------------------------------------------------ */
 .modal-backdrop {

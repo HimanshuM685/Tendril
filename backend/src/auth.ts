@@ -1,8 +1,18 @@
+import { randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { config } from "./config.js";
 
 // Contributor agents authenticate with an API key, not a key pair — see
 // `ownerOfApiKey` in db.ts. Everything here is the renter/browser side.
+
+export type SessionKind = "session" | "google-session";
+
+export interface SessionInfo {
+  address: string;
+  kind: SessionKind;
+  userId?: string;
+  email?: string;
+}
 
 // ─────────────────────────── lease tokens ───────────────────────────
 // /rent returns a lease-scoped JWT. /run, /release and GET /lease/:id require
@@ -54,16 +64,56 @@ export function issueSession(address: string): string {
   return jwt.sign({ address, kind: "session" }, config.jwtSecret, { expiresIn: "7d" });
 }
 
-/** Extract a verified address from an `Authorization: Bearer <session>` header. */
-export function addressFromSession(header?: string): string | null {
+/** Mint a session token for a Google custodial user. */
+export function issueGoogleSession(userId: string, address: string, email: string): string {
+  return jwt.sign({ userId, address, email, kind: "google-session" }, config.jwtSecret, {
+    expiresIn: "7d",
+  });
+}
+
+/** Short-lived one-time code exchanged by the web app for a session JWT. */
+export function issueGoogleExchangeCode(userId: string): string {
+  const jti = randomUUID();
+  return jwt.sign({ userId, kind: "google-exchange", jti }, config.jwtSecret, { expiresIn: "60s" });
+}
+
+export function verifyGoogleExchangeCode(code: string): { userId: string; jti: string } | null {
+  try {
+    const p = jwt.verify(code, config.jwtSecret) as {
+      userId?: string;
+      kind?: string;
+      jti?: string;
+    };
+    if (p.kind !== "google-exchange" || !p.userId || !p.jti) return null;
+    return { userId: p.userId, jti: p.jti };
+  } catch {
+    return null;
+  }
+}
+
+/** Parse and verify a browser session JWT (wallet or Google). */
+export function sessionFromAuthHeader(header?: string): SessionInfo | null {
   if (!header?.startsWith("Bearer ")) return null;
   try {
     const p = jwt.verify(header.slice("Bearer ".length), config.jwtSecret) as {
       address?: string;
       kind?: string;
+      userId?: string;
+      email?: string;
     };
-    return p.kind === "session" && p.address ? p.address : null;
+    if (p.kind === "session" && p.address) {
+      return { address: p.address, kind: "session" };
+    }
+    if (p.kind === "google-session" && p.address && p.userId) {
+      return { address: p.address, kind: "google-session", userId: p.userId, email: p.email };
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+/** Extract a verified address from an `Authorization: Bearer <session>` header. */
+export function addressFromSession(header?: string): string | null {
+  return sessionFromAuthHeader(header)?.address ?? null;
 }

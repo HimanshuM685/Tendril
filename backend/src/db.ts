@@ -185,7 +185,63 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS withdrawals_addr_idx ON withdrawals (to_addr, created_at DESC);
     CREATE INDEX IF NOT EXISTS api_keys_owner_idx ON api_keys (owner_addr, created_at DESC);
     CREATE INDEX IF NOT EXISTS x402_payments_payer_idx ON x402_payments (payer, created_at DESC);
+
+    -- Google OAuth custodial accounts: maps Google identity → generated Algorand
+    -- address. Mnemonic stored encrypted; never raw secret key.
+    CREATE TABLE IF NOT EXISTS users (
+      id                 TEXT PRIMARY KEY,
+      google_sub         TEXT UNIQUE NOT NULL,
+      email              TEXT NOT NULL,
+      name               TEXT,
+      address            TEXT UNIQUE NOT NULL,
+      encrypted_mnemonic TEXT NOT NULL,
+      created_at         BIGINT NOT NULL,
+      last_login_at      BIGINT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS users_address_idx ON users (address);
   `);
+}
+
+export interface DbUser {
+  id: string;
+  google_sub: string;
+  email: string;
+  name: string | null;
+  address: string;
+  encrypted_mnemonic: string;
+  created_at: number;
+  last_login_at: number;
+}
+
+export async function findUserByGoogleSub(sub: string): Promise<DbUser | null> {
+  const rows = await q<DbUser>("SELECT * FROM users WHERE google_sub = $1", [sub]);
+  return rows[0] ?? null;
+}
+
+export async function findUserById(id: string): Promise<DbUser | null> {
+  const rows = await q<DbUser>("SELECT * FROM users WHERE id = $1", [id]);
+  return rows[0] ?? null;
+}
+
+export async function createUser(row: {
+  id: string;
+  googleSub: string;
+  email: string;
+  name: string | null;
+  address: string;
+  encryptedMnemonic: string;
+}): Promise<DbUser> {
+  const now = Date.now();
+  const rows = await q<DbUser>(
+    `INSERT INTO users (id, google_sub, email, name, address, encrypted_mnemonic, created_at, last_login_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`,
+    [row.id, row.googleSub, row.email, row.name, row.address, row.encryptedMnemonic, now],
+  );
+  return rows[0];
+}
+
+export async function touchUserLogin(id: string): Promise<void> {
+  await q("UPDATE users SET last_login_at = $1 WHERE id = $2", [Date.now(), id]);
 }
 
 export async function walletSummary(address: string): Promise<WalletSummary> {

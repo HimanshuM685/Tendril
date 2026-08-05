@@ -35,9 +35,11 @@ export function Docs() {
 
         <h3>1 · Connect &amp; sign in</h3>
         <p>
-          Connect Pera, Lute, or Defly from the top bar, then <strong>Sign in</strong>. Signing a one-time
-          login challenge proves you control the address — no funds move. It mints a session so only
-          you can spend your balance.
+          Two paths: connect Pera, Lute, or Defly from the top bar and <strong>Sign in</strong> (one-time
+          wallet signature), or choose <strong>Continue with Google</strong> to get a custodial Algorand
+          wallet provisioned for your account. Either way mints a session so only you can spend your
+          balance. Google users must send ALGO to their deposit address for on-chain fees and opt in to
+          USDC before topping up; every custodial transaction requires an explicit approval dialog.
         </p>
 
         <h3>2 · Top up</h3>

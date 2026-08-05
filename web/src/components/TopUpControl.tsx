@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { usdToAtomic } from "@tendril/shared";
 import { topUp, type TopUpStage } from "../wallet";
 import type { SignTransactions } from "../lib/x402Client";
+import { useCustodialSign } from "../context/CustodialSignContext";
+import type { Session } from "../App";
 
 interface Props {
   address: string;
   signTransactions: SignTransactions;
+  session?: Session | null;
   onChanged: () => void;
   onError: (msg: string) => void;
 }
@@ -14,24 +18,40 @@ const PRESETS = [0.5, 1, 5];
 /** Amount presets + the top-up button, with the on-chain wait spelled out.
  *  Shared by the wallet panel and the dashboard — topping up is the action
  *  people take most, so it lives in both places. */
-export function TopUpControl({ address, signTransactions, onChanged, onError }: Props) {
+export function TopUpControl({
+  address,
+  signTransactions,
+  session,
+  onChanged,
+  onError,
+}: Props) {
+  const { runCustodialAction } = useCustodialSign();
   const [amount, setAmount] = useState(1);
   // null = idle. "done" lingers so a fast settle still shows a result.
-  const [stage, setStage] = useState<TopUpStage | "requesting" | "done" | null>(null);
+  const [stage, setStage] = useState<TopUpStage | "requesting" | "done" | "confirming" | null>(null);
   const amountOk = Number.isFinite(amount) && amount > 0;
   const busy = stage !== null && stage !== "done";
+  const isGoogle = session?.authType === "google";
 
   async function deposit() {
     if (!amountOk || busy) return;
     setStage("requesting");
     try {
-      await topUp(address, signTransactions, amount, setStage);
+      if (isGoogle && session) {
+        setStage("confirming");
+        await runCustodialAction(session.token, {
+          action: "topup",
+          amountAtomic: usdToAtomic(amount),
+        });
+      } else {
+        await topUp(address, signTransactions, amount, setStage);
+      }
       setStage("done");
       onChanged();
       setTimeout(() => setStage((s) => (s === "done" ? null : s)), 4000);
     } catch (e) {
       setStage(null);
-      onError((e as Error).message);
+      if ((e as Error).message !== "cancelled") onError((e as Error).message);
     }
   }
 
@@ -39,6 +59,7 @@ export function TopUpControl({ address, signTransactions, onChanged, onError }: 
     requesting: "Requesting quote…",
     signing: "Approve in wallet…",
     settling: "Settling on-chain…",
+    confirming: "Confirm in dialog…",
     done: `Topped up ${amount} USDC ✓`,
   };
 

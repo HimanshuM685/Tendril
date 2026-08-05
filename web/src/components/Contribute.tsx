@@ -142,7 +142,7 @@ docker compose up --build contributor`;
       <div className="card wide">
         <strong>1. Get an API key</strong>
         {!session && (
-          <p className="muted small">Sign in with your wallet to mint a key.</p>
+          <p className="muted small">Sign in (wallet or Google) to mint a key.</p>
         )}
         {session && (
           <>
@@ -242,7 +242,7 @@ docker compose up --build contributor`;
         </div>
         <p className="muted small">
           {!session
-            ? "Sign in with your wallet to see and withdraw your earnings."
+            ? "Sign in to see and withdraw your earnings."
             : canWithdraw
               ? "Sends your whole balance to your wallet in one transfer. You must be opted into USDC."
               : `Earned per lease, after the platform fee. Withdraw once you have ${formatUsdc(minWithdraw)} USDC — a floor that keeps transfer fees from eating small amounts.`}

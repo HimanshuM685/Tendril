@@ -38,6 +38,7 @@ export function Marketplace({
         <WalletPanel
           wallet={wallet}
           address={activeAddress}
+          session={session}
           signTransactions={signTransactions as never}
           onChanged={onWalletChanged}
           onError={onError}
@@ -71,7 +72,9 @@ export function Marketplace({
           />
         )}
 
-        {lease && <LeasePanel lease={lease} onRelease={() => onLeased(null)} />}
+        {lease && (
+          <LeasePanel lease={lease} session={session} onRelease={() => onLeased(null)} />
+        )}
       </section>
     </>
   );

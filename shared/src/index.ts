@@ -465,6 +465,39 @@ export interface WalletLoginResponse {
   balanceAtomic: number;
 }
 
+/** POST /auth/google/session response. */
+export interface GoogleSessionResponse extends WalletLoginResponse {
+  email: string;
+  name: string | null;
+  authType: "google";
+}
+
+/** GET /auth/google/account */
+export interface GoogleAccountResponse {
+  address: string;
+  algoMicro: number;
+  usdcAtomic: number;
+  usdcOptedIn: boolean;
+  prepaidCreditAtomic: number;
+}
+
+/** POST /auth/google/prepare */
+export interface SignPrepareResponse {
+  requestId: string;
+  summary: string;
+  details: string;
+}
+
+/** POST /auth/google/confirm */
+export interface SignConfirmRequest {
+  requestId: string;
+}
+
+/** POST /auth/google/export-key */
+export interface ExportKeyResponse {
+  mnemonic: string;
+}
+
 /** What the platform charges in, and where (GET /platform). */
 export interface PlatformInfo {
   /** Algorand address that receives x402 payments. */

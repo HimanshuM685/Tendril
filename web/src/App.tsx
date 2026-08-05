@@ -9,6 +9,7 @@ import { Docs } from "./components/Docs";
 import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
+import { GoogleCallback } from "./components/GoogleCallback";
 // ~90KB of markdown compiles into this page; keep it out of the landing bundle.
 const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
@@ -16,7 +17,13 @@ import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
 
-export type Session = { token: string; address: string };
+export type Session = {
+  token: string;
+  address: string;
+  authType?: "wallet" | "google";
+  email?: string;
+  name?: string | null;
+};
 
 // The session token is a 7-day JWT, so persist it and restore on reload — a
 // refresh shouldn't force the user to re-sign (and re-sign each time).
@@ -69,6 +76,9 @@ export function App() {
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const effectiveAddress = session?.address ?? activeAddress ?? null;
+  const isGoogleSession = session?.authType === "google";
+
   // Keep localStorage in lockstep with the session so reloads stay signed in.
   const setSession = useCallback((s: Session | null) => {
     storeSession(s);
@@ -86,6 +96,7 @@ export function App() {
       "/explore": "EXPLORE",
       "/contribute": "CONTRIBUTE",
       "/dashboard": "DASHBOARD",
+      "/metrics": "METRICS",
       "/api": "API",
       "/docs": "DOCS",
       "/about": "ABOUT",
@@ -100,12 +111,13 @@ export function App() {
   // Drop the session only on a real disconnect / account switch — and only once
   // the wallet has finished resuming, so a transient reconnect on reload (when
   // activeAddress is briefly null) doesn't wrongly clear a valid session.
+  // Google sessions are independent of the browser wallet.
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || isGoogleSession) return;
     if (!activeAddress || (session && session.address !== activeAddress)) {
       setSession(null);
     }
-  }, [isReady, activeAddress, session, setSession]);
+  }, [isReady, activeAddress, session, setSession, isGoogleSession]);
 
   const refreshWallet = useCallback(
     async (token: string) => {
@@ -147,12 +159,12 @@ export function App() {
   }, [session, refreshWallet]);
 
   async function signIn() {
-    if (!activeAddress) return;
+    if (!activeAddress || isGoogleSession) return;
     setSigningIn(true);
     setError(null);
     try {
       const res = await loginWithWallet(activeAddress, signTransactions as never);
-      setSession({ token: res.token, address: res.address });
+      setSession({ token: res.token, address: res.address, authType: "wallet" });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -207,10 +219,13 @@ export function App() {
         <div className="mast-right">
           {/* Shown on the landing page too — connecting is the first thing to do. */}
           <WalletBar
+            session={session}
             signedIn={!!session}
-            canSignIn={!!activeAddress}
+            canSignIn={!!activeAddress && !isGoogleSession}
             signingIn={signingIn}
             onSignIn={signIn}
+            onSignOut={() => setSession(null)}
+            onAccountRefresh={onWalletChanged}
             balanceAtomic={wallet?.balanceAtomic ?? null}
           />
         </div>
@@ -244,13 +259,17 @@ export function App() {
             }
           />
           <Route
+            path="/auth/google"
+            element={<GoogleCallback onSession={(s) => setSession(s)} />}
+          />
+          <Route
             path="/explore"
             element={
               <Marketplace
                 tab="explore"
                 session={session}
                 wallet={wallet}
-                activeAddress={activeAddress ?? null}
+                activeAddress={effectiveAddress}
                 signTransactions={signTransactions}
                 onWalletChanged={onWalletChanged}
                 onError={setError}
@@ -266,7 +285,7 @@ export function App() {
                 tab="contribute"
                 session={session}
                 wallet={wallet}
-                activeAddress={activeAddress ?? null}
+                activeAddress={effectiveAddress}
                 signTransactions={signTransactions}
                 onWalletChanged={onWalletChanged}
                 onError={setError}
@@ -279,8 +298,9 @@ export function App() {
             path="/dashboard"
             element={
               <Dashboard
+                session={session}
                 wallet={wallet}
-                address={session?.address ?? null}
+                address={effectiveAddress}
                 signedIn={!!session}
                 signTransactions={signTransactions}
                 onWalletChanged={onWalletChanged}

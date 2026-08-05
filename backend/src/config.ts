@@ -135,4 +135,27 @@ export const config = {
   // expensive one a short one, which is the same dollar of goodwill either way.
   // The platform absorbs it: the close bills at most the remaining balance.
   graceAtomic: Number(process.env.GRACE_ATOMIC ?? 1_000_000), // 1.00 USDC
+
+  // ─────────────────────── Google OAuth custodial login ───────────────────────
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? "",
+  /** First origin from CORS_ORIGIN, or explicit WEB_ORIGIN. */
+  webOrigin: (() => {
+    const explicit = process.env.WEB_ORIGIN?.trim();
+    if (explicit) return explicit.replace(/\/$/, "");
+    const cors = process.env.CORS_ORIGIN ?? "*";
+    if (cors === "*") return "http://localhost:5173";
+    return cors.split(",")[0]?.trim().replace(/\/$/, "") ?? "http://localhost:5173";
+  })(),
+  walletEncryptionKey: process.env.WALLET_ENCRYPTION_KEY ?? "",
 };
+
+export function googleAuthEnabled(): boolean {
+  return !!(
+    config.googleClientId &&
+    config.googleClientSecret &&
+    config.googleRedirectUri &&
+    config.walletEncryptionKey
+  );
+}

@@ -8,6 +8,7 @@ import {
   WalletProvider,
 } from "@txnlab/use-wallet-react";
 import { App } from "./App";
+import { CustodialSignProvider } from "./context/CustodialSignContext";
 import { network } from "./lib/network";
 import "./styles.css";
 // Eager load — use-wallet dynamically imports this on connect; without it cached
@@ -29,10 +30,12 @@ const walletManager = new WalletManager({
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <WalletProvider manager={walletManager}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </WalletProvider>
+    <CustodialSignProvider>
+      <WalletProvider manager={walletManager}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </WalletProvider>
+    </CustodialSignProvider>
   </React.StrictMode>,
 );

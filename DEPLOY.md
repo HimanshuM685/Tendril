@@ -123,6 +123,10 @@ Registry env vars:
 | `PLATFORM_PRIVATE_KEY` | — | **required for withdrawals** — base64 64-byte key for `PLATFORM_PAYTO`; signs contributor withdrawals. If unset, earnings still accrue but `POST /withdraw` returns 503 |
 | `PLATFORM_FEE_PCT` | `10` | platform's % cut of each charge; the rest is paid to the contributor |
 | `JWT_SECRET` | dev value | **set a strong secret in prod** (signs wallet-session + lease tokens) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | optional — enable Google OAuth custodial login |
+| `GOOGLE_REDIRECT_URI` | — | backend callback, e.g. `https://api.your-domain.com/auth/google/callback` |
+| `WEB_ORIGIN` | first `CORS_ORIGIN` | where to redirect after Google login, e.g. `https://tendril.your-domain.com` |
+| `WALLET_ENCRYPTION_KEY` | — | **required when Google auth enabled** — `openssl rand -base64 32` |
 | `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated |
 | `HEARTBEAT_TIMEOUT_MS` | `30000` | node considered offline after this gap |
 | `X402_NETWORK` | testnet CAIP-2 | Network every payment must be on; must match the facilitator's `/supported` exactly |
@@ -203,6 +207,7 @@ matching node, runs its job, and releases — reporting how much balance it drew
 - [ ] `DATABASE_URL` points at Neon; `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` set to an account you
       control and **funded** (it pays out every contributor); `PLATFORM_FEE_PCT` reviewed.
 - [ ] `CORS_ORIGIN` locked to your web origin.
+- [ ] Google OAuth (if enabled): `GOOGLE_*` + `WALLET_ENCRYPTION_KEY` set; redirect URI registered in Google Cloud Console.
 - [ ] Registry + web both HTTPS (avoid mixed-content blocking); WebSocket upgrades proxied.
 - [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
 - [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.

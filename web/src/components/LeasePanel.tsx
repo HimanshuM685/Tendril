@@ -3,9 +3,12 @@ import type { LeaseStatus } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
 import { type ActiveLease, fetchLease, releaseLease } from "../api";
 import { writeClipboard } from "../clipboard";
+import { useCustodialSign } from "../context/CustodialSignContext";
+import type { Session } from "../App";
 
 interface Props {
   lease: ActiveLease;
+  session?: Session | null;
   onRelease: () => void;
 }
 
@@ -19,7 +22,8 @@ function fmtCountdown(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-export function LeasePanel({ lease, onRelease }: Props) {
+export function LeasePanel({ lease, session, onRelease }: Props) {
+  const { runCustodialAction } = useCustodialSign();
   const [now, setNow] = useState(Date.now());
   const [expiresAt, setExpiresAt] = useState(lease.expiresAt);
   const [graceUntil, setGraceUntil] = useState<number | null>(null);
@@ -28,6 +32,7 @@ export function LeasePanel({ lease, onRelease }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const isGoogle = session?.authType === "google";
 
   const ended = status === "ended" || status === "failed";
 
@@ -99,9 +104,18 @@ export function LeasePanel({ lease, onRelease }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await releaseLease(lease.leaseId, lease.leaseToken);
+      if (isGoogle && session) {
+        await runCustodialAction(session.token, {
+          action: "release",
+          leaseId: lease.leaseId,
+          leaseToken: lease.leaseToken,
+        });
+      } else {
+        await releaseLease(lease.leaseId, lease.leaseToken);
+      }
       onRelease();
     } catch (e) {
+      if ((e as Error).message === "cancelled") return;
       // Keep the panel open — the sandbox may still be live and billing.
       setError(`Release failed — ${(e as Error).message}. Try again.`);
     } finally {

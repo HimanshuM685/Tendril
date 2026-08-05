@@ -7,8 +7,10 @@ import { LeasePanel } from "./LeasePanel";
 import { TopUpControl } from "./TopUpControl";
 import { explorerAddrUrl, explorerTxUrl, type ActiveLease } from "../api";
 import type { SignTransactions } from "../lib/x402Client";
+import type { Session } from "../App";
 
 interface Props {
+  session: Session | null;
   wallet: WalletSummary | null;
   address: string | null;
   signedIn: boolean;
@@ -81,6 +83,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 /** Address-only account dashboard: lifetime stats + spend/top-up history. */
 export function Dashboard({
+  session,
   wallet,
   address,
   signedIn,
@@ -107,7 +110,7 @@ export function Dashboard({
       <div className="rule"></div>
 
       {!signedIn || !address ? (
-        <p className="muted dash-note">Connect your wallet and sign in to view your dashboard.</p>
+        <p className="muted dash-note">Connect your wallet or sign in with Google to view your dashboard.</p>
       ) : !wallet ? (
         <p className="muted dash-note">Loading your account…</p>
       ) : (
@@ -123,7 +126,7 @@ export function Dashboard({
 
           {/* Same panel Explore shows — countdown, SSH command, release. Only one
               route is mounted at a time, so the poll never runs twice. */}
-          {lease && <LeasePanel lease={lease} onRelease={onLeaseEnded} />}
+          {lease && <LeasePanel lease={lease} session={session} onRelease={onLeaseEnded} />}
 
           <div className="stat-grid">
             <AlgoStat label="Balance" atomic={wallet.balanceAtomic} />
@@ -145,6 +148,7 @@ export function Dashboard({
             <h3>Top up</h3>
             <TopUpControl
               address={address}
+              session={session}
               signTransactions={signTransactions}
               onChanged={onWalletChanged}
               onError={onError}
