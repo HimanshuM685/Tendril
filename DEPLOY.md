@@ -145,25 +145,11 @@ VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
 ```
 
 **Vercel / Netlify / Cloudflare Pages:**
-- **Vercel:** use either setup (both ship `vercel.json` configs):
-  - Root Directory = repo root → root `vercel.json`: `npm install`, `npm run build -w web`, output `web/dist`.
-  - Root Directory = `web` → `web/vercel.json`: `cd .. && npm install` (workspace lockfile), then `npm run build`, output `dist`.
-- **Netlify / Cloudflare Pages:** build command `npm install && npm run build -w web`, output `web/dist`.
+- Build command: `npm install && npm run build -w web`
+- Output directory: `web/dist`
 - Env var: `VITE_REGISTRY_URL = https://api.your-tendril-domain.com`
 - SPA rewrite: serve `index.html` for all routes (Netlify `_redirects`: `/* /index.html 200`;
   Vercel/CF Pages handle SPAs automatically).
-
-**Optional — social sign-in (Magic):** set `VITE_MAGIC_API_KEY` to a publishable key from
-[dashboard.magic.link](https://dashboard.magic.link) and add your site's origin to that app's
-allowed origins. It adds a **Social sign-in** branch (Google + email OTP) to the connect modal for
-renters who have no Algorand wallet; unset, the modal shows only Pera / Lute / Defly and nothing
-else changes. The key is meant to ship in the bundle — it grants no signing power on its own.
-
-**Magic Google OAuth setup:**
-1. Magic Dashboard → **Social Login** → enable **Email OTP** and **Google** (add Google OAuth Client ID + Secret).
-2. Add your site origin(s) under the Magic app's allowed origins (`http://localhost:5173` for local dev).
-3. OAuth redirect URI is `{your-origin}/callback` (e.g. `https://tendril.algo/callback`).
-4. In Google Cloud Console, add Magic's redirect URI from the Magic Dashboard to your OAuth app.
 
 > **Mixed content:** if the site is served over HTTPS, the registry **must** also be HTTPS/WSS,
 > or browsers will block the API + socket calls.
@@ -221,8 +207,7 @@ matching node, runs its job, and releases — reporting how much balance it drew
 - [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
 - [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.
 - [ ] `X402_NETWORK` matches the facilitator's `/supported` byte for byte; `METER_INTERVAL_MS` reviewed.
-- [ ] `VITE_REGISTRY_URL` + `VITE_ALGOD_URL` baked into the web build (plus
-      `VITE_MAGIC_API_KEY` if you want email sign-in).
+- [ ] `VITE_REGISTRY_URL` + `VITE_ALGOD_URL` baked into the web build.
 - [ ] Contributors pre-build `SANDBOX_IMAGE` (`docker build -t tendril-ssh-sandbox contributor/sandbox-ssh`);
       agents kept alive (pm2/systemd) with Docker running + outbound network for bore.
 - [ ] Consumer accounts hold **ALGO** for top-ups (+ txn fees). No USDC / ASA opt-in needed.

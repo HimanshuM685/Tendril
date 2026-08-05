@@ -35,14 +35,9 @@ export function Docs() {
 
         <h3>1 · Connect &amp; sign in</h3>
         <p>
-          Hit <strong>Connect Wallet</strong> in the top bar and pick a side. <em>Social
-          sign-in</em> (Google or email OTP) hands you a Magic-custodied Algorand account — no wallet
-          to install. <em>Connect a wallet</em> is the usual Pera / Lute / Defly flow. Either way you
-          land on one address, and everything after this point is identical.
-        </p>
-        <p>
-          Then <strong>Sign in</strong>. Signing a one-time login challenge proves you control the
-          address — no funds move. It mints a session so only you can spend your balance.
+          Connect Pera, Lute, or Defly from the top bar, then <strong>Sign in</strong>. Signing a one-time
+          login challenge proves you control the address — no funds move. It mints a session so only
+          you can spend your balance.
         </p>
 
         <h3>2 · Top up</h3>

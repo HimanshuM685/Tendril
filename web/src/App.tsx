@@ -9,7 +9,6 @@ import { Docs } from "./components/Docs";
 import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
-import { MagicCallback } from "./components/MagicCallback";
 // ~90KB of markdown compiles into this page; keep it out of the landing bundle.
 const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
@@ -302,7 +301,6 @@ export function App() {
           />
           <Route path="/docs" element={<Docs />} />
           <Route path="/about" element={<About />} />
-          <Route path="/callback" element={<MagicCallback />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

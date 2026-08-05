@@ -646,65 +646,12 @@ main { display: block; }
 }
 .wallet-choice:hover { background: var(--green); color: var(--cream); }
 .wallet-choice img { width: 24px; height: 24px; display: block; }
-/* Second line on the social/wallet fork — what the choice actually means. */
-.wallet-choice small {
-  display: block;
-  margin-top: 3px;
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
-}
-.modal-input {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--green);
-  background: transparent;
-  border: 1px solid var(--green);
-  padding: 10px 12px;
-  width: 100%;
-}
-.modal-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(8, 46, 29, 0.55);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.modal-divider::before,
-.modal-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(8, 46, 29, 0.2);
-}
-.wallet-choice-google svg { flex-shrink: 0; }
-.magic-callback {
-  text-align: center;
-  padding: 48px 24px;
-}
-.magic-callback .btn { margin-top: 16px; }
 .modal-foot {
   margin: 0;
   padding: 0 16px 16px;
   font-size: 11px;
   letter-spacing: 0.04em;
   opacity: 0.7;
-}
-.modal-err { opacity: 1; font-weight: 700; padding-bottom: 8px; }
-.modal-back {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--green);
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-right: 10px;
-  cursor: pointer;
-  text-decoration: underline;
 }
 .modal-body { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 8px; }
 .modal-body p { margin: 0; }

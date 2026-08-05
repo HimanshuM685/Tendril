@@ -1,17 +1,7 @@
-import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
-
-/** Vercel Root Directory = web hoists deps to ../node_modules — point Vite there. */
-function workspacePkg(name: string): string {
-  const local = resolve(__dirname, "node_modules", name);
-  if (existsSync(local)) return local;
-  const root = resolve(__dirname, "../node_modules", name);
-  if (existsSync(root)) return root;
-  return name;
-}
 
 // algosdk expects a few Node globals (Buffer, etc.) in the browser; nodePolyfills
 // provides them. @tendril/shared is aliased to its TS source so Vite transpiles
@@ -21,12 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@tendril/shared": resolve(__dirname, "../shared/src/index.ts"),
-      "magic-sdk": workspacePkg("magic-sdk"),
-      "@magic-ext/algorand": workspacePkg("@magic-ext/algorand"),
-      "@magic-ext/oauth2": workspacePkg("@magic-ext/oauth2"),
-      "@magic-sdk/provider": workspacePkg("@magic-sdk/provider"),
     },
-    dedupe: ["magic-sdk", "@magic-ext/algorand", "@magic-ext/oauth2", "@magic-sdk/provider"],
   },
   server: {
     port: 5173,
