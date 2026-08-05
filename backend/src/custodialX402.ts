@@ -32,8 +32,12 @@ export function custodialPayingFetchForUser(user: DbUser): typeof globalThis.fet
   return custodialPayingFetch(accountFromUser(user));
 }
 
-/** Registry base URL for self-calls (x402 top-up, rent, run). */
-export function registryBaseUrl(): string {
-  if (config.publicBaseUrl) return config.publicBaseUrl.replace(/\/$/, "");
-  return `http://127.0.0.1:${config.port}`;
+/**
+ * Loopback URL for server-side x402 self-calls (custodial sign after confirm).
+ * Must hit the local Express listener directly — routing through PUBLIC_BASE_URL
+ * often lands on a reverse proxy or static host that returns 405 for POST.
+ */
+export function internalRegistryUrl(): string {
+  const host = process.env.INTERNAL_REGISTRY_HOST ?? "127.0.0.1";
+  return `http://${host}:${config.port}`;
 }

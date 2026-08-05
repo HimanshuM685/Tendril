@@ -4,7 +4,7 @@ import { formatUsdc } from "@tendril/shared";
 import type { SignPrepareResponse } from "@tendril/shared";
 import { config } from "./config.js";
 import { accountFromUser } from "./custodialWallet.js";
-import { custodialPayingFetchForUser, registryBaseUrl } from "./custodialX402.js";
+import { custodialPayingFetchForUser, internalRegistryUrl } from "./custodialX402.js";
 import { findUserById } from "./db.js";
 import { algod } from "./wallet.js";
 import { hasOptedIn } from "./payout.js";
@@ -54,7 +54,7 @@ export async function prepareCustodialSign(
       summary = `Top up ${formatUsdc(body.amountAtomic)}`;
       details = `Credit your prepaid balance from on-chain USDC.`;
       const amount = body.amountAtomic;
-      const url = `${registryBaseUrl()}/x402/topup?amount=${amount}`;
+      const url = `${internalRegistryUrl()}/x402/topup?amount=${amount}`;
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, { method: "POST" });
@@ -91,7 +91,7 @@ export async function prepareCustodialSign(
       details = `Open a metered session (gate fee applies).`;
       const nodeId = body.nodeId;
       const sshPubKey = body.sshPubKey ?? null;
-      const url = `${registryBaseUrl()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`;
+      const url = `${internalRegistryUrl()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`;
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
@@ -111,7 +111,7 @@ export async function prepareCustodialSign(
       summary = "Run code (leaseless)";
       details = `Execute a one-shot job; billed from credit when done.`;
       const payload = { code: body.code, minRamMb: body.minRamMb };
-      const url = `${registryBaseUrl()}/x402/run`;
+      const url = `${internalRegistryUrl()}/x402/run`;
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
@@ -132,7 +132,7 @@ export async function prepareCustodialSign(
       details = `Close the session and bill for time used.`;
       const leaseId = body.leaseId;
       const token = body.leaseToken;
-      const url = `${registryBaseUrl()}/x402/leases/${encodeURIComponent(leaseId)}`;
+      const url = `${internalRegistryUrl()}/x402/leases/${encodeURIComponent(leaseId)}`;
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
