@@ -63,16 +63,10 @@ export function signTransactions(
   account: CustodialAccount,
   txnGroup: Uint8Array[],
   indexesToSign?: number[],
-): Uint8Array[] {
+): (Uint8Array | null)[] {
   const toSign = indexesToSign ?? txnGroup.map((_, i) => i);
   return txnGroup.map((txnBytes, i) => {
-    if (!toSign.includes(i)) return new Uint8Array();
-    try {
-      const decoded = algosdk.decodeSignedTransaction(txnBytes);
-      if (decoded.sig) return txnBytes;
-      return algosdk.signBytes(txnBytes, account.secretKey);
-    } catch {
-      return algosdk.signBytes(txnBytes, account.secretKey);
-    }
+    if (!toSign.includes(i)) return null;
+    return algosdk.decodeUnsignedTransaction(txnBytes).signTxn(account.secretKey);
   });
 }
