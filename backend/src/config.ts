@@ -150,6 +150,19 @@ export const config = {
     return cors.split(",")[0]?.trim().replace(/\/$/, "") ?? "http://localhost:5173";
   })(),
   walletEncryptionKey: process.env.WALLET_ENCRYPTION_KEY ?? "",
+
+  // ─────────────────────── Admin portal ───────────────────────
+  gasGrantMicroAlgos: Number(process.env.GAS_GRANT_MICRO_ALGOS ?? 260_000), // 0.26 ALGO
+  adminEmails: (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+  adminGoogleRedirectUri: process.env.ADMIN_GOOGLE_REDIRECT_URI ?? "",
+  adminWebOrigin: (() => {
+    const explicit = process.env.ADMIN_WEB_ORIGIN?.trim();
+    if (explicit) return explicit.replace(/\/$/, "");
+    return "http://localhost:5174";
+  })(),
 };
 
 export function googleAuthEnabled(): boolean {
@@ -159,4 +172,16 @@ export function googleAuthEnabled(): boolean {
     config.googleRedirectUri &&
     config.walletEncryptionKey
   );
+}
+
+export function adminAuthEnabled(): boolean {
+  return !!(
+    googleAuthEnabled() &&
+    config.adminEmails.length > 0 &&
+    config.adminGoogleRedirectUri
+  );
+}
+
+export function isAdminEmail(email: string): boolean {
+  return config.adminEmails.includes(email.trim().toLowerCase());
 }

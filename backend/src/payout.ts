@@ -25,6 +25,15 @@ export function payoutsEnabled(): boolean {
   return !!config.platformPrivateKey;
 }
 
+/** Platform wallet address derived from PLATFORM_PRIVATE_KEY. */
+export function platformAddress(): string {
+  if (config.platformPayTo) return config.platformPayTo;
+  if (!config.platformPrivateKey) {
+    throw new Error("PLATFORM_PAYTO or PLATFORM_PRIVATE_KEY required");
+  }
+  return loadPlatformKey().addr;
+}
+
 /**
  * Send `amountAtomic` of the payment asset from the platform custodial wallet to
  * a contributor's payout address, on-chain. Returns the confirmed txid. Throws on
@@ -50,6 +59,52 @@ export async function payContributor(toAddr: string, amountAtomic: number): Prom
   const { txid } = await algod.sendRawTransaction(signed).do();
   await algosdk.waitForConfirmation(algod, txid, 8);
   return txid;
+}
+
+/** Send native ALGO from the platform wallet (gas grants). */
+export async function sendAlgo(toAddr: string, microAlgos: number): Promise<string> {
+  if (microAlgos <= 0) throw new Error("ALGO amount must be positive");
+  const { addr, sk } = loadPlatformKey();
+  const suggestedParams = await algod.getTransactionParams().do();
+  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    sender: addr,
+    receiver: toAddr,
+    amount: microAlgos,
+    suggestedParams,
+  });
+  const signed = txn.signTxn(sk);
+  const { txid } = await algod.sendRawTransaction(signed).do();
+  await algosdk.waitForConfirmation(algod, txid, 8);
+  return txid;
+}
+
+export interface PlatformBalances {
+  address: string;
+  algoMicro: number;
+  usdcAtomic: number;
+  usdcOptedIn: boolean;
+}
+
+/** On-chain balances for the platform treasury wallet. */
+export async function platformBalances(): Promise<PlatformBalances> {
+  const address = platformAddress();
+  const info = await algod.accountInformation(address).do();
+  let usdcAtomic = 0;
+  const optedIn = await hasOptedIn(address);
+  if (optedIn) {
+    try {
+      const asset = await algod.accountAssetInformation(address, Number(config.assetId)).do();
+      usdcAtomic = Number(asset.assetHolding?.amount ?? 0);
+    } catch {
+      /* zero */
+    }
+  }
+  return {
+    address,
+    algoMicro: Number(info.amount),
+    usdcAtomic,
+    usdcOptedIn: optedIn,
+  };
 }
 
 /**

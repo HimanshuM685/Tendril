@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { GoogleAccountResponse } from "@tendril/shared";
+import type { GasRequestInfo, GoogleAccountResponse } from "@tendril/shared";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
-import { exportGoogleMnemonic, fetchGoogleAccount } from "../lib/custodialClient";
+import { explorerTxUrl } from "../api";
+import {
+  exportGoogleMnemonic,
+  fetchGasRequest,
+  fetchGoogleAccount,
+  submitGasRequest,
+} from "../lib/custodialClient";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { ExportKeyModal } from "./ExportKeyModal";
@@ -33,6 +39,8 @@ export function GoogleWalletBar({
   const { runCustodialAction } = useCustodialSign();
   const [open, setOpen] = useState(false);
   const [account, setAccount] = useState<GoogleAccountResponse | null>(null);
+  const [gasRequest, setGasRequest] = useState<GasRequestInfo | null | undefined>(undefined);
+  const [gasBusy, setGasBusy] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [optInBusy, setOptInBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -41,6 +49,7 @@ export function GoogleWalletBar({
   const loadAccount = async () => {
     try {
       setAccount(await fetchGoogleAccount(session.token));
+      setGasRequest(await fetchGasRequest(session.token));
     } catch {
       /* non-fatal */
     }
@@ -86,9 +95,29 @@ export function GoogleWalletBar({
     }
   }
 
+  async function requestGas() {
+    setGasBusy(true);
+    setErr(null);
+    try {
+      setGasRequest(await submitGasRequest(session.token));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setGasBusy(false);
+    }
+  }
+
   const hasBalance = signedIn && balanceAtomic !== null;
   const displayName = session.name || session.email || "Google account";
   const needsAlgo = account && account.algoMicro < MIN_ALGO_MICRO;
+  const canRequestGas =
+    !!account &&
+    account.gasGrantEligible &&
+    account.algoMicro === 0 &&
+    gasRequest === null;
+  const grantAlgo = gasRequest?.amountMicro
+    ? formatAlgo(gasRequest.amountMicro)
+    : "0.26 ALGO";
 
   return (
     <div className="wallet-bar" ref={barRef}>
@@ -142,11 +171,51 @@ export function GoogleWalletBar({
                   </button>
                 </div>
               )}
-              {needsAlgo && (
-                <p className="wm-hint muted small">
-                  Send ALGO to <code>{session.address}</code> for transaction fees before
-                  opting in or topping up.
-                </p>
+              {needsAlgo && (canRequestGas || gasRequest != null) && (
+                <div className="wm-warn">
+                  {canRequestGas ? (
+                    <>
+                      <p className="muted small">
+                        Need ALGO for fees? Request a one-time {grantAlgo} grant.
+                      </p>
+                      <button
+                        className="btn"
+                        type="button"
+                        disabled={gasBusy}
+                        onClick={() => void requestGas()}
+                      >
+                        {gasBusy ? "Submitting…" : `Request gas (${grantAlgo})`}
+                      </button>
+                    </>
+                  ) : gasRequest?.status === "pending" ? (
+                    <p className="muted small">Gas request pending admin review.</p>
+                  ) : gasRequest?.status === "accepted" ? (
+                    <p className="muted small">
+                      Gas grant sent
+                      {gasRequest.txid && (
+                        <>
+                          {" "}
+                          (
+                          <a
+                            className="ext-link"
+                            href={explorerTxUrl(gasRequest.txid)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            tx
+                          </a>
+                          )
+                        </>
+                      )}
+                      .
+                    </p>
+                  ) : gasRequest?.status === "rejected" ? (
+                    <p className="muted small">
+                      Gas request was declined.
+                      {gasRequest.reviewNote ? ` ${gasRequest.reviewNote}` : ""}
+                    </p>
+                  ) : null}
+                </div>
               )}
             </>
           )}

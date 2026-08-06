@@ -479,6 +479,8 @@ export interface GoogleAccountResponse {
   usdcAtomic: number;
   usdcOptedIn: boolean;
   prepaidCreditAtomic: number;
+  /** False after self-funding (nonzero ALGO observed before any gas request). */
+  gasGrantEligible: boolean;
 }
 
 /** POST /auth/google/prepare */
@@ -498,6 +500,56 @@ export interface ExportKeyResponse {
   mnemonic: string;
 }
 
+export type GasRequestStatus = "pending" | "accepted" | "rejected";
+
+/** GET /auth/google/gas-request — null if never requested. */
+export interface GasRequestInfo {
+  id: string;
+  status: GasRequestStatus;
+  amountMicro: number;
+  address: string;
+  txid?: string | null;
+  createdAt: number;
+  reviewedAt?: number | null;
+  reviewNote?: string | null;
+}
+
+/** Admin gas request row. */
+export interface AdminGasRequest {
+  id: string;
+  userId: string;
+  email: string;
+  name: string | null;
+  address: string;
+  amountMicro: number;
+  status: GasRequestStatus;
+  txid: string | null;
+  reviewedBy: string | null;
+  reviewedAt: number | null;
+  reviewNote: string | null;
+  createdAt: number;
+}
+
+export interface AdminDashboard {
+  pendingGasRequests: number;
+  totalGoogleUsers: number;
+  treasury: PlatformTreasury;
+  metrics: Metrics;
+}
+
+export interface PlatformTreasury {
+  address: string;
+  algoMicro: number;
+  usdcAtomic: number;
+  usdcOptedIn: boolean;
+}
+
+export interface AdminSessionResponse {
+  token: string;
+  email: string;
+  name?: string | null;
+}
+
 /** What the platform charges in, and where (GET /platform). */
 export interface PlatformInfo {
   /** Algorand address that receives x402 payments. */
@@ -515,6 +567,8 @@ export interface PlatformInfo {
   minWithdrawAtomic: number;
   /** On-chain fee to mint a contributor API key (`POST /x402/keys`). */
   flatMintKeyAtomic: number;
+  /** Default ALGO grant size for Google gas requests (microAlgos). */
+  gasGrantMicroAlgos: number;
 }
 
 // ───────────────────────── x402 endpoint DTOs ─────────────────────────

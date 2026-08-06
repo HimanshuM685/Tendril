@@ -56,6 +56,7 @@ Run each piece in its own terminal:
 npm run backend       # http://localhost:4000  (needs DATABASE_URL + PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY)
 npm run contributor   # contributor daemon (needs TENDRIL_API_KEY + Docker running)
 npm run web           # http://localhost:5173
+npm run admin         # http://localhost:5174  (admin portal; needs ADMIN_EMAILS on backend)
 npm run client        # the autonomous consumer agent (needs its own funded AVM_PRIVATE_KEY)
 ```
 
@@ -127,7 +128,11 @@ Registry env vars:
 | `GOOGLE_REDIRECT_URI` | — | backend callback, e.g. `https://api.your-domain.com/auth/google/callback` |
 | `WEB_ORIGIN` | first `CORS_ORIGIN` | where to redirect after Google login, e.g. `https://tendril.your-domain.com` |
 | `WALLET_ENCRYPTION_KEY` | — | **required when Google auth enabled** — `openssl rand -base64 32` |
-| `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated |
+| `ADMIN_EMAILS` | — | optional — comma-separated Google emails allowed into admin portal |
+| `ADMIN_WEB_ORIGIN` | `http://localhost:5174` | admin SPA origin (OAuth handoff + CORS) |
+| `ADMIN_GOOGLE_REDIRECT_URI` | — | admin OAuth callback, e.g. `https://api.your-domain.com/admin/auth/google/callback` |
+| `GAS_GRANT_MICRO_ALGOS` | `260000` | ALGO (microAlgos) sent per accepted gas request (0.26 ALGO) |
+| `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated; include admin origin |
 | `HEARTBEAT_TIMEOUT_MS` | `30000` | node considered offline after this gap |
 | `X402_NETWORK` | testnet CAIP-2 | Network every payment must be on; must match the facilitator's `/supported` exactly |
 | `X402_ASSET_ID` | `10458941` | ASA every price is denominated in (testnet USDC; mainnet `31566704`) |
@@ -157,6 +162,36 @@ VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
 
 > **Mixed content:** if the site is served over HTTPS, the registry **must** also be HTTPS/WSS,
 > or browsers will block the API + socket calls.
+
+### 3b2. Admin app (static SPA)
+
+Separate Vite build for `admin.tendrilhq.com` — Google sign-in with an email allowlist (`ADMIN_EMAILS`).
+Admins review one-time ALGO gas grants for Google custodial users.
+
+```bash
+VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w admin
+# output: admin/dist  → upload to admin subdomain static host
+```
+
+**Google Cloud Console:** register a second OAuth redirect URI:
+`https://api.your-tendril-domain.com/admin/auth/google/callback`
+
+Backend env (in addition to Google OAuth vars):
+
+| Var | Example |
+|---|---|
+| `ADMIN_EMAILS` | `you@tendrilhq.com` |
+| `ADMIN_WEB_ORIGIN` | `https://admin.tendrilhq.com` |
+| `ADMIN_GOOGLE_REDIRECT_URI` | `https://api…/admin/auth/google/callback` |
+| `GAS_GRANT_MICRO_ALGOS` | `260000` (0.26 ALGO) |
+| `CORS_ORIGIN` | `https://tendrilhq.com,https://admin.tendrilhq.com` |
+
+`PLATFORM_PRIVATE_KEY` must hold enough ALGO for gas grants (plus txn fees) in addition to USDC for withdrawals.
+
+**Vercel / Netlify / Cloudflare Pages:**
+- Build command: `npm install && npm run build -w admin`
+- Output directory: `admin/dist`
+- Env var: `VITE_REGISTRY_URL = https://api.your-tendril-domain.com`
 
 ### 3c. Contributor agent (on each contributor's machine)
 
@@ -207,7 +242,8 @@ matching node, runs its job, and releases — reporting how much balance it drew
 - [ ] `DATABASE_URL` points at Neon; `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` set to an account you
       control and **funded** (it pays out every contributor); `PLATFORM_FEE_PCT` reviewed.
 - [ ] `CORS_ORIGIN` locked to your web origin.
-- [ ] Google OAuth (if enabled): `GOOGLE_*` + `WALLET_ENCRYPTION_KEY` set; redirect URI registered in Google Cloud Console.
+- [ ] Google OAuth (if enabled): `GOOGLE_*` + `WALLET_ENCRYPTION_KEY` set; redirect URI registered in Google Cloud Console (user **and** admin callback if using admin portal).
+- [ ] Admin portal (if enabled): `ADMIN_EMAILS`, `ADMIN_WEB_ORIGIN`, `ADMIN_GOOGLE_REDIRECT_URI`; `CORS_ORIGIN` includes admin origin; platform wallet funded with ALGO for gas grants.
 - [ ] Registry + web both HTTPS (avoid mixed-content blocking); WebSocket upgrades proxied.
 - [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
 - [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.

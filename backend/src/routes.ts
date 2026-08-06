@@ -14,7 +14,9 @@ import {
   type WithdrawResponse,
   type X402RentResponse,
   type X402TopUpResponse,
+  type GasRequestInfo,
 } from "@tendril/shared";
+import { adminRouter } from "./adminRoutes.js";
 import {
   asset,
   challenge,
@@ -50,10 +52,14 @@ import {
 } from "./auth.js";
 import {
   createApiKey,
+  createGasRequest,
+  findGasRequestByUserId,
+  findUserById,
   listApiKeys,
   metrics,
   recordWithdrawal,
   revokeApiKey,
+  type DbGasRequest,
   walletSummary,
 } from "./db.js";
 import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
@@ -83,6 +89,7 @@ import {
   googleStart,
   isGoogleAuthEnabled,
 } from "./googleAuth.js";
+import { syncGasGrantEligibility } from "./gasGrant.js";
 
 export const router = Router();
 
@@ -118,6 +125,7 @@ router.get("/platform", guard((_req, res) => {
     maxTopUpAtomic: config.maxTopUpAtomic,
     minWithdrawAtomic: config.minWithdrawAtomic,
     flatMintKeyAtomic: config.flatMintKeyAtomic,
+    gasGrantMicroAlgos: config.gasGrantMicroAlgos,
   };
   res.json(info);
 }));
@@ -164,10 +172,16 @@ router.get("/auth/google/enabled", guard((_req, res) => {
 router.get("/auth/google/account", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session") {
+  if (session.kind !== "google-session" || !session.userId) {
     return res.status(403).json({ error: "Google account endpoint requires Google sign-in" });
   }
-  res.json(await googleAccountInfo(session.address));
+  await syncGasGrantEligibility(session.userId, session.address);
+  const user = await findUserById(session.userId);
+  const info = await googleAccountInfo(session.address);
+  res.json({
+    ...info,
+    gasGrantEligible: user?.gas_grant_eligible ?? false,
+  });
 }));
 
 router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
@@ -216,6 +230,66 @@ router.post("/auth/google/export-key", guard(async (req: Request, res: Response)
   } catch (e) {
     res.status(500).json({ error: (e as Error).message });
   }
+}));
+
+function toGasRequestInfo(r: DbGasRequest): GasRequestInfo {
+  return {
+    id: r.id,
+    status: r.status,
+    amountMicro: r.amount_micro,
+    address: r.address,
+    txid: r.txid,
+    createdAt: r.created_at,
+    reviewedAt: r.reviewed_at,
+    reviewNote: r.review_note,
+  };
+}
+
+router.get("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session" || !session.userId) {
+    return res.status(403).json({ error: "gas requests require Google sign-in" });
+  }
+  const row = await findGasRequestByUserId(session.userId);
+  res.json(row ? toGasRequestInfo(row) : null);
+}));
+
+router.post("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "google-session" || !session.userId) {
+    return res.status(403).json({ error: "gas requests require Google sign-in" });
+  }
+  const existing = await findGasRequestByUserId(session.userId);
+  if (existing) {
+    return res.status(409).json({
+      error: "gas already requested",
+      request: toGasRequestInfo(existing),
+    });
+  }
+
+  await syncGasGrantEligibility(session.userId, session.address);
+  const user = await findUserById(session.userId);
+  if (!user) return res.status(404).json({ error: "user not found" });
+  if (!user.gas_grant_eligible) {
+    return res.status(403).json({ error: "not eligible for gas grant" });
+  }
+
+  const { algoMicro } = await googleAccountInfo(session.address);
+  if (algoMicro !== 0) {
+    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  }
+
+  const row = await createGasRequest({
+    id: nanoid(),
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    address: user.address,
+    amountMicro: config.gasGrantMicroAlgos,
+  });
+  res.status(201).json(toGasRequestInfo(row));
 }));
 
 // ─────────────────────── discovery (free) ───────────────────────
@@ -940,3 +1014,5 @@ const SSH_PUBKEY =
 function isOpenSshPubKey(value: string): boolean {
   return SSH_PUBKEY.test(value.trim());
 }
+
+router.use("/admin", adminRouter);

@@ -1,4 +1,5 @@
 import type {
+  GasRequestInfo,
   GoogleAccountResponse,
   GoogleSessionResponse,
   SignPrepareResponse,
@@ -69,6 +70,23 @@ export async function confirmCustodial<T = unknown>(
     body: JSON.stringify({ requestId }),
   });
   if (!res.ok) throw await apiError(res, "confirm");
+  return res.json();
+}
+
+export async function fetchGasRequest(token: string): Promise<GasRequestInfo | null> {
+  const res = await fetch(`${REGISTRY_URL}/auth/google/gas-request`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "gas request");
+  return res.json();
+}
+
+export async function submitGasRequest(token: string): Promise<GasRequestInfo> {
+  const res = await fetch(`${REGISTRY_URL}/auth/google/gas-request`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "gas request");
   return res.json();
 }
 

@@ -196,9 +196,27 @@ export async function initDb(): Promise<void> {
       address            TEXT UNIQUE NOT NULL,
       encrypted_mnemonic TEXT NOT NULL,
       created_at         BIGINT NOT NULL,
-      last_login_at      BIGINT NOT NULL
+      last_login_at      BIGINT NOT NULL,
+      gas_grant_eligible BOOLEAN NOT NULL DEFAULT TRUE
     );
     CREATE INDEX IF NOT EXISTS users_address_idx ON users (address);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS gas_grant_eligible BOOLEAN NOT NULL DEFAULT TRUE;
+
+    CREATE TABLE IF NOT EXISTS gas_requests (
+      id            TEXT PRIMARY KEY,
+      user_id       TEXT UNIQUE NOT NULL,
+      email         TEXT NOT NULL,
+      name          TEXT,
+      address       TEXT NOT NULL,
+      amount_micro  BIGINT NOT NULL,
+      status        TEXT NOT NULL,
+      txid          TEXT,
+      reviewed_by   TEXT,
+      reviewed_at   BIGINT,
+      review_note   TEXT,
+      created_at    BIGINT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS gas_requests_status_idx ON gas_requests (status, created_at DESC);
   `);
 }
 
@@ -211,6 +229,7 @@ export interface DbUser {
   encrypted_mnemonic: string;
   created_at: number;
   last_login_at: number;
+  gas_grant_eligible: boolean;
 }
 
 export async function findUserByGoogleSub(sub: string): Promise<DbUser | null> {
@@ -242,6 +261,102 @@ export async function createUser(row: {
 
 export async function touchUserLogin(id: string): Promise<void> {
   await q("UPDATE users SET last_login_at = $1 WHERE id = $2", [Date.now(), id]);
+}
+
+export async function setGasGrantIneligible(userId: string): Promise<void> {
+  await q("UPDATE users SET gas_grant_eligible = FALSE WHERE id = $1", [userId]);
+}
+
+// ─────────────────────────── gas requests ───────────────────────────
+
+export type GasRequestStatus = "pending" | "accepted" | "rejected";
+
+export interface DbGasRequest {
+  id: string;
+  user_id: string;
+  email: string;
+  name: string | null;
+  address: string;
+  amount_micro: number;
+  status: GasRequestStatus;
+  txid: string | null;
+  reviewed_by: string | null;
+  reviewed_at: number | null;
+  review_note: string | null;
+  created_at: number;
+}
+
+export async function findGasRequestByUserId(userId: string): Promise<DbGasRequest | null> {
+  const rows = await q<DbGasRequest>("SELECT * FROM gas_requests WHERE user_id = $1", [userId]);
+  return rows[0] ?? null;
+}
+
+export async function findGasRequestById(id: string): Promise<DbGasRequest | null> {
+  const rows = await q<DbGasRequest>("SELECT * FROM gas_requests WHERE id = $1", [id]);
+  return rows[0] ?? null;
+}
+
+export async function createGasRequest(row: {
+  id: string;
+  userId: string;
+  email: string;
+  name: string | null;
+  address: string;
+  amountMicro: number;
+}): Promise<DbGasRequest> {
+  const now = Date.now();
+  const rows = await q<DbGasRequest>(
+    `INSERT INTO gas_requests (id, user_id, email, name, address, amount_micro, status, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,'pending',$7) RETURNING *`,
+    [row.id, row.userId, row.email, row.name, row.address, row.amountMicro, now],
+  );
+  return rows[0];
+}
+
+export async function listGasRequests(status?: GasRequestStatus): Promise<DbGasRequest[]> {
+  if (status) {
+    return q<DbGasRequest>(
+      "SELECT * FROM gas_requests WHERE status = $1 ORDER BY created_at DESC",
+      [status],
+    );
+  }
+  return q<DbGasRequest>("SELECT * FROM gas_requests ORDER BY created_at DESC");
+}
+
+export async function countGasRequestsByStatus(status: GasRequestStatus): Promise<number> {
+  const rows = await q<{ n: number }>(
+    "SELECT COUNT(*)::bigint AS n FROM gas_requests WHERE status = $1",
+    [status],
+  );
+  return rows[0]?.n ?? 0;
+}
+
+export async function resolveGasRequest(
+  id: string,
+  status: "accepted" | "rejected",
+  reviewedBy: string,
+  opts: { txid?: string; note?: string },
+): Promise<DbGasRequest | null> {
+  const rows = await q<DbGasRequest>(
+    `UPDATE gas_requests
+     SET status = $2, reviewed_by = $3, reviewed_at = $4, txid = $5, review_note = $6
+     WHERE id = $1 AND status = 'pending'
+     RETURNING *`,
+    [id, status, reviewedBy, Date.now(), opts.txid ?? null, opts.note ?? null],
+  );
+  return rows[0] ?? null;
+}
+
+export async function listGoogleUsers(limit = 50, offset = 0): Promise<DbUser[]> {
+  return q<DbUser>(
+    "SELECT * FROM users ORDER BY last_login_at DESC LIMIT $1 OFFSET $2",
+    [limit, offset],
+  );
+}
+
+export async function countGoogleUsers(): Promise<number> {
+  const rows = await q<{ n: number }>("SELECT COUNT(*)::bigint AS n FROM users");
+  return rows[0]?.n ?? 0;
 }
 
 export async function walletSummary(address: string): Promise<WalletSummary> {
@@ -394,8 +509,8 @@ export async function listApiKeys(ownerAddr: string): Promise<ApiKeyInfo[]> {
 /** Revoke one of `ownerAddr`'s keys. Scoped by owner so an id guess is useless. */
 export async function revokeApiKey(ownerAddr: string, id: number): Promise<boolean> {
   const rows = await q<{ id: number }>(
-    "UPDATE api_keys SET revoked_at = $1 WHERE id = $2 AND owner_addr = $3 AND revoked_at IS NULL RETURNING id",
-    [Date.now(), id, ownerAddr],
+    "DELETE FROM api_keys WHERE id = $1 AND owner_addr = $2 RETURNING id",
+    [id, ownerAddr],
   );
   return rows.length > 0;
 }

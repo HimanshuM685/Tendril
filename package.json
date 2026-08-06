@@ -8,12 +8,14 @@
     "backend",
     "contributor",
     "web",
+    "admin",
     "example-buyer"
   ],
   "scripts": {
     "backend": "npm run dev -w backend",
     "contributor": "npm run dev -w contributor",
     "web": "npm run dev -w web",
+    "admin": "npm run dev -w admin",
     "client": "npm run start -w example-buyer",
     "keygen": "npm run keygen -w contributor",
     "typecheck": "tsc -b shared backend contributor example-buyer",

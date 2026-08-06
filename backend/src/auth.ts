@@ -5,13 +5,19 @@ import { config } from "./config.js";
 // Contributor agents authenticate with an API key, not a key pair — see
 // `ownerOfApiKey` in db.ts. Everything here is the renter/browser side.
 
-export type SessionKind = "session" | "google-session";
+export type SessionKind = "session" | "google-session" | "admin-session";
 
 export interface SessionInfo {
   address: string;
   kind: SessionKind;
   userId?: string;
   email?: string;
+}
+
+export interface AdminInfo {
+  email: string;
+  sub: string;
+  name?: string | null;
 }
 
 // ─────────────────────────── lease tokens ───────────────────────────
@@ -116,4 +122,53 @@ export function sessionFromAuthHeader(header?: string): SessionInfo | null {
 /** Extract a verified address from an `Authorization: Bearer <session>` header. */
 export function addressFromSession(header?: string): string | null {
   return sessionFromAuthHeader(header)?.address ?? null;
+}
+
+// ─────────────────────── admin session tokens ───────────────────────
+
+export function issueAdminSession(email: string, sub: string, name?: string | null): string {
+  return jwt.sign({ email, sub, name, kind: "admin-session" }, config.jwtSecret, {
+    expiresIn: "12h",
+  });
+}
+
+export function issueAdminExchangeCode(email: string, sub: string, name?: string | null): string {
+  const jti = randomUUID();
+  return jwt.sign({ email, sub, name, kind: "admin-exchange", jti }, config.jwtSecret, {
+    expiresIn: "60s",
+  });
+}
+
+export function verifyAdminExchangeCode(
+  code: string,
+): { email: string; sub: string; name?: string | null; jti: string } | null {
+  try {
+    const p = jwt.verify(code, config.jwtSecret) as {
+      email?: string;
+      sub?: string;
+      name?: string | null;
+      kind?: string;
+      jti?: string;
+    };
+    if (p.kind !== "admin-exchange" || !p.email || !p.sub || !p.jti) return null;
+    return { email: p.email, sub: p.sub, name: p.name, jti: p.jti };
+  } catch {
+    return null;
+  }
+}
+
+export function adminFromAuthHeader(header?: string): AdminInfo | null {
+  if (!header?.startsWith("Bearer ")) return null;
+  try {
+    const p = jwt.verify(header.slice("Bearer ".length), config.jwtSecret) as {
+      email?: string;
+      sub?: string;
+      name?: string | null;
+      kind?: string;
+    };
+    if (p.kind !== "admin-session" || !p.email || !p.sub) return null;
+    return { email: p.email, sub: p.sub, name: p.name };
+  } catch {
+    return null;
+  }
 }
