@@ -32,7 +32,6 @@ export function Metrics() {
       </h2>
 
       <LineCard title="Users over time" series={data.usersOverTime} now={data.totalUsers} />
-      <LineCard title="Active users on compute" series={data.activeOverTime} now={data.totalActive} />
 
       <Board
         title="Top users"
