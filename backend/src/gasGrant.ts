@@ -1,4 +1,9 @@
-import { findGasRequestByUserId, setGasGrantIneligible } from "./db.js";
+import {
+  findGasRequestByAddress,
+  findGasRequestByUserId,
+  setGasGrantIneligible,
+  setWalletGasGrantIneligible,
+} from "./db.js";
 import { googleAccountInfo } from "./custodialSign.js";
 
 /** Pure rule: self-fund before any gas request permanently disqualifies the grant. */
@@ -9,8 +14,8 @@ export function shouldMarkGasGrantIneligible(
   return !hasGasRequestRow && algoMicro > 0;
 }
 
-/** Observe on-chain balance; flip eligibility when user funded themselves. */
-export async function syncGasGrantEligibility(userId: string, address: string): Promise<void> {
+/** Google custodial: observe on-chain balance; flip eligibility when self-funded. */
+export async function syncGoogleGasGrantEligibility(userId: string, address: string): Promise<void> {
   const existing = await findGasRequestByUserId(userId);
   if (existing) return;
 
@@ -19,6 +24,20 @@ export async function syncGasGrantEligibility(userId: string, address: string): 
     await setGasGrantIneligible(userId);
   }
 }
+
+/** Connected wallet: same rules keyed by address. */
+export async function syncWalletGasGrantEligibility(address: string): Promise<void> {
+  const existing = await findGasRequestByAddress(address);
+  if (existing) return;
+
+  const { algoMicro } = await googleAccountInfo(address);
+  if (shouldMarkGasGrantIneligible(false, algoMicro)) {
+    await setWalletGasGrantIneligible(address);
+  }
+}
+
+/** @deprecated use syncGoogleGasGrantEligibility */
+export const syncGasGrantEligibility = syncGoogleGasGrantEligibility;
 
 /** Whether a user may submit a new gas request (API + UI). */
 export function canSubmitGasGrant(

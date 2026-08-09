@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { GasRequestInfo, GoogleAccountResponse } from "@tendril/shared";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
-import { explorerTxUrl } from "../api";
 import {
   exportGoogleMnemonic,
   fetchGasRequest,
@@ -12,9 +11,9 @@ import {
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { ExportKeyModal } from "./ExportKeyModal";
+import { OnchainAccountPanel } from "./OnchainAccountPanel";
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-const MIN_ALGO_MICRO = 100_000; // 0.1 ALGO hint threshold
 
 interface Props {
   session: Session;
@@ -22,10 +21,6 @@ interface Props {
   balanceAtomic: number | null;
   onSignOut: () => void;
   onAccountRefresh?: () => void;
-}
-
-function formatAlgo(micro: number): string {
-  return `${(micro / 1_000_000).toFixed(4)} ALGO`;
 }
 
 export function GoogleWalletBar({
@@ -109,15 +104,6 @@ export function GoogleWalletBar({
 
   const hasBalance = signedIn && balanceAtomic !== null;
   const displayName = session.name || session.email || "Google account";
-  const needsAlgo = account && account.algoMicro < MIN_ALGO_MICRO;
-  const canRequestGas =
-    !!account &&
-    account.gasGrantEligible &&
-    account.algoMicro === 0 &&
-    gasRequest === null;
-  const grantAlgo = gasRequest?.amountMicro
-    ? formatAlgo(gasRequest.amountMicro)
-    : "0.26 ALGO";
 
   return (
     <div className="wallet-bar" ref={barRef}>
@@ -145,80 +131,23 @@ export function GoogleWalletBar({
               {short(session.address)}
             </code>
           </div>
-          {account && (
-            <>
-              <div className="wm-balance">
-                <span className="muted small">On-chain ALGO</span>
-                <strong>{formatAlgo(account.algoMicro)}</strong>
-              </div>
-              {account.usdcOptedIn ? (
-                <div className="wm-balance">
-                  <span className="muted small">On-chain USDC</span>
-                  <strong title={formatUsdcExact(account.usdcAtomic)}>
-                    {formatUsdc(account.usdcAtomic)}
-                  </strong>
-                </div>
-              ) : (
-                <div className="wm-warn">
-                  <p className="muted small">USDC not opted in — required for top-ups.</p>
-                  <button
-                    className="btn"
-                    type="button"
-                    disabled={optInBusy || needsAlgo}
-                    onClick={() => void optInUsdc()}
-                  >
-                    {optInBusy ? "Opting in…" : "Opt in to USDC"}
-                  </button>
-                </div>
-              )}
-              {needsAlgo && (canRequestGas || gasRequest != null) && (
-                <div className="wm-warn">
-                  {canRequestGas ? (
-                    <>
-                      <p className="muted small">
-                        Need ALGO for fees? Request a one-time {grantAlgo} grant.
-                      </p>
-                      <button
-                        className="btn"
-                        type="button"
-                        disabled={gasBusy}
-                        onClick={() => void requestGas()}
-                      >
-                        {gasBusy ? "Submitting…" : `Request gas (${grantAlgo})`}
-                      </button>
-                    </>
-                  ) : gasRequest?.status === "pending" ? (
-                    <p className="muted small">Gas request pending admin review.</p>
-                  ) : gasRequest?.status === "accepted" ? (
-                    <p className="muted small">
-                      Gas grant sent
-                      {gasRequest.txid && (
-                        <>
-                          {" "}
-                          (
-                          <a
-                            className="ext-link"
-                            href={explorerTxUrl(gasRequest.txid)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            tx
-                          </a>
-                          )
-                        </>
-                      )}
-                      .
-                    </p>
-                  ) : gasRequest?.status === "rejected" ? (
-                    <p className="muted small">
-                      Gas request was declined.
-                      {gasRequest.reviewNote ? ` ${gasRequest.reviewNote}` : ""}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </>
-          )}
+          <OnchainAccountPanel
+            account={
+              account
+                ? {
+                    algoMicro: account.algoMicro,
+                    usdcAtomic: account.usdcAtomic,
+                    usdcOptedIn: account.usdcOptedIn,
+                    gasGrantEligible: account.gasGrantEligible,
+                  }
+                : null
+            }
+            gasRequest={gasRequest}
+            gasBusy={gasBusy}
+            optInBusy={optInBusy}
+            onOptIn={() => void optInUsdc()}
+            onRequestGas={() => void requestGas()}
+          />
           <div className="wm-balance">
             <span className="muted small">Prepaid credit</span>
             <strong title={hasBalance ? formatUsdcExact(balanceAtomic) : undefined}>

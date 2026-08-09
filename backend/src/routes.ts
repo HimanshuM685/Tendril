@@ -53,8 +53,10 @@ import {
 import {
   createApiKey,
   createGasRequest,
+  findGasRequestByAddress,
   findGasRequestByUserId,
   findUserById,
+  isWalletGasGrantEligible,
   listApiKeys,
   metrics,
   recordWithdrawal,
@@ -89,7 +91,7 @@ import {
   googleStart,
   isGoogleAuthEnabled,
 } from "./googleAuth.js";
-import { syncGasGrantEligibility } from "./gasGrant.js";
+import { syncGasGrantEligibility, syncWalletGasGrantEligibility } from "./gasGrant.js";
 
 export const router = Router();
 
@@ -261,7 +263,9 @@ router.post("/auth/google/gas-request", guard(async (req: Request, res: Response
   if (session.kind !== "google-session" || !session.userId) {
     return res.status(403).json({ error: "gas requests require Google sign-in" });
   }
-  const existing = await findGasRequestByUserId(session.userId);
+  const existing =
+    (await findGasRequestByUserId(session.userId)) ??
+    (await findGasRequestByAddress(session.address));
   if (existing) {
     return res.status(409).json({
       error: "gas already requested",
@@ -287,6 +291,68 @@ router.post("/auth/google/gas-request", guard(async (req: Request, res: Response
     email: user.email,
     name: user.name,
     address: user.address,
+    amountMicro: config.gasGrantMicroAlgos,
+  });
+  res.status(201).json(toGasRequestInfo(row));
+}));
+
+// ─────────────────────── wallet on-chain account + gas ───────────────────────
+
+router.get("/auth/wallet/account", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "session") {
+    return res.status(403).json({ error: "wallet account requires wallet sign-in" });
+  }
+  await syncWalletGasGrantEligibility(session.address);
+  const info = await googleAccountInfo(session.address);
+  res.json({
+    ...info,
+    gasGrantEligible: await isWalletGasGrantEligible(session.address),
+  });
+}));
+
+router.get("/auth/wallet/gas-request", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "session") {
+    return res.status(403).json({ error: "gas requests require wallet sign-in" });
+  }
+  const row = await findGasRequestByAddress(session.address);
+  res.json(row ? toGasRequestInfo(row) : null);
+}));
+
+router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (session.kind !== "session") {
+    return res.status(403).json({ error: "gas requests require wallet sign-in" });
+  }
+
+  const existing = await findGasRequestByAddress(session.address);
+  if (existing) {
+    return res.status(409).json({
+      error: "gas already requested",
+      request: toGasRequestInfo(existing),
+    });
+  }
+
+  await syncWalletGasGrantEligibility(session.address);
+  if (!(await isWalletGasGrantEligible(session.address))) {
+    return res.status(403).json({ error: "not eligible for gas grant" });
+  }
+
+  const { algoMicro } = await googleAccountInfo(session.address);
+  if (algoMicro !== 0) {
+    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  }
+
+  const row = await createGasRequest({
+    id: nanoid(),
+    userId: `wallet:${session.address}`,
+    email: session.address,
+    name: "Wallet",
+    address: session.address,
     amountMicro: config.gasGrantMicroAlgos,
   });
   res.status(201).json(toGasRequestInfo(row));

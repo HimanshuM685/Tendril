@@ -217,6 +217,13 @@ export async function initDb(): Promise<void> {
       created_at    BIGINT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS gas_requests_status_idx ON gas_requests (status, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS gas_requests_address_idx ON gas_requests (address);
+
+    -- Connected-wallet gas grant eligibility (mirrors users.gas_grant_eligible).
+    CREATE TABLE IF NOT EXISTS wallet_gas_state (
+      address             TEXT PRIMARY KEY,
+      gas_grant_eligible  BOOLEAN NOT NULL DEFAULT TRUE
+    );
   `);
 }
 
@@ -267,6 +274,22 @@ export async function setGasGrantIneligible(userId: string): Promise<void> {
   await q("UPDATE users SET gas_grant_eligible = FALSE WHERE id = $1", [userId]);
 }
 
+export async function isWalletGasGrantEligible(address: string): Promise<boolean> {
+  const rows = await q<{ gas_grant_eligible: boolean }>(
+    "SELECT gas_grant_eligible FROM wallet_gas_state WHERE address = $1",
+    [address],
+  );
+  return rows[0]?.gas_grant_eligible ?? true;
+}
+
+export async function setWalletGasGrantIneligible(address: string): Promise<void> {
+  await q(
+    `INSERT INTO wallet_gas_state (address, gas_grant_eligible) VALUES ($1, FALSE)
+     ON CONFLICT (address) DO UPDATE SET gas_grant_eligible = FALSE`,
+    [address],
+  );
+}
+
 // ─────────────────────────── gas requests ───────────────────────────
 
 export type GasRequestStatus = "pending" | "accepted" | "rejected";
@@ -288,6 +311,11 @@ export interface DbGasRequest {
 
 export async function findGasRequestByUserId(userId: string): Promise<DbGasRequest | null> {
   const rows = await q<DbGasRequest>("SELECT * FROM gas_requests WHERE user_id = $1", [userId]);
+  return rows[0] ?? null;
+}
+
+export async function findGasRequestByAddress(address: string): Promise<DbGasRequest | null> {
+  const rows = await q<DbGasRequest>("SELECT * FROM gas_requests WHERE address = $1", [address]);
   return rows[0] ?? null;
 }
 

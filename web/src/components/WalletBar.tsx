@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
+import type { GasRequestInfo } from "@tendril/shared";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
 import { fetchGoogleEnabled, googleLoginUrl } from "../lib/custodialClient";
+import {
+  fetchOnchainBalances,
+  fetchWalletAccount,
+  fetchWalletGasRequest,
+  optInUsdcWithWallet,
+  submitWalletGasRequest,
+} from "../lib/walletAccount";
+import type { SignTransactions } from "../wallet";
 import type { Session } from "../App";
 import { GoogleWalletBar } from "./GoogleWalletBar";
+import { OnchainAccountPanel } from "./OnchainAccountPanel";
+import type { OnchainPanelState } from "./OnchainAccountPanel";
 
 interface Props {
   session: Session | null;
@@ -15,6 +26,7 @@ interface Props {
   onSignOut: () => void;
   onAccountRefresh?: () => void;
   balanceAtomic: number | null;
+  signTransactions: SignTransactions;
 }
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -28,14 +40,22 @@ export function WalletBar({
   onSignOut,
   onAccountRefresh,
   balanceAtomic,
+  signTransactions,
 }: Props) {
   const { wallets, activeAddress, activeWallet, activeWalletAccounts } = useWallet();
   const navigate = useNavigate();
   const [picking, setPicking] = useState(false);
   const [open, setOpen] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [onchain, setOnchain] = useState<OnchainPanelState | null>(null);
+  const [gasRequest, setGasRequest] = useState<GasRequestInfo | null | undefined>(undefined);
+  const [gasBusy, setGasBusy] = useState(false);
+  const [optInBusy, setOptInBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const autoSignIn = useRef(false);
+
+  const walletSignedIn = signedIn && session?.authType !== "google";
 
   useEffect(() => {
     void fetchGoogleEnabled().then(setGoogleEnabled);
@@ -61,6 +81,39 @@ export function WalletBar({
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  const loadOnchain = async () => {
+    if (!activeAddress) return;
+    try {
+      if (walletSignedIn && session?.token) {
+        const acct = await fetchWalletAccount(session.token);
+        setOnchain({
+          algoMicro: acct.algoMicro,
+          usdcAtomic: acct.usdcAtomic,
+          usdcOptedIn: acct.usdcOptedIn,
+          gasGrantEligible: acct.gasGrantEligible,
+        });
+        setGasRequest(await fetchWalletGasRequest(session.token));
+      } else {
+        const bal = await fetchOnchainBalances(activeAddress);
+        setOnchain({ ...bal, gasGrantEligible: false });
+        setGasRequest(undefined);
+      }
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  useEffect(() => {
+    if (!activeAddress) {
+      setOnchain(null);
+      setGasRequest(undefined);
+      return;
+    }
+    void loadOnchain();
+    const t = setInterval(() => void loadOnchain(), 8000);
+    return () => clearInterval(t);
+  }, [activeAddress, walletSignedIn, session?.token]);
 
   if (session?.authType === "google") {
     return (
@@ -97,8 +150,37 @@ export function WalletBar({
     setOpen(false);
   }
 
+  async function optInUsdc() {
+    if (!activeAddress) return;
+    setOptInBusy(true);
+    setErr(null);
+    try {
+      await optInUsdcWithWallet(activeAddress, signTransactions);
+      await loadOnchain();
+      onAccountRefresh?.();
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (!/cancel/i.test(msg)) setErr(msg);
+    } finally {
+      setOptInBusy(false);
+    }
+  }
+
+  async function requestGas() {
+    if (!session?.token) return;
+    setGasBusy(true);
+    setErr(null);
+    try {
+      setGasRequest(await submitWalletGasRequest(session.token));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setGasBusy(false);
+    }
+  }
+
   const others = (activeWalletAccounts ?? []).filter((a) => a.address !== activeAddress);
-  const hasBalance = signedIn && balanceAtomic !== null;
+  const hasBalance = walletSignedIn && balanceAtomic !== null;
 
   const picker = picking && (
     <div className="modal-backdrop" onClick={() => setPicking(false)}>
@@ -185,11 +267,31 @@ export function WalletBar({
         {open && (
           <div className="wallet-menu" role="menu">
             <div className="wm-balance">
-              <span className="muted small">Prepaid balance</span>
+              <span className="muted small">Address</span>
+              <code className="wm-addr" title={activeAddress}>
+                {short(activeAddress)}
+              </code>
+            </div>
+            <OnchainAccountPanel
+              account={onchain}
+              gasRequest={walletSignedIn ? gasRequest : undefined}
+              gasBusy={gasBusy}
+              optInBusy={optInBusy}
+              onOptIn={() => void optInUsdc()}
+              onRequestGas={() => void requestGas()}
+            />
+            <div className="wm-balance">
+              <span className="muted small">Prepaid credit</span>
               <strong title={hasBalance ? formatUsdcExact(balanceAtomic) : undefined}>
                 {hasBalance ? formatUsdc(balanceAtomic) : "—"}
               </strong>
             </div>
+            {!walletSignedIn && (
+              <p className="muted small" style={{ padding: "0 12px 8px" }}>
+                Sign in to request a gas grant or view prepaid credit.
+              </p>
+            )}
+            {err && <p className="modal-err">{err}</p>}
             <button className="wm-item" role="menuitem" onClick={() => go("/dashboard")}>
               Top up
             </button>
@@ -223,16 +325,22 @@ export function WalletBar({
             >
               Switch wallet…
             </button>
-            <button
-              className="wm-item wm-danger"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                activeWallet?.disconnect();
-              }}
-            >
-              Disconnect
-            </button>
+            {walletSignedIn ? (
+              <button className="wm-item wm-danger" role="menuitem" onClick={onSignOut}>
+                Sign out
+              </button>
+            ) : (
+              <button
+                className="wm-item wm-danger"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  activeWallet?.disconnect();
+                }}
+              >
+                Disconnect
+              </button>
+            )}
           </div>
         )}
         {picker}

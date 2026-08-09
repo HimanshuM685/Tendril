@@ -227,6 +227,7 @@ export function App() {
             onSignOut={() => setSession(null)}
             onAccountRefresh={onWalletChanged}
             balanceAtomic={wallet?.balanceAtomic ?? null}
+            signTransactions={signTransactions as never}
           />
         </div>
       </header>

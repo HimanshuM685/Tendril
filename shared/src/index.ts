@@ -483,6 +483,9 @@ export interface GoogleAccountResponse {
   gasGrantEligible: boolean;
 }
 
+/** GET /auth/wallet/account — same on-chain + eligibility fields as Google account. */
+export type WalletAccountResponse = GoogleAccountResponse;
+
 /** POST /auth/google/prepare */
 export interface SignPrepareResponse {
   requestId: string;
