@@ -53,6 +53,7 @@ export async function payContributor(toAddr: string, amountAtomic: number): Prom
     receiver: toAddr,
     assetIndex: Number(config.assetId),
     amount: amountAtomic,
+    note: new TextEncoder().encode("Tendril contributor payout — compute earnings"),
     suggestedParams,
   });
   const signed = txn.signTxn(sk);
@@ -70,6 +71,9 @@ export async function sendAlgo(toAddr: string, microAlgos: number): Promise<stri
     sender: addr,
     receiver: toAddr,
     amount: microAlgos,
+    note: new TextEncoder().encode(
+      "Tendril gas grant — for USDC opt-in and transaction fees",
+    ),
     suggestedParams,
   });
   const signed = txn.signTxn(sk);
