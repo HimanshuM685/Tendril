@@ -184,3 +184,15 @@ adminRouter.patch("/settings", guard(async (req, res) => {
   const body: AdminSettings = { emailAuthEnabled };
   res.json(body);
 }));
+
+// Some proxies block PATCH — POST alias for the same update.
+adminRouter.post("/settings", guard(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { emailAuthEnabled } = (req.body ?? {}) as { emailAuthEnabled?: boolean };
+  if (typeof emailAuthEnabled !== "boolean") {
+    return res.status(400).json({ error: "emailAuthEnabled boolean required" });
+  }
+  await setEmailAuthEnabled(emailAuthEnabled);
+  const body: AdminSettings = { emailAuthEnabled };
+  res.json(body);
+}));

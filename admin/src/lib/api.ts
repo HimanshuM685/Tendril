@@ -167,11 +167,18 @@ export async function updateAdminSettings(
   token: string,
   patch: Partial<AdminSettings>,
 ): Promise<AdminSettings> {
-  const res = await fetch(`${REGISTRY_URL}/admin/settings`, {
+  let res = await fetch(`${REGISTRY_URL}/admin/settings`, {
     method: "PATCH",
     headers: authHeaders(token),
     body: JSON.stringify(patch),
   });
+  if (res.status === 404 || res.status === 405) {
+    res = await fetch(`${REGISTRY_URL}/admin/settings`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(patch),
+    });
+  }
   if (!res.ok) throw await apiError(res, "settings");
   return res.json();
 }

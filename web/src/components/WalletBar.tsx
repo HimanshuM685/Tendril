@@ -69,6 +69,12 @@ export function WalletBar({
   }, []);
 
   useEffect(() => {
+    if (!picking) return;
+    void fetchGoogleEnabled().then(setGoogleEnabled);
+    void fetchEmailEnabled().then(setEmailEnabled);
+  }, [picking]);
+
+  useEffect(() => {
     if (activeAddress && autoSignIn.current && !signedIn && canSignIn && !signingIn) {
       autoSignIn.current = false;
       onSignIn();

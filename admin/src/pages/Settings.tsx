@@ -49,14 +49,15 @@ export function Settings() {
               Each account gets a custodial Algorand wallet, same as Google sign-in.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn"
-            disabled={busy}
-            onClick={() => void toggleEmailAuth()}
-          >
-            {settings.emailAuthEnabled ? "Enabled — turn off" : "Disabled — turn on"}
-          </button>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={settings.emailAuthEnabled}
+              disabled={busy}
+              onChange={() => void toggleEmailAuth()}
+            />
+            <span className="kicker">{settings.emailAuthEnabled ? "On" : "Off"}</span>
+          </label>
         </div>
         {err && <p className="error" style={{ marginTop: 16 }}>{err}</p>}
       </div>

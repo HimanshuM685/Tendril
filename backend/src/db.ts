@@ -303,7 +303,8 @@ export async function isEmailAuthEnabled(): Promise<boolean> {
     "SELECT value FROM platform_settings WHERE key = $1",
     [EMAIL_AUTH_SETTING],
   );
-  return rows[0]?.value === "true";
+  if (rows[0]) return rows[0].value === "true";
+  return process.env.EMAIL_AUTH_DEFAULT === "true";
 }
 
 export async function setEmailAuthEnabled(enabled: boolean): Promise<void> {
