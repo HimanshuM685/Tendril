@@ -283,6 +283,7 @@ export async function createUser(row: {
 export async function createEmailUser(row: {
   id: string;
   email: string;
+  name: string;
   passwordHash: string;
   address: string;
   encryptedMnemonic: string;
@@ -290,8 +291,8 @@ export async function createEmailUser(row: {
   const now = Date.now();
   const rows = await q<DbUser>(
     `INSERT INTO users (id, google_sub, email, name, address, encrypted_mnemonic, password_hash, created_at, last_login_at)
-     VALUES ($1, NULL, $2, NULL, $3, $4, $5, $6, $6) RETURNING *`,
-    [row.id, row.email, row.address, row.encryptedMnemonic, row.passwordHash, now],
+     VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $7) RETURNING *`,
+    [row.id, row.email, row.name, row.address, row.encryptedMnemonic, row.passwordHash, now],
   );
   return rows[0];
 }

@@ -40,11 +40,12 @@ export async function fetchEmailEnabled(): Promise<boolean> {
 export async function registerWithEmail(
   email: string,
   password: string,
+  name: string,
 ): Promise<EmailSessionResponse> {
   const res = await fetch(`${REGISTRY_URL}/auth/email/register`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, name }),
   });
   if (!res.ok) throw await apiError(res, "sign up");
   return res.json();

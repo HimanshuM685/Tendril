@@ -9,6 +9,7 @@ interface Props {
 
 export function EmailAuthModal({ onClose, onSuccess }: Props) {
   const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -21,7 +22,7 @@ export function EmailAuthModal({ onClose, onSuccess }: Props) {
     try {
       const res =
         mode === "signup"
-          ? await registerWithEmail(email, password)
+          ? await registerWithEmail(email, password, name)
           : await loginWithEmail(email, password);
       onSuccess(res);
     } catch (e) {
@@ -46,6 +47,19 @@ export function EmailAuthModal({ onClose, onSuccess }: Props) {
           </button>
         </div>
         <form className="modal-wallets" onSubmit={(e) => void submit(e)}>
+          {mode === "signup" && (
+            <label className="email-field">
+              <span className="muted small">Name</span>
+              <input
+                type="text"
+                autoComplete="name"
+                required
+                maxLength={100}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+          )}
           <label className="email-field">
             <span className="muted small">Email</span>
             <input

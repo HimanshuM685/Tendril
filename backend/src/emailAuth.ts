@@ -15,6 +15,7 @@ import type { EmailSessionResponse } from "@tendril/shared";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LEN = 8;
+const MAX_NAME_LEN = 100;
 
 function disabled(_req: Request, res: Response) {
   res.status(503).json({ error: "Email sign-in is disabled" });
@@ -31,14 +32,16 @@ export async function emailEnabled(_req: Request, res: Response) {
 export async function emailRegister(req: Request, res: Response) {
   if (!(await isEmailAuthEnabled())) return disabled(req, res);
 
-  const { email: rawEmail, password } = (req.body ?? {}) as {
+  const { email: rawEmail, password, name: rawName } = (req.body ?? {}) as {
     email?: string;
     password?: string;
+    name?: string;
   };
-  if (!rawEmail || !password) {
-    return res.status(400).json({ error: "email and password required" });
+  if (!rawEmail || !password || !rawName?.trim()) {
+    return res.status(400).json({ error: "name, email and password required" });
   }
 
+  const name = rawName.trim().slice(0, MAX_NAME_LEN);
   const email = normalizeEmail(rawEmail);
   if (!EMAIL_RE.test(email)) {
     return res.status(400).json({ error: "invalid email" });
@@ -56,6 +59,7 @@ export async function emailRegister(req: Request, res: Response) {
   const user = await createEmailUser({
     id: nanoid(),
     email,
+    name,
     passwordHash: await hashPassword(password),
     address,
     encryptedMnemonic,
