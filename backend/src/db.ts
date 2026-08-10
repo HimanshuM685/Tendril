@@ -201,6 +201,14 @@ export async function initDb(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS users_address_idx ON users (address);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS gas_grant_eligible BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
+
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
 
     CREATE TABLE IF NOT EXISTS gas_requests (
       id            TEXT PRIMARY KEY,
@@ -229,11 +237,12 @@ export async function initDb(): Promise<void> {
 
 export interface DbUser {
   id: string;
-  google_sub: string;
+  google_sub: string | null;
   email: string;
   name: string | null;
   address: string;
   encrypted_mnemonic: string;
+  password_hash: string | null;
   created_at: number;
   last_login_at: number;
   gas_grant_eligible: boolean;
@@ -246,6 +255,11 @@ export async function findUserByGoogleSub(sub: string): Promise<DbUser | null> {
 
 export async function findUserById(id: string): Promise<DbUser | null> {
   const rows = await q<DbUser>("SELECT * FROM users WHERE id = $1", [id]);
+  return rows[0] ?? null;
+}
+
+export async function findUserByEmail(email: string): Promise<DbUser | null> {
+  const rows = await q<DbUser>("SELECT * FROM users WHERE LOWER(email) = LOWER($1)", [email]);
   return rows[0] ?? null;
 }
 
@@ -264,6 +278,40 @@ export async function createUser(row: {
     [row.id, row.googleSub, row.email, row.name, row.address, row.encryptedMnemonic, now],
   );
   return rows[0];
+}
+
+export async function createEmailUser(row: {
+  id: string;
+  email: string;
+  passwordHash: string;
+  address: string;
+  encryptedMnemonic: string;
+}): Promise<DbUser> {
+  const now = Date.now();
+  const rows = await q<DbUser>(
+    `INSERT INTO users (id, google_sub, email, name, address, encrypted_mnemonic, password_hash, created_at, last_login_at)
+     VALUES ($1, NULL, $2, NULL, $3, $4, $5, $6, $6) RETURNING *`,
+    [row.id, row.email, row.address, row.encryptedMnemonic, row.passwordHash, now],
+  );
+  return rows[0];
+}
+
+const EMAIL_AUTH_SETTING = "email_auth_enabled";
+
+export async function isEmailAuthEnabled(): Promise<boolean> {
+  const rows = await q<{ value: string }>(
+    "SELECT value FROM platform_settings WHERE key = $1",
+    [EMAIL_AUTH_SETTING],
+  );
+  return rows[0]?.value === "true";
+}
+
+export async function setEmailAuthEnabled(enabled: boolean): Promise<void> {
+  await q(
+    `INSERT INTO platform_settings (key, value) VALUES ($1, $2)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [EMAIL_AUTH_SETTING, enabled ? "true" : "false"],
+  );
 }
 
 export async function touchUserLogin(id: string): Promise<void> {

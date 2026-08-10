@@ -117,6 +117,60 @@ export async function checkFacilitator(): Promise<void> {
   );
 }
 
+/**
+ * Discovery catalogs `resource.url` from PUBLIC_BASE_URL + routeTemplate. If that
+ * origin is the static web app (or localhost behind a proxy), settlements still
+ * work but the facilitator never lists the endpoint and challenge activity won't
+ * show on the dashboard.
+ */
+export async function checkDiscoveryConfig(): Promise<void> {
+  const base = config.publicBaseUrl.replace(/\/$/, "");
+  if (!base) {
+    console.warn(
+      "[x402] PUBLIC_BASE_URL unset — discovery will use the request Host header. " +
+        "Behind nginx/Caddy, set it to your public API origin (e.g. https://api.example.com).",
+    );
+    return;
+  }
+
+  const probe = `${base}/x402/topup?amount=${config.minTopUpAtomic}`;
+  try {
+    const res = await fetch(probe, { method: "POST" });
+    if (res.status !== 402) {
+      console.warn(
+        `[x402] PUBLIC_BASE_URL=${base} returned HTTP ${res.status} for POST /x402/topup ` +
+          `(expected 402). Bazaar discovery will advertise ${base}/x402/topup — if that is ` +
+          "your static web app, fix PUBLIC_BASE_URL to your registry API origin and restart.",
+      );
+      return;
+    }
+    const header = res.headers.get("payment-required");
+    if (!header) {
+      console.warn(
+        "[x402] POST /x402/topup on PUBLIC_BASE_URL did not return PAYMENT-REQUIRED — " +
+          "is PUBLIC_BASE_URL pointing at this registry?",
+      );
+      return;
+    }
+    const body = JSON.parse(
+      Buffer.from(header, "base64").toString("utf8"),
+    ) as { resource?: { url?: string; tags?: string[] }; extensions?: unknown };
+    const url = body.resource?.url ?? "";
+    if (!body.extensions) {
+      console.warn("[x402] 402 challenge missing extensions — Bazaar discovery will not run.");
+    }
+    if (!body.resource?.tags?.includes(config.x402Tag)) {
+      console.warn(
+        `[x402] 402 challenge missing tag ${config.x402Tag} on resource — ` +
+          "x402 Global Challenge activity may not be attributed.",
+      );
+    }
+    console.log(`[x402] discovery probe ok — resource ${url}`);
+  } catch (err) {
+    console.warn(`[x402] could not probe PUBLIC_BASE_URL ${base}: ${(err as Error).message}`);
+  }
+}
+
 /** Build the single payment option we accept for `amountAtomic`. */
 export async function requirements(amountAtomic: number): Promise<PaymentRequirements> {
   if (!config.platformPayTo) {

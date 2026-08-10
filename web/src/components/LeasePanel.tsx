@@ -5,6 +5,7 @@ import { type ActiveLease, fetchLease, releaseLease } from "../api";
 import { writeClipboard } from "../clipboard";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
+import { isCustodialSession } from "../lib/session";
 
 interface Props {
   lease: ActiveLease;
@@ -32,7 +33,7 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const isGoogle = session?.authType === "google";
+  const isCustodial = isCustodialSession(session);
 
   const ended = status === "ended" || status === "failed";
 
@@ -104,7 +105,7 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
     setBusy(true);
     setError(null);
     try {
-      if (isGoogle && session) {
+      if (isCustodial && session) {
         await runCustodialAction(session.token, {
           action: "release",
           leaseId: lease.leaseId,

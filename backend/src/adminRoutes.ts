@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import type { AdminDashboard, AdminGasRequest, AdminSessionResponse } from "@tendril/shared";
+import type { AdminDashboard, AdminGasRequest, AdminSessionResponse, AdminSettings } from "@tendril/shared";
 import { adminFromAuthHeader } from "./auth.js";
 import {
   adminGoogleCallback,
@@ -16,6 +16,8 @@ import {
   listGoogleUsers,
   metrics,
   resolveGasRequest,
+  isEmailAuthEnabled,
+  setEmailAuthEnabled,
   type DbGasRequest,
   type GasRequestStatus,
 } from "./db.js";
@@ -162,4 +164,23 @@ adminRouter.get("/treasury", guard(async (req, res) => {
     usdcOptedIn: b.usdcOptedIn,
     gasGrantMicroAlgos: config.gasGrantMicroAlgos,
   });
+}));
+
+adminRouter.get("/settings", guard(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const body: AdminSettings = {
+    emailAuthEnabled: await isEmailAuthEnabled(),
+  };
+  res.json(body);
+}));
+
+adminRouter.patch("/settings", guard(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { emailAuthEnabled } = (req.body ?? {}) as { emailAuthEnabled?: boolean };
+  if (typeof emailAuthEnabled !== "boolean") {
+    return res.status(400).json({ error: "emailAuthEnabled boolean required" });
+  }
+  await setEmailAuthEnabled(emailAuthEnabled);
+  const body: AdminSettings = { emailAuthEnabled };
+  res.json(body);
 }));

@@ -16,6 +16,7 @@ export function AdminLayout() {
           <NavLink to="/gas-requests">Gas requests</NavLink>
           <NavLink to="/users">Users</NavLink>
           <NavLink to="/treasury">Treasury</NavLink>
+          <NavLink to="/settings">Settings</NavLink>
         </nav>
         <div style={{ marginTop: "auto", paddingTop: 24 }}>
           {email && <p className="small muted">{email}</p>}

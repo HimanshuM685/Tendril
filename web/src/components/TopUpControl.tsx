@@ -4,6 +4,7 @@ import { topUp, type TopUpStage } from "../wallet";
 import type { SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
+import { isCustodialSession } from "../lib/session";
 
 interface Props {
   address: string;
@@ -31,13 +32,13 @@ export function TopUpControl({
   const [stage, setStage] = useState<TopUpStage | "requesting" | "done" | "confirming" | null>(null);
   const amountOk = Number.isFinite(amount) && amount > 0;
   const busy = stage !== null && stage !== "done";
-  const isGoogle = session?.authType === "google";
+  const isCustodial = isCustodialSession(session);
 
   async function deposit() {
     if (!amountOk || busy) return;
     setStage("requesting");
     try {
-      if (isGoogle && session) {
+      if (isCustodial && session) {
         setStage("confirming");
         await runCustodialAction(session.token, {
           action: "topup",

@@ -13,6 +13,7 @@ import { writeClipboard } from "../clipboard";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import type { Session } from "../App";
+import { isCustodialSession } from "../lib/session";
 
 interface Props {
   address: string | null;
@@ -49,7 +50,7 @@ export function Contribute({
   const [mintKeyFee, setMintKeyFee] = useState(100_000);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const isGoogle = session?.authType === "google";
+  const isCustodial = isCustodialSession(session);
 
   useEffect(() => {
     if (!address) {
@@ -96,7 +97,7 @@ export function Contribute({
     onError(null);
     try {
       let created: CreateApiKeyResponse;
-      if (isGoogle) {
+      if (isCustodial) {
         setMintStage("confirming");
         created = (await runCustodialAction(session.token, {
           action: "mintkey",

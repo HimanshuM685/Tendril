@@ -16,11 +16,12 @@ import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
+import { isCustodialSession } from "./lib/session";
 
 export type Session = {
   token: string;
   address: string;
-  authType?: "wallet" | "google";
+  authType?: "wallet" | "google" | "email";
   email?: string;
   name?: string | null;
 };
@@ -77,7 +78,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   const effectiveAddress = session?.address ?? activeAddress ?? null;
-  const isGoogleSession = session?.authType === "google";
+  const isCustodialAuth = isCustodialSession(session);
 
   // Keep localStorage in lockstep with the session so reloads stay signed in.
   const setSession = useCallback((s: Session | null) => {
@@ -113,11 +114,11 @@ export function App() {
   // activeAddress is briefly null) doesn't wrongly clear a valid session.
   // Google sessions are independent of the browser wallet.
   useEffect(() => {
-    if (!isReady || isGoogleSession) return;
+    if (!isReady || isCustodialAuth) return;
     if (!activeAddress || (session && session.address !== activeAddress)) {
       setSession(null);
     }
-  }, [isReady, activeAddress, session, setSession, isGoogleSession]);
+  }, [isReady, activeAddress, session, setSession, isCustodialAuth]);
 
   const refreshWallet = useCallback(
     async (token: string) => {
@@ -159,7 +160,7 @@ export function App() {
   }, [session, refreshWallet]);
 
   async function signIn() {
-    if (!activeAddress || isGoogleSession) return;
+    if (!activeAddress || isCustodialAuth) return;
     setSigningIn(true);
     setError(null);
     try {
@@ -221,10 +222,19 @@ export function App() {
           <WalletBar
             session={session}
             signedIn={!!session}
-            canSignIn={!!activeAddress && !isGoogleSession}
+            canSignIn={!!activeAddress && !isCustodialAuth}
             signingIn={signingIn}
             onSignIn={signIn}
             onSignOut={() => setSession(null)}
+            onCustodialSession={(res) =>
+              setSession({
+                token: res.token,
+                address: res.address,
+                authType: res.authType,
+                email: res.email,
+                name: res.name,
+              })
+            }
             onAccountRefresh={onWalletChanged}
             balanceAtomic={wallet?.balanceAtomic ?? null}
             signTransactions={signTransactions as never}

@@ -6,7 +6,7 @@ import { initDb } from "./db.js";
 import { initWs } from "./ws.js";
 import { startWatchdog } from "./leases.js";
 import { allowedOrigin, corsPolicy } from "./x402/cors.js";
-import { checkFacilitator } from "./x402/server.js";
+import { checkFacilitator, checkDiscoveryConfig } from "./x402/server.js";
 
 // A billing/payment error must never take down the registry.
 process.on("unhandledRejection", (reason) => {
@@ -56,6 +56,7 @@ async function main(): Promise<void> {
   // Loud at boot rather than opaque at the first payment: confirms the
   // facilitator speaks our network and tells us who sponsors the fees.
   await checkFacilitator();
+  await checkDiscoveryConfig();
 
   const httpServer = createServer(app);
   initWs(httpServer, corsOrigin);

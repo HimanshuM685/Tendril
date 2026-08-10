@@ -5,6 +5,7 @@ import { type ActiveLease, fetchExplorer, rentNode, toActiveLease } from "../api
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
+import { isCustodialSession } from "../lib/session";
 
 interface Props {
   session: Session | null;
@@ -28,7 +29,7 @@ export function Explore({
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
   const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
-  const isGoogle = session?.authType === "google";
+  const isCustodial = isCustodialSession(session);
 
   // Poll the node list, pausing while the tab is hidden — same pattern as the
   // balance poll in App. A stale "can't reach backend" error clears itself on
@@ -72,10 +73,10 @@ export function Explore({
 
   async function rent(node: ExplorerNode) {
     if (!activeAddress) {
-      setError(isGoogle ? "Sign in to rent." : "Connect a wallet to rent.");
+      setError(isCustodial ? "Sign in to rent." : "Connect a wallet to rent.");
       return;
     }
-    if (isGoogle && !session) {
+    if (isCustodial && !session) {
       setError("Sign in to rent.");
       return;
     }
@@ -84,7 +85,7 @@ export function Explore({
     setError(null);
     try {
       let res: X402RentResponse;
-      if (isGoogle && session) {
+      if (isCustodial && session) {
         setStage("confirming");
         res = (await runCustodialAction(session.token, {
           action: "rent",
@@ -123,7 +124,7 @@ export function Explore({
     confirming: "Confirm in dialog…",
   };
 
-  const connectHint = isGoogle
+  const connectHint = isCustodial
     ? !session && "Sign in with Google to rent."
     : !activeAddress && "Connect your wallet to rent.";
 
@@ -145,7 +146,7 @@ export function Explore({
         {nodes.map((n) => {
           const rate = atomicPerHour(n.pricePerHourUsd);
           const runtime = runtimeFor(n.pricePerHourUsd);
-          const canRent = !!activeAddress && (!isGoogle || !!session);
+          const canRent = !!activeAddress && (!isCustodial || !!session);
           return (
             <div className="card" key={n.id}>
               <div className="card-head">

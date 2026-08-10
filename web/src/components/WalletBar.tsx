@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
-import type { GasRequestInfo } from "@tendril/shared";
+import type { EmailSessionResponse, GasRequestInfo, GoogleSessionResponse } from "@tendril/shared";
 import { formatUsdc, formatUsdcExact } from "@tendril/shared";
-import { fetchGoogleEnabled, googleLoginUrl } from "../lib/custodialClient";
+import { fetchEmailEnabled, fetchGoogleEnabled, googleLoginUrl } from "../lib/custodialClient";
 import {
   fetchOnchainBalances,
   fetchWalletAccount,
@@ -14,7 +14,9 @@ import {
 import type { SignTransactions } from "../wallet";
 import type { Session } from "../App";
 import { GoogleWalletBar } from "./GoogleWalletBar";
+import { EmailAuthModal } from "./EmailAuthModal";
 import { OnchainAccountPanel } from "./OnchainAccountPanel";
+import { isCustodialSession } from "../lib/session";
 import type { OnchainPanelState } from "./OnchainAccountPanel";
 
 interface Props {
@@ -24,6 +26,7 @@ interface Props {
   signingIn: boolean;
   onSignIn: () => void;
   onSignOut: () => void;
+  onCustodialSession: (res: GoogleSessionResponse | EmailSessionResponse) => void;
   onAccountRefresh?: () => void;
   balanceAtomic: number | null;
   signTransactions: SignTransactions;
@@ -38,6 +41,7 @@ export function WalletBar({
   signingIn,
   onSignIn,
   onSignOut,
+  onCustodialSession,
   onAccountRefresh,
   balanceAtomic,
   signTransactions,
@@ -47,6 +51,8 @@ export function WalletBar({
   const [picking, setPicking] = useState(false);
   const [open, setOpen] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [onchain, setOnchain] = useState<OnchainPanelState | null>(null);
   const [gasRequest, setGasRequest] = useState<GasRequestInfo | null | undefined>(undefined);
   const [gasBusy, setGasBusy] = useState(false);
@@ -55,10 +61,11 @@ export function WalletBar({
   const barRef = useRef<HTMLDivElement>(null);
   const autoSignIn = useRef(false);
 
-  const walletSignedIn = signedIn && session?.authType !== "google";
+  const walletSignedIn = signedIn && !isCustodialSession(session);
 
   useEffect(() => {
     void fetchGoogleEnabled().then(setGoogleEnabled);
+    void fetchEmailEnabled().then(setEmailEnabled);
   }, []);
 
   useEffect(() => {
@@ -115,7 +122,7 @@ export function WalletBar({
     return () => clearInterval(t);
   }, [activeAddress, walletSignedIn, session?.token]);
 
-  if (session?.authType === "google") {
+  if (isCustodialSession(session)) {
     return (
       <GoogleWalletBar
         session={session}
@@ -197,6 +204,21 @@ export function WalletBar({
           </button>
         </div>
         <div className="modal-wallets">
+          {emailEnabled && (
+            <button
+              type="button"
+              className="wallet-choice wallet-choice-email"
+              onClick={() => {
+                setPicking(false);
+                setEmailOpen(true);
+              }}
+            >
+              <span className="email-icon" aria-hidden="true">
+                @
+              </span>
+              <span>Continue with email</span>
+            </button>
+          )}
           {googleEnabled && (
             <button
               type="button"
@@ -344,6 +366,15 @@ export function WalletBar({
           </div>
         )}
         {picker}
+        {emailOpen && (
+          <EmailAuthModal
+            onClose={() => setEmailOpen(false)}
+            onSuccess={(res) => {
+              setEmailOpen(false);
+              onCustodialSession(res);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -354,6 +385,15 @@ export function WalletBar({
         Connect Wallet
       </button>
       {picker}
+      {emailOpen && (
+        <EmailAuthModal
+          onClose={() => setEmailOpen(false)}
+          onSuccess={(res) => {
+            setEmailOpen(false);
+            onCustodialSession(res);
+          }}
+        />
+      )}
     </div>
   );
 }

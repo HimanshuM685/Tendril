@@ -8,6 +8,7 @@ import { GoogleCallback } from "./pages/GoogleCallback";
 import { Login } from "./pages/Login";
 import { Treasury } from "./pages/Treasury";
 import { Users } from "./pages/Users";
+import { Settings } from "./pages/Settings";
 
 interface AdminAuth {
   token: string | null;
@@ -73,6 +74,7 @@ export function App() {
           <Route path="gas-requests" element={<GasRequests />} />
           <Route path="users" element={<Users />} />
           <Route path="treasury" element={<Treasury />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

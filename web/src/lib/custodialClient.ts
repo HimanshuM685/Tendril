@@ -1,4 +1,5 @@
 import type {
+  EmailSessionResponse,
   GasRequestInfo,
   GoogleAccountResponse,
   GoogleSessionResponse,
@@ -23,6 +24,43 @@ export async function fetchGoogleEnabled(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function fetchEmailEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`${REGISTRY_URL}/auth/email/enabled`);
+    if (!res.ok) return false;
+    const body = (await res.json()) as { enabled?: boolean };
+    return !!body.enabled;
+  } catch {
+    return false;
+  }
+}
+
+export async function registerWithEmail(
+  email: string,
+  password: string,
+): Promise<EmailSessionResponse> {
+  const res = await fetch(`${REGISTRY_URL}/auth/email/register`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw await apiError(res, "sign up");
+  return res.json();
+}
+
+export async function loginWithEmail(
+  email: string,
+  password: string,
+): Promise<EmailSessionResponse> {
+  const res = await fetch(`${REGISTRY_URL}/auth/email/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw await apiError(res, "sign in");
+  return res.json();
 }
 
 export function googleLoginUrl(): string {

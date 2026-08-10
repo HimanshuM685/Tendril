@@ -5,7 +5,11 @@ import { config } from "./config.js";
 // Contributor agents authenticate with an API key, not a key pair — see
 // `ownerOfApiKey` in db.ts. Everything here is the renter/browser side.
 
-export type SessionKind = "session" | "google-session" | "admin-session";
+export type SessionKind = "session" | "google-session" | "email-session" | "admin-session";
+
+export function isCustodialSessionKind(kind: SessionKind): boolean {
+  return kind === "google-session" || kind === "email-session";
+}
 
 export interface SessionInfo {
   address: string;
@@ -77,6 +81,13 @@ export function issueGoogleSession(userId: string, address: string, email: strin
   });
 }
 
+/** Mint a session token for an email/password custodial user. */
+export function issueEmailSession(userId: string, address: string, email: string): string {
+  return jwt.sign({ userId, address, email, kind: "email-session" }, config.jwtSecret, {
+    expiresIn: "7d",
+  });
+}
+
 /** Short-lived one-time code exchanged by the web app for a session JWT. */
 export function issueGoogleExchangeCode(userId: string): string {
   const jti = randomUUID();
@@ -112,6 +123,9 @@ export function sessionFromAuthHeader(header?: string): SessionInfo | null {
     }
     if (p.kind === "google-session" && p.address && p.userId) {
       return { address: p.address, kind: "google-session", userId: p.userId, email: p.email };
+    }
+    if (p.kind === "email-session" && p.address && p.userId) {
+      return { address: p.address, kind: "email-session", userId: p.userId, email: p.email };
     }
     return null;
   } catch {

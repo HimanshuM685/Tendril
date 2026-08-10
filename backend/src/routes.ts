@@ -43,12 +43,14 @@ import {
 } from "./x402/credit.js";
 import {
   addressFromSession,
+  isCustodialSessionKind,
   issueLeaseToken,
   issueSession,
   issueWalletNonce,
   leaseIdFromAuthHeader,
   sessionFromAuthHeader,
   verifyWalletNonce,
+  type SessionInfo,
 } from "./auth.js";
 import {
   createApiKey,
@@ -91,6 +93,7 @@ import {
   googleStart,
   isGoogleAuthEnabled,
 } from "./googleAuth.js";
+import { emailEnabled, emailLogin, emailRegister } from "./emailAuth.js";
 import { syncGasGrantEligibility, syncWalletGasGrantEligibility } from "./gasGrant.js";
 
 export const router = Router();
@@ -171,12 +174,15 @@ router.get("/auth/google/enabled", guard((_req, res) => {
   res.json({ enabled: isGoogleAuthEnabled() });
 }));
 
+// ─────────────────────── Email/password (custodial login) ───────────────────────
+router.get("/auth/email/enabled", guard(emailEnabled));
+router.post("/auth/email/register", guard(emailRegister));
+router.post("/auth/email/login", guard(emailLogin));
+
 router.get("/auth/google/account", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "Google account endpoint requires Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   await syncGasGrantEligibility(session.userId, session.address);
   const user = await findUserById(session.userId);
   const info = await googleAccountInfo(session.address);
@@ -189,9 +195,7 @@ router.get("/auth/google/account", guard(async (req: Request, res: Response) => 
 router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "custodial signing requires Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   try {
     const body = req.body as PrepareAction;
     if (!body?.action) return res.status(400).json({ error: "action required" });
@@ -204,9 +208,7 @@ router.post("/auth/google/prepare", guard(async (req: Request, res: Response) =>
 router.post("/auth/google/confirm", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "custodial signing requires Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   const { requestId } = (req.body ?? {}) as { requestId?: string };
   if (!requestId) return res.status(400).json({ error: "requestId required" });
   try {
@@ -219,9 +221,7 @@ router.post("/auth/google/confirm", guard(async (req: Request, res: Response) =>
 router.post("/auth/google/export-key", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "export requires Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   const { confirmed } = (req.body ?? {}) as { confirmed?: boolean };
   if (!confirmed) return res.status(400).json({ error: "confirmation required" });
   if (!checkExportRateLimit(session.userId)) {
@@ -250,9 +250,7 @@ function toGasRequestInfo(r: DbGasRequest): GasRequestInfo {
 router.get("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "gas requests require Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   const row = await findGasRequestByUserId(session.userId);
   res.json(row ? toGasRequestInfo(row) : null);
 }));
@@ -260,9 +258,7 @@ router.get("/auth/google/gas-request", guard(async (req: Request, res: Response)
 router.post("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (session.kind !== "google-session" || !session.userId) {
-    return res.status(403).json({ error: "gas requests require Google sign-in" });
-  }
+  if (!requireCustodialSession(session, res)) return;
   const existing =
     (await findGasRequestByUserId(session.userId)) ??
     (await findGasRequestByAddress(session.address));
@@ -1043,7 +1039,7 @@ function requireSession(req: Request, res: Response): string | null {
   return info?.address ?? null;
 }
 
-/** Wallet or Google session — both can use /wallet and /keys. */
+/** Wallet or custodial session — both can use /wallet and /keys. */
 function requireSessionInfo(req: Request, res: Response) {
   const info = sessionFromAuthHeader(req.header("authorization"));
   if (!info) {
@@ -1051,6 +1047,17 @@ function requireSessionInfo(req: Request, res: Response) {
     return null;
   }
   return info;
+}
+
+function requireCustodialSession(
+  session: SessionInfo,
+  res: Response,
+): session is SessionInfo & { userId: string } {
+  if (!isCustodialSessionKind(session.kind) || !session.userId) {
+    res.status(403).json({ error: "custodial account sign-in required" });
+    return false;
+  }
+  return true;
 }
 
 /**

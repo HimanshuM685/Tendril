@@ -2,6 +2,7 @@ import type {
   AdminDashboard,
   AdminGasRequest,
   AdminSessionResponse,
+  AdminSettings,
   GasRequestStatus,
 } from "@tendril/shared";
 
@@ -152,4 +153,25 @@ export async function fetchTreasury(token: string) {
     usdcOptedIn: boolean;
     gasGrantMicroAlgos: number;
   }>;
+}
+
+export async function fetchAdminSettings(token: string): Promise<AdminSettings> {
+  const res = await fetch(`${REGISTRY_URL}/admin/settings`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw await apiError(res, "settings");
+  return res.json();
+}
+
+export async function updateAdminSettings(
+  token: string,
+  patch: Partial<AdminSettings>,
+): Promise<AdminSettings> {
+  const res = await fetch(`${REGISTRY_URL}/admin/settings`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw await apiError(res, "settings");
+  return res.json();
 }

@@ -472,6 +472,13 @@ export interface GoogleSessionResponse extends WalletLoginResponse {
   authType: "google";
 }
 
+/** POST /auth/email/register or /auth/email/login response. */
+export interface EmailSessionResponse extends WalletLoginResponse {
+  email: string;
+  name: string | null;
+  authType: "email";
+}
+
 /** GET /auth/google/account */
 export interface GoogleAccountResponse {
   address: string;
@@ -551,6 +558,11 @@ export interface AdminSessionResponse {
   token: string;
   email: string;
   name?: string | null;
+}
+
+/** GET/PATCH /admin/settings */
+export interface AdminSettings {
+  emailAuthEnabled: boolean;
 }
 
 /** What the platform charges in, and where (GET /platform). */
