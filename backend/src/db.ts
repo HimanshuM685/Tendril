@@ -723,8 +723,8 @@ export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
       ),
       q<{ topped: number; spent: number }>(
         `SELECT
-           (SELECT COALESCE(SUM(amount_micro),0)::bigint FROM topups) AS topped,
-           (SELECT COALESCE(SUM(amount_micro),0)::bigint FROM charges) AS spent`,
+           COALESCE((SELECT SUM(amount_micro) FROM topups), 0)::bigint AS topped,
+           COALESCE((SELECT SUM(amount_micro) FROM charges), 0)::bigint AS spent`,
       ),
     ]);
 
@@ -741,8 +741,8 @@ export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
     activeOverTime,
     totalUsers: usersOverTime.at(-1)?.count ?? 0,
     totalActive: new Set(live.map((w) => w.address)).size,
-    totalTopupAtomic: totals[0]?.topped ?? 0,
-    totalSpendAtomic: totals[0]?.spent ?? 0,
+    totalTopupAtomic: Number(totals[0]?.topped) || 0,
+    totalSpendAtomic: Number(totals[0]?.spent) || 0,
     topUsers: { topup, leaseTime, leaseSpan },
     topContributors: { timeServed, timesServed },
   };

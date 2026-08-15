@@ -5,7 +5,10 @@ import { fetchMetrics } from "../api";
 
 const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
-function fmtDur(seconds: number): string {
+function fmtUsdc(atomic: unknown): string {
+  const n = Number(atomic);
+  return formatUsdc(Number.isFinite(n) ? n : 0);
+}
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -34,11 +37,11 @@ export function Metrics() {
       <div className="stat-grid">
         <div className="stat">
           <p className="muted small">Total top-up</p>
-          <p className="metric-big">{formatUsdc(data.totalTopupAtomic)}</p>
+          <p className="metric-big">{fmtUsdc(data.totalTopupAtomic)}</p>
         </div>
         <div className="stat">
           <p className="muted small">Total spend</p>
-          <p className="metric-big">{formatUsdc(data.totalSpendAtomic)}</p>
+          <p className="metric-big">{fmtUsdc(data.totalSpendAtomic)}</p>
         </div>
       </div>
 
