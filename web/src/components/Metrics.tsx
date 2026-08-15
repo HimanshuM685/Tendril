@@ -31,6 +31,17 @@ export function Metrics() {
         METRICS
       </h2>
 
+      <div className="stat-grid">
+        <div className="stat">
+          <p className="muted small">Total top-up</p>
+          <p className="metric-big">{formatUsdc(data.totalTopupAtomic)}</p>
+        </div>
+        <div className="stat">
+          <p className="muted small">Total spend</p>
+          <p className="metric-big">{formatUsdc(data.totalSpendAtomic)}</p>
+        </div>
+      </div>
+
       <LineCard title="Users over time" series={data.usersOverTime} now={data.totalUsers} />
 
       <Board

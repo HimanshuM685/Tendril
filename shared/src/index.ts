@@ -286,6 +286,10 @@ export interface Metrics {
   totalUsers: number;
   /** Distinct users on compute right now, not all-time. */
   totalActive: number;
+  /** Sum of settled top-ups, atomic units of the platform asset. */
+  totalTopupAtomic: number;
+  /** Sum of lease charges across all users, atomic units. */
+  totalSpendAtomic: number;
   /** Renter leaderboards. topup=atomic units, leaseTime=seconds, leaseSpan=lease count. */
   topUsers: { topup: RankRow[]; leaseTime: RankRow[]; leaseSpan: RankRow[] };
   /** Contributor leaderboards. timeServed=seconds, timesServed=lease count. */

@@ -685,7 +685,7 @@ export function activeUsersByChange(windows: ActiveWindow[]): MetricPoint[] {
  * Public (no PII beyond the addresses users already broadcast on-chain).
  */
 export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
-  const [userFirsts, closedWindows, topup, leaseTime, leaseSpan, timeServed, timesServed] =
+  const [userFirsts, closedWindows, topup, leaseTime, leaseSpan, timeServed, timesServed, totals] =
     await Promise.all([
       // A user is anyone who has ever paid us, whether that was a top-up or a
       // lease paid for directly — counting only top-ups misses the second kind
@@ -721,6 +721,11 @@ export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
       q<{ address: string; value: number }>(
         "SELECT pay_to AS address, COUNT(DISTINCT lease_id)::bigint AS value FROM charges WHERE pay_to <> '' GROUP BY pay_to ORDER BY value DESC LIMIT 20",
       ),
+      q<{ topped: number; spent: number }>(
+        `SELECT
+           (SELECT COALESCE(SUM(amount_micro),0)::bigint FROM topups) AS topped,
+           (SELECT COALESCE(SUM(amount_micro),0)::bigint FROM charges) AS spent`,
+      ),
     ]);
 
   const usersOverTime = cumulativeByChange(userFirsts.map((r) => r.first));
@@ -736,6 +741,8 @@ export async function metrics(live: ActiveWindow[] = []): Promise<Metrics> {
     activeOverTime,
     totalUsers: usersOverTime.at(-1)?.count ?? 0,
     totalActive: new Set(live.map((w) => w.address)).size,
+    totalTopupAtomic: totals[0]?.topped ?? 0,
+    totalSpendAtomic: totals[0]?.spent ?? 0,
     topUsers: { topup, leaseTime, leaseSpan },
     topContributors: { timeServed, timesServed },
   };
