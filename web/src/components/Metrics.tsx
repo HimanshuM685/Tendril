@@ -54,12 +54,61 @@ export function Metrics() {
 }
 
 // ─────────────────────────── line chart ───────────────────────────
-// Inline SVG (same approach as BalanceChart — no charting dependency).
+// Inline SVG. X is wall-clock time so gaps between events are real.
+
+type ChartRange = "all" | "month";
+
+function monthStartMs(now: number): number {
+  const d = new Date(now);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** Window a cumulative series onto [t0, t1], carrying the last count before t0. */
+function windowSeries(
+  series: MetricPoint[],
+  range: ChartRange,
+  nowMs: number,
+): { plot: MetricPoint[]; events: MetricPoint[]; t0: number; t1: number } {
+  const t1 = nowMs;
+  const t0 = range === "month" ? monthStartMs(nowMs) : (series[0]?.t ?? nowMs);
+
+  let carry = 0;
+  const events: MetricPoint[] = [];
+  for (const p of series) {
+    if (p.t < t0) carry = p.count;
+    else if (p.t <= t1) events.push(p);
+  }
+
+  const plot: MetricPoint[] = [{ t: t0, count: carry }, ...events];
+  const last = plot[plot.length - 1];
+  if (last.t < t1) plot.push({ t: t1, count: last.count });
+  return { plot, events, t0, t1 };
+}
 
 function LineCard({ title, series, now }: { title: string; series: MetricPoint[]; now: number }) {
   const W = 900;
   const H = 240;
   const pad = { l: 12, r: 12, t: 20, b: 34 };
+  const [range, setRange] = useState<ChartRange>("all");
+  const nowMs = Date.now();
+  const { plot, events, t0, t1 } = windowSeries(series, range, nowMs);
+
+  const tabs = (
+    <div className="board-tabs chart-range">
+      {(["all", "month"] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          className={range === r ? "board-tab active" : "board-tab"}
+          onClick={() => setRange(r)}
+        >
+          {r === "all" ? "All time" : "This month"}
+        </button>
+      ))}
+    </div>
+  );
 
   if (series.length === 0) {
     return (
@@ -68,44 +117,38 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
           <h3>{title}</h3>
           <span className="metric-big">0</span>
         </div>
+        {tabs}
         <p className="muted small">No data yet.</p>
       </div>
     );
   }
 
-  // X is the change index, not wall-clock time (same as BalanceChart): every
-  // step gets the same width, so a day of signups reads as clearly as a year.
-  // Single point holds a flat line across the width so it still reads.
-  const xy = series.length === 1 ? [series[0], series[0]] : series;
-  const vMax = Math.max(...xy.map((p) => p.count), 1);
-  const top = vMax * 1.15; // headroom so the line doesn't glue to the top edge
-  const iMax = xy.length - 1 || 1;
-  const x = (i: number) => pad.l + (i / iMax) * (W - pad.l - pad.r);
+  const vMax = Math.max(...plot.map((p) => p.count), 1);
+  const top = vMax * 1.15;
+  const span = Math.max(t1 - t0, 1);
+  const x = (t: number) => pad.l + ((t - t0) / span) * (W - pad.l - pad.r);
   const y = (v: number) => H - pad.b - (v / top) * (H - pad.t - pad.b);
 
-  const line = xy
-    .map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.count).toFixed(1)}`)
+  const step = plot
+    .map((p, i) =>
+      i === 0
+        ? `M${x(p.t).toFixed(1)},${y(p.count).toFixed(1)}`
+        : `H${x(p.t).toFixed(1)} L${x(p.t).toFixed(1)},${y(p.count).toFixed(1)}`,
+    )
     .join(" ");
-  const area = `${line} L${x(iMax).toFixed(1)},${H - pad.b} L${x(0).toFixed(1)},${H - pad.b} Z`;
-  const last = xy[xy.length - 1];
+  const last = plot[plot.length - 1];
+  const area = `${step} L${x(last.t).toFixed(1)},${H - pad.b} L${x(plot[0].t).toFixed(1)},${H - pad.b} Z`;
 
-  // Label granularity follows the span the changes cover: hours, days, months.
-  const hours = (xy[xy.length - 1].t - xy[0].t) / 3_600_000;
+  const hours = span / 3_600_000;
   const tickOpts: Intl.DateTimeFormatOptions =
     hours < 36
       ? { hour: "2-digit", minute: "2-digit" }
-      : hours < 24 * 365
+      : hours < 24 * 40
         ? { month: "short", day: "numeric" }
         : { month: "short", year: "numeric" };
   const fmtDate = (ms: number) => new Date(ms).toLocaleString(undefined, tickOpts);
-
-  // Up to 4 evenly-spaced ticks over the change indices.
-  const tickCount = Math.min(4, xy.length);
-  const ticks = Array.from(
-    new Set(
-      Array.from({ length: tickCount }, (_, k) => Math.round((k * iMax) / Math.max(1, tickCount - 1))),
-    ),
-  );
+  const tickCount = 4;
+  const ticks = Array.from({ length: tickCount }, (_, k) => t0 + (k * span) / (tickCount - 1));
 
   return (
     <div className="panel chart-card">
@@ -113,25 +156,26 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
         <h3>{title}</h3>
         <span className="metric-big">{now}</span>
       </div>
+      {tabs}
       <figure className="balance-chart">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title}>
           <line className="bc-grid" x1={pad.l} y1={y(vMax)} x2={W - pad.r} y2={y(vMax)} />
           <path className="bc-area" d={area} />
-          <path className="bc-line" d={line} />
-          {/* one marker per change */}
-          {series.length > 1 &&
-            xy.map((p, i) => <circle key={i} className="bc-dot" cx={x(i)} cy={y(p.count)} r={3} />)}
-          <circle className="bc-dot bc-dot-now" cx={x(iMax)} cy={y(last.count)} r={5} />
+          <path className="bc-line" d={step} />
+          {events.map((p, i) => (
+            <circle key={`${p.t}-${i}`} className="bc-dot" cx={x(p.t)} cy={y(p.count)} r={3} />
+          ))}
+          <circle className="bc-dot bc-dot-now" cx={x(last.t)} cy={y(last.count)} r={5} />
           <text className="bc-vlabel" x={pad.l} y={y(vMax) - 7}>{vMax}</text>
-          {ticks.map((i) => (
+          {ticks.map((t, i) => (
             <text
-              key={i}
+              key={t}
               className="bc-tlabel"
-              x={x(i)}
+              x={x(t)}
               y={H - 10}
-              textAnchor={i === 0 ? "start" : i === iMax ? "end" : "middle"}
+              textAnchor={i === 0 ? "start" : i === tickCount - 1 ? "end" : "middle"}
             >
-              {fmtDate(xy[i].t)}
+              {fmtDate(t)}
             </text>
           ))}
         </svg>

@@ -1075,6 +1075,7 @@ main { display: block; }
   text-transform: uppercase;
   margin: 0 0 16px;
 }
+.chart-range { margin: 12px 0 0; }
 .board-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 .board-tab {
   font-family: var(--mono);
