@@ -60,34 +60,47 @@ export async function apiError(res: Response, what: string): Promise<Error> {
   return new Error(`${what} failed: ${res.status}${detail ? ` — ${detail}` : ""}`);
 }
 
+export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err) {
+    if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("Failed"))) {
+      throw new Error(
+        `Unable to connect to backend API at ${REGISTRY_URL}. Ensure backend server is running and VITE_REGISTRY_URL is configured correctly.`
+      );
+    }
+    throw err;
+  }
+}
+
 export async function fetchExplorer(): Promise<ExplorerNode[]> {
-  const res = await fetch(`${REGISTRY_URL}/explorer`);
+  const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
   return (await res.json()).nodes as ExplorerNode[];
 }
 
 /** Where to send top-ups + the USD→ALGO rate used to show prices in ALGO. */
 export async function fetchPlatform(): Promise<PlatformInfo> {
-  const res = await fetch(`${REGISTRY_URL}/platform`);
+  const res = await safeFetch(`${REGISTRY_URL}/platform`);
   if (!res.ok) throw await apiError(res, "platform");
   return res.json();
 }
 
 export async function fetchMetrics(): Promise<Metrics> {
-  const res = await fetch(`${REGISTRY_URL}/metrics`);
+  const res = await safeFetch(`${REGISTRY_URL}/metrics`);
   if (!res.ok) throw await apiError(res, "metrics");
   return res.json();
 }
 
 export async function fetchMyNodes(owner: string): Promise<ComputeNode[]> {
-  const res = await fetch(`${REGISTRY_URL}/nodes?owner=${owner}`);
+  const res = await safeFetch(`${REGISTRY_URL}/nodes?owner=${owner}`);
   if (!res.ok) throw await apiError(res, "nodes");
   return (await res.json()).nodes as ComputeNode[];
 }
 
 /** The signed-in wallet's balance + deposit/spend history. */
 export async function fetchWallet(token: string): Promise<WalletSummary> {
-  const res = await fetch(`${REGISTRY_URL}/wallet`, {
+  const res = await safeFetch(`${REGISTRY_URL}/wallet`, {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw await apiError(res, "wallet");
@@ -99,7 +112,7 @@ export async function fetchWallet(token: string): Promise<WalletSummary> {
 // earnings it accrues.
 
 export async function fetchApiKeys(token: string): Promise<ApiKeyInfo[]> {
-  const res = await fetch(`${REGISTRY_URL}/keys`, {
+  const res = await safeFetch(`${REGISTRY_URL}/keys`, {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw await apiError(res, "keys");
@@ -127,7 +140,7 @@ export async function createApiKey(
 }
 
 export async function revokeApiKey(token: string, id: number): Promise<void> {
-  const res = await fetch(`${REGISTRY_URL}/keys/${id}`, {
+  const res = await safeFetch(`${REGISTRY_URL}/keys/${id}`, {
     method: "DELETE",
     headers: { authorization: `Bearer ${token}` },
   });
@@ -136,7 +149,7 @@ export async function revokeApiKey(token: string, id: number): Promise<void> {
 
 /** Cash the whole earnings balance out to the signed-in wallet, on-chain. */
 export async function withdrawEarnings(token: string): Promise<WithdrawResponse> {
-  const res = await fetch(`${REGISTRY_URL}/withdraw`, {
+  const res = await safeFetch(`${REGISTRY_URL}/withdraw`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}` },
   });
@@ -192,7 +205,7 @@ export function toActiveLease(r: X402RentResponse, label: string): ActiveLease {
 
 /** Poll a lease to refresh its projected expiry + status as the meter bills it. */
 export async function fetchLease(leaseId: string, leaseToken: string): Promise<Lease> {
-  const res = await fetch(`${REGISTRY_URL}/lease/${leaseId}`, {
+  const res = await safeFetch(`${REGISTRY_URL}/lease/${leaseId}`, {
     headers: { authorization: `Bearer ${leaseToken}` },
   });
   if (!res.ok) throw await apiError(res, "lease");
@@ -232,7 +245,7 @@ export async function releaseLease(
   leaseId: string,
   leaseToken: string,
 ): Promise<LeaseCloseResponse | null> {
-  const res = await fetch(`${REGISTRY_URL}/x402/leases/${leaseId}`, {
+  const res = await safeFetch(`${REGISTRY_URL}/x402/leases/${leaseId}`, {
     method: "DELETE",
     headers: { authorization: `Bearer ${leaseToken}` },
   });
