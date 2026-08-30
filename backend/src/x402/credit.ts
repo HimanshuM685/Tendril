@@ -18,7 +18,7 @@
  * withdraw it to their wallet in one on-chain transfer.
  */
 import type { PoolClient } from "pg";
-import pool, { q } from "../db.js";
+import { q, inTransaction } from "../db.js";
 import { config } from "../config.js";
 
 /** Current credit balance for an address, in atomic units. 0 if never seen. */
@@ -210,17 +210,4 @@ async function addEarnings(
   return Number(res.rows[0].amount_atomic);
 }
 
-async function inTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const out = await fn(client);
-    await client.query("COMMIT");
-    return out;
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
+

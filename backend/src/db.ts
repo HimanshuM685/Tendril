@@ -45,18 +45,37 @@ const pool = new pg.Pool({
   ssl: config.databaseUrl?.includes("localhost") ? undefined : { rejectUnauthorized: false },
 });
 
-pool.on("connect", (client) => {
-  client.query(`SET search_path TO "${SCHEMA}", public`);
-});
-
 // int8/bigint comes back as a string by default; we store epoch-ms + atomic
 // units (well within Number's safe range here) so parse them to numbers.
 pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 
 type Row = Record<string, unknown>;
+
+export async function inTransaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+    const out = await fn(client);
+    await client.query("COMMIT");
+    return out;
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* client may already be dead */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export async function q<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
-  const res = await pool.query(text, params);
-  return res.rows as T[];
+  return inTransaction(async (client) => {
+    const res = await client.query(text, params);
+    return res.rows as T[];
+  });
 }
 
 /**
@@ -75,7 +94,8 @@ export async function initDb(): Promise<void> {
   // schema that isn't there, but the tables would then land in `public` and the
   // two networks would silently share one ledger.
   await pool.query(`CREATE SCHEMA IF NOT EXISTS "${SCHEMA}"`);
-  await pool.query(`
+  await inTransaction((client) =>
+    client.query(`
     -- Prepaid credit, in atomic units of the configured asset. Fed by
     -- POST /x402/topup and by refunds of unused lease time; spent by renting.
     CREATE TABLE IF NOT EXISTS credits (
@@ -230,7 +250,8 @@ export async function initDb(): Promise<void> {
       address             TEXT PRIMARY KEY,
       gas_grant_eligible  BOOLEAN NOT NULL DEFAULT TRUE
     );
-  `);
+  `),
+  );
 }
 
 export interface DbUser {
