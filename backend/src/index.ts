@@ -36,6 +36,11 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, _res, next) => {
+  if (req.url.startsWith("//")) req.url = req.url.replace(/^\/+/, "/");
+  next();
+});
+
 app.use(router);
 
 /**

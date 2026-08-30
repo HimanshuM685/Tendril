@@ -37,7 +37,7 @@ import {
   type X402TopUpResponse,
 } from "@tendril/shared";
 
-const REGISTRY = process.env.REGISTRY_URL ?? "http://localhost:4000";
+const REGISTRY = (process.env.REGISTRY_URL ?? "http://localhost:4000").replace(/\/+$/, "");
 const MIN_RAM_MB = Number(process.env.AGENT_MIN_RAM_MB ?? 1024);
 const TOPUP_ATOMIC = Number(process.env.AGENT_TOPUP_ATOMIC ?? 500_000); // 0.50 USDC
 const PRIVATE_KEY = process.env.AVM_PRIVATE_KEY ?? "";

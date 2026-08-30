@@ -6,8 +6,9 @@ import type {
   GasRequestStatus,
 } from "@tendril/shared";
 
-export const REGISTRY_URL =
-  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000";
+export const REGISTRY_URL = (
+  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000"
+).replace(/\/+$/, "");
 
 export const EXPLORER_URL =
   (import.meta.env.VITE_EXPLORER_URL as string | undefined) ??

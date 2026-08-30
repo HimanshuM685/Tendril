@@ -17,8 +17,9 @@ import type {
 import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Client";
 import { EXPLORER_URL } from "./lib/network";
 
-export const REGISTRY_URL =
-  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000";
+export const REGISTRY_URL = (
+  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000"
+).replace(/\/+$/, "");
 
 export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;
 export const explorerAddrUrl = (address: string) => `${EXPLORER_URL}/account/${address}`;
