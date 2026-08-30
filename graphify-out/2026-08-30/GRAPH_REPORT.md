@@ -1,16 +1,16 @@
 # Graph Report - Tendril  (2026-08-30)
 
 ## Corpus Check
-- 114 files · ~82,978 words
+- 114 files · ~83,035 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1033 nodes · 2019 edges · 77 communities (67 shown, 10 thin omitted)
+- 1034 nodes · 2031 edges · 72 communities (62 shown, 10 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `43f25298`
+- Built from commit: `b4bcc20d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -71,25 +71,20 @@
 - [[_COMMUNITY_Community 55|Community 55]]
 - [[_COMMUNITY_Community 56|Community 56]]
 - [[_COMMUNITY_Community 57|Community 57]]
-- [[_COMMUNITY_Community 58|Community 58]]
 - [[_COMMUNITY_Community 59|Community 59]]
 - [[_COMMUNITY_Community 60|Community 60]]
 - [[_COMMUNITY_Community 61|Community 61]]
 - [[_COMMUNITY_Community 62|Community 62]]
-- [[_COMMUNITY_Community 63|Community 63]]
 - [[_COMMUNITY_Community 64|Community 64]]
 - [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Community 66|Community 66]]
 - [[_COMMUNITY_Community 67|Community 67]]
 - [[_COMMUNITY_Community 68|Community 68]]
 - [[_COMMUNITY_Community 69|Community 69]]
-- [[_COMMUNITY_Community 73|Community 73]]
-- [[_COMMUNITY_Community 74|Community 74]]
-- [[_COMMUNITY_Community 75|Community 75]]
 - [[_COMMUNITY_Community 76|Community 76]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Fetch` - 41 edges
+1. `Fetch` - 42 edges
 2. `apiError()` - 31 edges
 3. `formatUsdc()` - 28 edges
 4. `Session` - 22 edges
@@ -121,19 +116,19 @@
 - **Tendril monorepo workspaces** — readme_backend_folder, readme_contributor_folder, readme_web_folder, readme_example_buyer_folder, readme_shared_folder [EXTRACTED 1.00]
 - **Tendril authentication credential model** — docs_api_auth_model, docs_api_get_wallet, docs_api_post_keys, docs_api_get_lease [EXTRACTED 1.00]
 
-## Communities (77 total, 10 thin omitted)
+## Communities (72 total, 10 thin omitted)
 
 ### Community 0 - "Frontend Dashboard & UI Components"
-Cohesion: 0.16
-Nodes (24): Contribute(), Props, Props, Explore(), Props, Props, Props, fmtCountdown() (+16 more)
+Cohesion: 0.12
+Nodes (31): Contribute(), Props, Dashboard(), ExplorerLink(), Props, short(), Explore(), Props (+23 more)
 
 ### Community 1 - "Lease Lifecycle & Node Registry"
-Cohesion: 0.19
-Nodes (22): AssetInfo, ProvisionArgs, topUp(), topUpBody(), PaidRequest, requirePayment(), asset, challenge() (+14 more)
+Cohesion: 0.13
+Nodes (31): ProvisionArgs, topUp(), topUpBody(), discoveryExtensions(), RouteDiscovery, serviceMetadata, discovered, payloadFor() (+23 more)
 
 ### Community 2 - "Contributor Sandbox & WS Protocol"
-Cohesion: 0.17
-Nodes (15): runInSandbox(), activeLeases, AgentHelloMsg, ContainerFailedMsg, ContainerReadyMsg, handleRun(), HeartbeatMsg, HelloAckMsg (+7 more)
+Cohesion: 0.14
+Nodes (18): runInSandbox(), activeLeases, AgentHelloMsg, ContainerFailedMsg, ContainerReadyMsg, DestroyContainerMsg, handleRun(), HeartbeatMsg (+10 more)
 
 ### Community 3 - "Project Docs & Design Rationale"
 Cohesion: 0.15
@@ -141,15 +136,15 @@ Nodes (17): DELETE /x402/leases/:id (api.md), Paid endpoints, `200 OK`, `400 Bad
 
 ### Community 4 - "Wallet & x402 Payment Client"
 Cohesion: 0.09
-Nodes (16): About(), ArchDiagram(), Docs(), GoogleCallback(), HashHero(), HashHeroProps, ROWS, Marketplace() (+8 more)
+Nodes (18): About(), ArchDiagram(), Docs(), HashHero(), HashHeroProps, ROWS, network, PayStage (+10 more)
 
 ### Community 5 - "Database & Credit Ledger"
-Cohesion: 0.08
-Nodes (34): adminRouter, Handler, requireAdmin(), adminFromAuthHeader(), activeUsersByChange(), ActiveWindow, countGasRequestsByStatus(), countGoogleUsers() (+26 more)
+Cohesion: 0.15
+Nodes (19): activeUsersByChange(), ActiveWindow, createGasRequest(), cumulativeByChange(), hashKey(), isWalletGasGrantEligible(), listApiKeys(), listGasRequests() (+11 more)
 
 ### Community 6 - "x402 Paywall & Facilitator"
 Cohesion: 0.09
-Nodes (41): AdminLayout(), acceptGasRequest(), adminLoginUrl(), AdminUserRow, apiError(), authHeaders(), exchangeAdminCode(), explorerAddrUrl() (+33 more)
+Nodes (40): AdminLayout(), acceptGasRequest(), adminLoginUrl(), AdminUserRow, apiError(), authHeaders(), exchangeAdminCode(), explorerAddrUrl() (+32 more)
 
 ### Community 7 - "Backend Package Config"
 Cohesion: 0.06
@@ -160,8 +155,8 @@ Cohesion: 0.07
 Nodes (29): dependencies, algosdk, @blockshake/defly-connect, lute-connect, marked, @perawallet/connect, react, react-dom (+21 more)
 
 ### Community 9 - "Balance Display & USDC Formatting"
-Cohesion: 0.14
-Nodes (22): EmailAuthModal(), Props, formatAlgo(), OnchainAccountPanel(), OnchainPanelState, Props, Props, loginWithEmail() (+14 more)
+Cohesion: 0.12
+Nodes (28): BalanceChart(), Props, Pt, AlgoStat(), EmailAuthModal(), Props, ExportKeyModal(), Props (+20 more)
 
 ### Community 10 - "Contributor Package Config"
 Cohesion: 0.11
@@ -188,8 +183,8 @@ Cohesion: 0.14
 Nodes (13): compilerOptions, composite, declaration, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution (+5 more)
 
 ### Community 16 - "Example Buyer Agent Script"
-Cohesion: 0.22
-Nodes (12): main(), LeaseCloseResponse, MIN_RAM_MB, PlatformInfo, postJson(), repoRoot, request(), RunResponse (+4 more)
+Cohesion: 0.18
+Nodes (14): main(), ExplorerNode, LeaseCloseResponse, MIN_RAM_MB, PlatformInfo, postJson(), repoRoot, request() (+6 more)
 
 ### Community 17 - "Auth Endpoints & Contributor Deploy"
 Cohesion: 0.15
@@ -248,40 +243,40 @@ Cohesion: 0.12
 Nodes (16): AssetInfo, Authentication, Common schemas, CORS, Error envelope, Headers, How payment works, Overview (+8 more)
 
 ### Community 38 - "GET /metrics Endpoint"
-Cohesion: 0.20
-Nodes (15): config, repoRoot, adminGoogleCallback(), adminGoogleStart(), adminSessionExchange(), disabled(), isAdminAuthEnabled(), usedExchangeJtis (+7 more)
+Cohesion: 0.08
+Nodes (34): config, repoRoot, adminGoogleCallback(), adminGoogleStart(), adminSessionExchange(), disabled(), isAdminAuthEnabled(), usedExchangeJtis (+26 more)
 
 ### Community 39 - "GET /nodes Endpoint"
-Cohesion: 0.12
-Nodes (21): ExportKeyModal(), Props, GoogleWalletBar(), short(), Props, SignConfirmModal(), CustodialSignContext, CustodialSignContextValue (+13 more)
+Cohesion: 0.27
+Nodes (8): Props, SignConfirmModal(), CustodialSignContext, CustodialSignContextValue, CustodialSignProvider(), PendingConfirm, CustodialAction, SignPrepareResponse
 
 ### Community 40 - "GET /platform Endpoint"
 Cohesion: 0.15
-Nodes (24): payingFetch(), PayStage, apiError(), createApiKey(), fetchApiKeys(), fetchExplorer(), fetchLease(), fetchMyNodes() (+16 more)
+Nodes (35): confirmCustodial(), exchangeGoogleCode(), exportGoogleMnemonic(), fetchEmailEnabled(), fetchGasRequest(), fetchGoogleAccount(), fetchGoogleEnabled(), loginWithEmail() (+27 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.08
-Nodes (25): `200 OK`, `200 OK`, `200 OK`, `200 OK`, `200 OK`, `200 OK`, Billing, and how you can end up owing money, `DELETE /x402/leases/:id` (+17 more)
+Cohesion: 0.05
+Nodes (40): `200 OK`, `200 OK`, `200 OK`, `200 OK`, `200 OK`, `200 OK`, Billing, and how you can end up owing money, Browser — same code, different signer (+32 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.10
 Nodes (19): dependencies, react, react-dom, react-router-dom, @tendril/shared, devDependencies, @types/react, @types/react-dom (+11 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.14
-Nodes (18): fundedSeconds(), Lease, LeaseStatus, SandboxAccess, activateLease(), closeLease(), expiredLeaseAction(), fundedUntil() (+10 more)
+Cohesion: 0.12
+Nodes (28): issueLeaseToken(), fundedSeconds(), Lease, LeaseStatus, proratedCost(), SandboxAccess, abandonLease(), activateLease() (+20 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.15
-Nodes (12): AlgorandNetwork, DestroyContainerMsg, ExportKeyResponse, Job, NETWORKS, NodeStatus, PlatformTreasury, RegisterNodeRequest (+4 more)
+Cohesion: 0.10
+Nodes (19): AlgorandNetwork, ApiKeyInfo, AssetInfo, CreateApiKeyResponse, ExportKeyResponse, Job, LeaseBilling, NETWORKS (+11 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.22
-Nodes (12): [{ n }], otherAfter, otherBefore, [{ s }], schemas, chargeUsage(), creditEarnings(), creditTopUp() (+4 more)
+Cohesion: 0.21
+Nodes (12): pool, [{ n }], otherAfter, otherBefore, [{ s }], schemas, chargeUsage(), creditEarnings() (+4 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.16
-Nodes (11): BoardTab, ChartRange, fmtUsdc(), LineCard(), Metrics(), monthStartMs(), windowSeries(), fetchMetrics() (+3 more)
+Cohesion: 0.18
+Nodes (10): BoardTab, ChartRange, fmtUsdc(), LineCard(), Metrics(), monthStartMs(), windowSeries(), MetricPoint (+2 more)
 
 ### Community 49 - "Community 49"
 Cohesion: 0.26
@@ -292,12 +287,12 @@ Cohesion: 0.10
 Nodes (16): AGENTS.md (caveman rule), Caveman Response Style Convention, Architecture, Being findable (Bazaar discovery), Configuration, Demo script (the money shot), Notes & limitations, Prerequisites (+8 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.31
-Nodes (12): issueGoogleExchangeCode(), verifyGoogleExchangeCode(), googleAuthEnabled(), createUser(), findUserByGoogleSub(), touchUserLogin(), disabled(), googleCallback() (+4 more)
+Cohesion: 0.29
+Nodes (13): issueGoogleExchangeCode(), issueGoogleSession(), verifyGoogleExchangeCode(), googleAuthEnabled(), createUser(), findUserByGoogleSub(), touchUserLogin(), disabled() (+5 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.23
-Nodes (12): issueGoogleSession(), checkExportRateLimit(), confirmCustodialSign(), exportLog, exportMnemonicForUser(), pending, PendingRequest, PrepareAction (+4 more)
+Cohesion: 0.22
+Nodes (12): checkExportRateLimit(), confirmCustodialSign(), exportLog, exportMnemonicForUser(), googleAccountInfo, pending, PendingRequest, PrepareAction (+4 more)
 
 ### Community 53 - "Community 53"
 Cohesion: 0.28
@@ -312,16 +307,12 @@ Cohesion: 0.44
 Nodes (10): issueEmailSession(), createEmailUser(), findUserByEmail(), isEmailAuthEnabled(), disabled(), emailEnabled(), emailLogin(), emailRegister() (+2 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.22
-Nodes (9): hourly, mainnet, quote, rate, testnet, atomicPerHour(), proratedCost(), usdToAtomic() (+1 more)
+Cohesion: 0.20
+Nodes (8): hourly, mainnet, quote, rate, testnet, atomicPerHour(), usdToAtomic(), rate
 
 ### Community 57 - "Community 57"
-Cohesion: 0.33
-Nodes (9): googleAccountInfo, findGasRequestByAddress(), findGasRequestByUserId(), setGasGrantIneligible(), setWalletGasGrantIneligible(), canSubmitGasGrant(), shouldMarkGasGrantIneligible(), syncGoogleGasGrantEligibility() (+1 more)
-
-### Community 58 - "Community 58"
-Cohesion: 0.16
-Nodes (15): BalanceChart(), Props, Pt, AlgoStat(), Dashboard(), ExplorerLink(), short(), short() (+7 more)
+Cohesion: 0.38
+Nodes (8): findGasRequestByAddress(), findGasRequestByUserId(), setGasGrantIneligible(), setWalletGasGrantIneligible(), canSubmitGasGrant(), shouldMarkGasGrantIneligible(), syncGoogleGasGrantEligibility(), syncWalletGasGrantEligibility()
 
 ### Community 59 - "Community 59"
 Cohesion: 0.18
@@ -333,15 +324,11 @@ Nodes (8): Production deployment checklist, Facilitator-sponsored network fee, A
 
 ### Community 61 - "Community 61"
 Cohesion: 0.13
-Nodes (25): addressFromSession(), AdminInfo, isCustodialSessionKind(), issueLeaseToken(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), sessionFromAuthHeader() (+17 more)
+Nodes (24): addressFromSession(), AdminInfo, isCustodialSessionKind(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), sessionFromAuthHeader(), SessionInfo (+16 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.15
-Nodes (14): ComputeNode, ExplorerNode, isOnline(), getNode(), listNodesByOwner(), listOnlineNodes(), markOffline(), nodes (+6 more)
-
-### Community 63 - "Community 63"
-Cohesion: 0.13
-Nodes (15): Browser — same code, different signer, Client recipes, Configuration, Error index, Node — the whole flow, no sign-in, Option A — the bundled agent, Option B — rent a box and SSH into it, Reference (+7 more)
+Cohesion: 0.17
+Nodes (13): ComputeNode, isOnline(), getNode(), listNodesByOwner(), listOnlineNodes(), markOffline(), nodes, pickBestValueNode() (+5 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.17
@@ -354,18 +341,6 @@ Nodes (4): main(), detectGpu(), detectSpecs(), execFileP
 ### Community 66 - "Community 66"
 Cohesion: 0.80
 Nodes (5): Self-hosted BORE_SERVER/BORE_SECRET, Contributor agent deployment, bore tunnel, contributor/ (contributor agent), Ephemeral Docker sandbox (trust model)
-
-### Community 73 - "Community 73"
-Cohesion: 0.21
-Nodes (10): discoveryExtensions(), RouteDiscovery, serviceMetadata, discovered, payloadFor(), rent, run, service (+2 more)
-
-### Community 74 - "Community 74"
-Cohesion: 0.29
-Nodes (10): abandonLease(), createLease(), leasesForNode(), nodeBusy(), isOpenSshPubKey(), provision(), rent(), runAnywhere() (+2 more)
-
-### Community 75 - "Community 75"
-Cohesion: 0.43
-Nodes (7): hasOptedIn(), loadPlatformKey(), payContributor(), payoutsEnabled(), platformAddress(), platformBalances, sendAlgo()
 
 ### Community 76 - "Community 76"
 Cohesion: 0.33
@@ -385,12 +360,12 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `🌿 Tendril` and `Caveman Response Style Convention`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `Fetch` connect `x402 Paywall & Facilitator` to `Frontend Dashboard & UI Components`, `GET /metrics Endpoint`, `GET /nodes Endpoint`, `GET /platform Endpoint`, `Balance Display & USDC Formatting`, `Backend App Bootstrap`, `Example Buyer Agent Script`, `Community 48`, `Community 51`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `formatUsdc()` connect `Community 58` to `Frontend Dashboard & UI Components`, `Lease Lifecycle & Node Registry`, `GET /nodes Endpoint`, `GET /platform Endpoint`, `Balance Display & USDC Formatting`, `Community 74`, `Community 46`, `Community 48`, `Community 52`, `Community 56`, `Community 61`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `WalletSummary` connect `Frontend Dashboard & UI Components` to `Wallet & x402 Payment Client`, `Database & Credit Ledger`, `GET /platform Endpoint`, `Community 46`, `Community 58`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `Fetch` connect `GET /platform Endpoint` to `Wallet & x402 Payment Client`, `GET /metrics Endpoint`, `x402 Paywall & Facilitator`, `Backend App Bootstrap`, `Example Buyer Agent Script`, `Community 51`?**
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `formatUsdc()` connect `Balance Display & USDC Formatting` to `Frontend Dashboard & UI Components`, `Lease Lifecycle & Node Registry`, `Community 45`, `Community 46`, `Community 48`, `Community 52`, `Community 56`, `Community 61`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `SandboxLimits` connect `Contributor Sandbox & WS Protocol` to `Community 49`, `Community 61`, `Community 46`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `Fetch` (e.g. with `main()` and `loginWithWallet()`) actually correct?**
   _`Fetch` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `apiError()` (e.g. with `loginWithWallet()` and `topUp()`) actually correct?**

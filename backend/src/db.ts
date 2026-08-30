@@ -40,15 +40,13 @@ if (!/^[a-z]+$/.test(SCHEMA)) {
   throw new Error(`refusing to use "${SCHEMA}" as a schema name`);
 }
 
-// The search_path is set in the connection startup packet rather than by a
-// `SET` in a `connect` handler: the handler races the first real query on that
-// client (pg warns about exactly this and will make it an error in pg@9),
-// whereas a startup option is applied by the server before the client is
-// usable at all. `public` stays on the path so extensions there still resolve.
 const pool = new pg.Pool({
   connectionString: config.databaseUrl,
-  ssl: config.databaseUrl.includes("localhost") ? undefined : { rejectUnauthorized: false },
-  options: `-c search_path=${SCHEMA},public`,
+  ssl: config.databaseUrl?.includes("localhost") ? undefined : { rejectUnauthorized: false },
+});
+
+pool.on("connect", (client) => {
+  client.query(`SET search_path TO "${SCHEMA}", public`);
 });
 
 // int8/bigint comes back as a string by default; we store epoch-ms + atomic

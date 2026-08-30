@@ -1,7 +1,7 @@
 # Graph Report - Tendril  (2026-08-30)
 
 ## Corpus Check
-- 114 files · ~83,035 words
+- 114 files · ~82,970 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b4bcc20d`
+- Built from commit: `a6bfa74a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
