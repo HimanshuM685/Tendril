@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
@@ -10,8 +10,6 @@ import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
-// ~90KB of markdown compiles into this page; keep it out of the landing bundle.
-const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
@@ -29,6 +27,11 @@ export type Session = {
 // The session token is a 7-day JWT, so persist it and restore on reload — a
 // refresh shouldn't force the user to re-sign (and re-sign each time).
 const SESSION_KEY = "tendril.session";
+
+function ApiToDocs() {
+  const { hash } = useLocation();
+  return <Navigate to={`/docs?doc=api${hash}`} replace />;
+}
 
 function loadSession(): Session | null {
   try {
@@ -98,7 +101,6 @@ export function App() {
       "/contribute": "CONTRIBUTE",
       "/dashboard": "DASHBOARD",
       "/metrics": "METRICS",
-      "/api": "API",
       "/docs": "DOCS",
       "/about": "ABOUT",
     };
@@ -203,9 +205,6 @@ export function App() {
           </NavLink>
           <NavLink to="/metrics" className={navClass}>
             METRICS
-          </NavLink>
-          <NavLink to="/api" className={navClass}>
-            API
           </NavLink>
           <NavLink to="/docs" className={navClass}>
             DOCS
@@ -322,14 +321,7 @@ export function App() {
             }
           />
           <Route path="/metrics" element={<Metrics />} />
-          <Route
-            path="/api"
-            element={
-              <Suspense fallback={<p className="muted dash-note">Loading API reference…</p>}>
-                <ApiDocs />
-              </Suspense>
-            }
-          />
+          <Route path="/api" element={<ApiToDocs />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />

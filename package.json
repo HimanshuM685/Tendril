@@ -9,7 +9,8 @@
     "contributor",
     "web",
     "admin",
-    "example-buyer"
+    "example-buyer",
+    "mcp"
   ],
   "scripts": {
     "backend": "npm run dev -w backend",
@@ -17,8 +18,9 @@
     "web": "npm run dev -w web",
     "admin": "npm run dev -w admin",
     "client": "npm run start -w example-buyer",
+    "mcp": "npm run mcp -w @tendril/mcp",
     "keygen": "npm run keygen -w contributor",
-    "typecheck": "tsc -b shared backend contributor example-buyer",
+    "typecheck": "tsc -b shared backend contributor example-buyer mcp",
     "build:shared": "tsc -b shared"
   },
   "engines": {

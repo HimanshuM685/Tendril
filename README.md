@@ -114,9 +114,9 @@ they guessed wrong.
 
 Wallet popups, end to end: top up = 1, rent = 1, each job execution = 1, release/SSH = 0.
 
-API reference: **[docs/api.md](docs/api.md)** for the plain HTTP endpoints (with `curl` for
-each), **[docs/x402-api.md](docs/x402-api.md)** for the three paid ones — every status code,
-error string, and a CLI-only renting walkthrough.
+API reference: **[docs/api.md](docs/api.md)** (plain HTTP), **[docs/x402-api.md](docs/x402-api.md)**
+(paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). On the site they share one
+**Docs** page.
 
 **The payable routes are CORS-free.** They answer any origin, so a browser anywhere can pay one —
 the Tendril web app has no privileged access, and the frontend is just another x402 client.
