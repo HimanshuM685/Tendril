@@ -112,14 +112,13 @@ export async function prepareCustodialSign(
     case "run": {
       summary = "Run code (leaseless)";
       details = `Execute a one-shot job; billed from credit when done.`;
-      const payload = { code: body.code, minRamMb: body.minRamMb };
       const url = `${internalRegistryUrl()}/x402/run`;
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ payload: body.code }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));

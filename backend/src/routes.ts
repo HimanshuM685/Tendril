@@ -396,12 +396,11 @@ router.get("/keys", guard(async (req: Request, res: Response) => {
 
 // Mint a contributor API key. Session + x402: payer must be the signed-in address.
 async function mintKey(req: Request, res: Response) {
-  const address = requireSession(req, res);
-  if (!address) return;
-
   const label = String((req.body as { label?: string })?.label ?? "").slice(0, 64);
   const fee = config.flatMintKeyAtomic;
 
+  // 402 first — a bare POST must advertise price + bazaar/challenge metadata.
+  // Session is checked after verify so an unauthenticated probe still catalogs.
   const paid = await requirePayment(
     req,
     res,
@@ -411,6 +410,9 @@ async function mintKey(req: Request, res: Response) {
     ROUTES.mintkey,
   );
   if (!paid) return;
+
+  const address = requireSession(req, res);
+  if (!address) return;
 
   if (paid.facts.payer !== address) {
     return res.status(403).json({
@@ -627,14 +629,26 @@ async function rent(req: Request, res: Response) {
     req.params.nodeId ??
     (typeof req.query.nodeId === "string" ? req.query.nodeId : undefined) ??
     (typeof body?.nodeId === "string" ? body.nodeId : undefined);
+  const node = nodeId ? getNode(nodeId) : undefined;
+  const gateFee = config.flatRentAtomic;
+  const rate = node ? atomicPerHour(node.pricePerHourUsd) : undefined;
+  const description = node && rate !== undefined
+    ? `Open a metered session on ${node.id} (${node.cpuCores} vCPU, ` +
+      `${Math.round(node.ramMb / 1024)}GB) for a ${formatUsdc(gateFee)} gate fee. ` +
+      `Time is then billed from credit at ${formatUsdc(rate)}/hr for as long as you keep it.`
+    : `Open a metered SSH session. Pass nodeId as ?nodeId= (from GET /nodes) or in the JSON body. ` +
+      `Gate fee ${formatUsdc(gateFee)}; time then bills from credit.`;
+
+  // 402 first so a Bazaar/agent probe of the catalog URL still gets tags + discovery.
+  const paid = await requirePayment(req, res, "rent", gateFee, description, ROUTES.rent);
+  if (!paid) return;
+
   if (!nodeId) {
     return res
       .status(400)
       .json({ error: "node_required", detail: "pass ?nodeId= (or a nodeId body field)" });
   }
-
-  const node = getNode(nodeId);
-  if (!node) return res.status(404).json({ error: "node_not_found" });
+  if (!node || rate === undefined) return res.status(404).json({ error: "node_not_found" });
   if (node.status !== "online" || !isNodeConnected(node.id)) {
     return res.status(409).json({ error: "node_unavailable" });
   }
@@ -643,21 +657,6 @@ async function rent(req: Request, res: Response) {
   if (sshPubKey !== null && (typeof sshPubKey !== "string" || !isOpenSshPubKey(sshPubKey))) {
     return res.status(400).json({ error: "invalid_ssh_key" });
   }
-
-  const rate = atomicPerHour(node.pricePerHourUsd);
-  const gateFee = config.flatRentAtomic;
-
-  const paid = await requirePayment(
-    req,
-    res,
-    "rent",
-    gateFee,
-    `Open a metered session on ${node.id} (${node.cpuCores} vCPU, ` +
-      `${Math.round(node.ramMb / 1024)}GB) for a ${formatUsdc(gateFee)} gate fee. ` +
-      `Time is then billed from credit at ${formatUsdc(rate)}/hr for as long as you keep it.`,
-    ROUTES.rent,
-  );
-  if (!paid) return; // 402/400/409 already sent
 
   if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
 
