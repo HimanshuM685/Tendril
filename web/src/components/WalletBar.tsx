@@ -18,6 +18,7 @@ import { EmailAuthModal } from "./EmailAuthModal";
 import { OnchainAccountPanel } from "./OnchainAccountPanel";
 import { isCustodialSession } from "../lib/session";
 import type { OnchainPanelState } from "./OnchainAccountPanel";
+import { ConnectWalletModal } from "./ConnectWalletModal";
 
 interface Props {
   session: Session | null;
@@ -128,7 +129,7 @@ export function WalletBar({
     return () => clearInterval(t);
   }, [activeAddress, walletSignedIn, session?.token]);
 
-  if (isCustodialSession(session)) {
+  if (isCustodialSession(session) && session) {
     return (
       <GoogleWalletBar
         session={session}
@@ -204,7 +205,7 @@ export function WalletBar({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
-          <span>// CONNECT</span>
+          <span>CONNECT</span>
           <button className="modal-close" aria-label="Close" onClick={() => setPicking(false)}>
             ×
           </button>
@@ -390,13 +391,12 @@ export function WalletBar({
       <button className="btn" onClick={() => setPicking(true)}>
         Connect Wallet
       </button>
-      {picker}
-      {emailOpen && (
-        <EmailAuthModal
-          onClose={() => setEmailOpen(false)}
-          onSuccess={(res) => {
-            setEmailOpen(false);
-            onCustodialSession(res);
+      {picking && (
+        <ConnectWalletModal
+          onClose={() => setPicking(false)}
+          onCustodialSession={onCustodialSession}
+          onWalletConnected={() => {
+            autoSignIn.current = true;
           }}
         />
       )}

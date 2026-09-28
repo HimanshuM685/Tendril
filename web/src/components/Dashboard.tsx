@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import type { WalletStats, WalletSummary } from "@tendril/shared";
-import { formatUsdc, formatUsdcExact } from "@tendril/shared";
+import { formatUsdcExact } from "@tendril/shared";
 import { BalanceChart } from "./BalanceChart";
 import { LeasePanel } from "./LeasePanel";
 import { TopUpControl } from "./TopUpControl";
@@ -19,6 +19,7 @@ interface Props {
   onError: (msg: string) => void;
   lease: ActiveLease | null;
   onLeaseEnded: () => void;
+  onOpenTopUp?: () => void;
 }
 
 function fmtDuration(seconds: number): string {
@@ -37,18 +38,6 @@ function short(addr: string): string {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
 }
 
-/** Truncated id that opens the block explorer; full value on hover. */
-function ExplorerLink({ id, href }: { id: string; href: string }) {
-  if (!id) return <>—</>;
-  return (
-    <a className="ext-link" href={href} title={id} target="_blank" rel="noreferrer">
-      {short(id)}
-    </a>
-  );
-}
-
-/** Use server-side stats when present; otherwise derive from the loaded history
- *  (so the dashboard still works before the backend is rebuilt). */
 function resolveStats(w: WalletSummary): WalletStats {
   if (w.stats) return w.stats;
   const sum = <T,>(arr: T[], pick: (x: T) => number) => arr.reduce((a, x) => a + pick(x), 0);
@@ -62,26 +51,6 @@ function resolveStats(w: WalletSummary): WalletStats {
   };
 }
 
-/** Compact ALGO figure; the exact one is on hover. */
-function AlgoStat({ label, atomic }: { label: string; atomic: number }) {
-  return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value" title={formatUsdcExact(atomic)}>{formatUsdc(atomic)}</div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-    </div>
-  );
-}
-
-/** Address-only account dashboard: lifetime stats + spend/top-up history. */
 export function Dashboard({
   session,
   wallet,
@@ -92,138 +61,255 @@ export function Dashboard({
   onError,
   lease,
   onLeaseEnded,
+  onOpenTopUp,
 }: Props) {
-  // Router doesn't scroll to #hash targets, and the tables only exist once the
-  // wallet has loaded — so re-try when it arrives.
   const { hash } = useLocation();
-  const loaded = !!wallet; // not `wallet` — it's re-fetched every 5s and would re-scroll
+  const loaded = !!wallet;
+
   useEffect(() => {
-    if (hash && loaded) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth" });
+    if (hash && loaded) {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [hash, loaded]);
 
+  const stats = wallet ? resolveStats(wallet) : null;
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const userGreetingName = session?.name || (address ? `${address.slice(0, 6)}…` : "");
+
+  const creditBalance = wallet ? (wallet.balanceAtomic / 1_000_000).toFixed(2) : "0.00";
+  const totalSpent = stats ? (stats.totalSpentAtomic / 1_000_000).toFixed(2) : "0.00";
+  const meteredRuntime = stats?.totalLeaseSeconds ? fmtDuration(stats.totalLeaseSeconds) : "0s";
+  const leasesCount = stats?.leaseCount ?? 0;
+
   return (
-    <section className="page">
-      <div className="section-head">
-        <p className="kicker">// ACCOUNT</p>
-        <h2 className="display section-title">DASHBOARD</h2>
-      </div>
-      <div className="rule"></div>
-
-      {!signedIn || !address ? (
-        <p className="muted dash-note">Connect your wallet or sign in with Google to view your dashboard.</p>
-      ) : !wallet ? (
-        <p className="muted dash-note">Loading your account…</p>
-      ) : (
-        (() => {
-          const stats = resolveStats(wallet);
-          return (
-        <>
-          <p className="dash-addr">
-            <a className="ext-link" href={explorerAddrUrl(address)} target="_blank" rel="noreferrer">
-              {address}
-            </a>
+    <div className="explore-dashboard">
+      {/* Header Row */}
+      <div className="explore-header-row">
+        <div>
+          <h1 className="explore-greeting">
+            {userGreetingName ? `${timeGreeting}, ${userGreetingName}!` : "Account Dashboard"}
+          </h1>
+          <p className="explore-subtitle">
+            Prepaid credit, usage analytics, and on-chain transaction history.
           </p>
+        </div>
+      </div>
 
-          {/* Same panel Explore shows — countdown, SSH command, release. Only one
-              route is mounted at a time, so the poll never runs twice. */}
-          {lease && <LeasePanel lease={lease} session={session} onRelease={onLeaseEnded} />}
+      {address && (
+        <div className="dash-addr-pill" style={{ marginBottom: "20px" }}>
+          <span className="muted small">Connected: </span>
+          <a className="ext-link" href={explorerAddrUrl(address)} target="_blank" rel="noreferrer">
+            {address}
+          </a>
+        </div>
+      )}
 
-          <div className="stat-grid">
-            <AlgoStat label="Balance" atomic={wallet.balanceAtomic} />
-            <AlgoStat label="Total spent" atomic={stats.totalSpentAtomic} />
-            <AlgoStat label="Total topped up" atomic={stats.totalToppedUpAtomic} />
-            <Stat label="Lease time" value={fmtDuration(stats.totalLeaseSeconds)} />
-            <Stat label="Leases taken" value={String(stats.leaseCount)} />
-            {stats.payoutCount > 0 && (
-              <>
-                <AlgoStat label="Earned (contributor)" atomic={stats.totalEarnedAtomic} />
-                {/* What is left to cash out — withdraw it from the Contribute tab. */}
-                <AlgoStat label="Withdrawable" atomic={wallet.earningsAtomic ?? 0} />
-              </>
+      {/* Top 4 Stat Cards (No dummy data) */}
+      <div className="explore-stats-grid">
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Credit Balance</div>
+          <div className="stat-card-value">{creditBalance}</div>
+          <div className="stat-card-sub">USDC available</div>
+        </div>
+
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Total Spent</div>
+          <div className="stat-card-value">{totalSpent}</div>
+          <div className="stat-card-sub">Lifetime compute spend</div>
+        </div>
+
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Metered Runtime</div>
+          <div className="stat-card-value">{meteredRuntime}</div>
+          <div className="stat-card-sub text-green">Billed to exact second</div>
+        </div>
+
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Leases Taken</div>
+          <div className="stat-card-value">{leasesCount}</div>
+          <div className="stat-card-sub">Closed sessions</div>
+        </div>
+      </div>
+
+      {/* Actions Bar with Vector SVG Icons */}
+      <div className="compute-actions-bar">
+        <span className="ca-title">Account Actions</span>
+        <div className="ca-buttons">
+          {address && (
+            <a
+              href={explorerAddrUrl(address)}
+              target="_blank"
+              rel="noreferrer"
+              className="ca-btn ca-btn-ghost"
+            >
+              <span className="ca-btn-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </span>
+              <span>View On Explorer</span>
+            </a>
+          )}
+
+          <button
+            type="button"
+            className="ca-btn ca-btn-primary"
+            onClick={onOpenTopUp}
+          >
+            <span>+ Top Up USDC</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Active Lease if running */}
+      {lease && (
+        <div style={{ marginBottom: "24px" }}>
+          <LeasePanel lease={lease} session={session} onRelease={onLeaseEnded} />
+        </div>
+      )}
+
+      {/* 2-Column Section */}
+      <div className="explore-columns-grid">
+        {/* Row 1, Col 1: Historical Balance */}
+        <div className="explore-card">
+          <div className="explore-card-head">
+            <div>
+              <h3 className="card-head-title">Historical Balance</h3>
+              <p className="card-head-sub">Reconstructed deposits &amp; usage</p>
+            </div>
+            <strong className="text-green" style={{ fontSize: "16px" }}>
+              {creditBalance} USDC
+            </strong>
+          </div>
+          {wallet ? (
+            <BalanceChart
+              topups={wallet.topups}
+              charges={wallet.charges}
+              currentBalance={wallet.balanceAtomic}
+            />
+          ) : (
+            <div className="lease-empty-state">
+              <p className="empty-title">Connect wallet</p>
+              <p className="empty-sub">Connect your wallet to see real-time balance history and usage charts.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Row 1, Col 2: Spend History */}
+        <div className="explore-card" id="history">
+          <div className="explore-card-head">
+            <div>
+              <h3 className="card-head-title">Spend History</h3>
+              <p className="card-head-sub">Settled compute sessions</p>
+            </div>
+          </div>
+
+          <div className="leases-list">
+            {wallet?.charges && wallet.charges.length > 0 ? (
+              wallet.charges.map((c) => (
+                <div className="lease-item" key={c.id}>
+                  <div className="lease-item-info pl-dot">
+                    <div className="lease-item-title">
+                      Compute Session &middot; {fmtDuration(c.seconds)}
+                    </div>
+                    <div className="lease-item-meta">
+                      Paid to {c.payToAddr ? short(c.payToAddr) : "Registry"} &middot; {new Date(c.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="lease-item-badge">
+                    <span className="pill-badge pill-cost">
+                      −{formatUsdcExact(c.amountAtomic)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="lease-empty-state">
+                <p className="empty-title">No charges yet</p>
+                <p className="empty-sub">When you rent hardware or run agent jobs, charges appear here.</p>
+              </div>
             )}
           </div>
+        </div>
 
-          {/* Topping up is the most-taken action — don't make it a trip to the wallet panel. */}
-          <div className="panel">
-            <h3>Top up</h3>
-            <TopUpControl
-              address={address}
-              session={session}
-              signTransactions={signTransactions}
-              onChanged={onWalletChanged}
-              onError={onError}
-            />
-          </div>
-
-          <BalanceChart
-            topups={wallet.topups}
-            charges={wallet.charges}
-            currentBalance={wallet.balanceAtomic}
-          />
-
-          <div className="dash-cols panel" id="history">
+        {/* Row 2, Col 1: Prepaid Top Up */}
+        <div className="explore-card">
+          <div className="explore-card-head">
             <div>
-              <h3>Spend history</h3>
-              {wallet.charges.length === 0 ? (
-                <p className="muted small">No charges yet.</p>
-              ) : (
-                <table className="ledger">
-                  <thead>
-                    <tr>
-                      <th>Amount</th>
-                      <th>Time</th>
-                      <th>Paid to</th>
-                      <th>When</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {wallet.charges.map((c) => (
-                      <tr key={c.id}>
-                        <td className="num">−{formatUsdcExact(c.amountAtomic)}</td>
-                        <td className="num">{fmtDuration(c.seconds)}</td>
-                        <td>
-                          <ExplorerLink id={c.payToAddr} href={explorerAddrUrl(c.payToAddr)} />
-                        </td>
-                        <td>{new Date(c.createdAt).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            <div>
-              <h3>Top-up history</h3>
-              {wallet.topups.length === 0 ? (
-                <p className="muted small">No deposits yet.</p>
-              ) : (
-                <table className="ledger">
-                  <thead>
-                    <tr>
-                      <th>Amount</th>
-                      <th>Txn</th>
-                      <th>When</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {wallet.topups.map((t) => (
-                      <tr key={t.txid}>
-                        <td className="num">+{formatUsdcExact(t.amountAtomic)}</td>
-                        <td>
-                          <ExplorerLink id={t.txid} href={explorerTxUrl(t.txid)} />
-                        </td>
-                        <td>{new Date(t.createdAt).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <h3 className="card-head-title">Prepaid Top Up</h3>
+              <p className="card-head-sub">Instant settlement with Algorand USDC</p>
             </div>
           </div>
-        </>
-          );
-        })()
-      )}
-    </section>
+          {address ? (
+            <div style={{ marginTop: "12px", flex: 1, display: "flex", flexDirection: "column" }}>
+              <TopUpControl
+                address={address}
+                session={session}
+                signTransactions={signTransactions}
+                onChanged={onWalletChanged}
+                onError={onError}
+              />
+            </div>
+          ) : (
+            <div className="lease-empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                <rect width="20" height="14" x="2" y="5" rx="2" />
+                <line x1="2" x2="22" y1="10" y2="10" />
+              </svg>
+              <p className="empty-title">Wallet not connected</p>
+              <p className="empty-sub">Connect a wallet to deposit USDC into your prepaid balance.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2, Col 2: Top-up History */}
+        <div className="explore-card">
+          <div className="explore-card-head">
+            <div>
+              <h3 className="card-head-title">Top-up History</h3>
+              <p className="card-head-sub">On-chain USDC deposits</p>
+            </div>
+          </div>
+
+          <div className="leases-list">
+            {wallet?.topups && wallet.topups.length > 0 ? (
+              wallet.topups.map((t) => (
+                <div className="lease-item" key={t.txid}>
+                  <div className="lease-item-info pl-dot">
+                    <div className="lease-item-title">
+                      Deposit &middot;{" "}
+                      <a
+                        className="ext-link"
+                        href={explorerTxUrl(t.txid)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {short(t.txid)}
+                      </a>
+                    </div>
+                    <div className="lease-item-meta">
+                      {new Date(t.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="lease-item-badge">
+                    <span className="pill-badge pill-running">
+                      +{formatUsdcExact(t.amountAtomic)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="lease-empty-state">
+                <p className="empty-title">No deposits yet</p>
+                <p className="empty-sub">Top up your account in USDC to fund your sandboxed machines.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

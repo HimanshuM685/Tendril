@@ -1,10 +1,9 @@
 import type { WalletSummary } from "@tendril/shared";
 import type { Session } from "../App";
 import type { ActiveLease } from "../api";
-import { WalletPanel } from "./WalletPanel";
+import type { SignTransactions } from "../lib/x402Client";
 import { Explore } from "./Explore";
 import { Contribute } from "./Contribute";
-import { LeasePanel } from "./LeasePanel";
 
 interface Props {
   tab: "explore" | "contribute";
@@ -16,6 +15,8 @@ interface Props {
   onError: (e: string | null) => void;
   lease: ActiveLease | null;
   onLeased: (l: ActiveLease | null) => void;
+  onOpenTopUp?: () => void;
+  onOpenConnectWallet?: () => void;
 }
 
 /** The rentable marketplace — backs both /explore and /contribute. */
@@ -29,54 +30,34 @@ export function Marketplace({
   onError,
   lease,
   onLeased,
+  onOpenTopUp,
+  onOpenConnectWallet,
 }: Props) {
+  if (tab === "explore") {
+    return (
+      <Explore
+        session={session}
+        activeAddress={activeAddress}
+        wallet={wallet}
+        signTransactions={signTransactions as SignTransactions}
+        balanceAtomic={wallet?.balanceAtomic ?? 0}
+        lease={lease}
+        onLeased={onLeased}
+        onOpenTopUp={onOpenTopUp}
+        onOpenConnectWallet={onOpenConnectWallet}
+      />
+    );
+  }
+
   return (
-    <>
-      {/* Topping up needs only a connected wallet — the payment proves who is
-          paying, so it is shown before (and without) signing in. */}
-      {activeAddress && (
-        <WalletPanel
-          wallet={wallet}
-          address={activeAddress}
-          session={session}
-          signTransactions={signTransactions as never}
-          onChanged={onWalletChanged}
-          onError={onError}
-        />
-      )}
-
-      <section className="index">
-        <div className="section-head">
-          <div className="sh-left">
-            <p className="kicker">// {tab === "explore" ? "THE MARKETPLACE" : "SHARE COMPUTE"}</p>
-            <h2 className="display section-title">{tab === "explore" ? "EXPLORE" : "CONTRIBUTE"}</h2>
-          </div>
-        </div>
-        <div className="rule"></div>
-
-        {tab === "explore" ? (
-          <Explore
-            session={session}
-            activeAddress={activeAddress}
-            signTransactions={signTransactions as never}
-            balanceAtomic={wallet?.balanceAtomic ?? 0}
-            onLeased={onLeased}
-          />
-        ) : (
-          <Contribute
-            address={activeAddress}
-            session={session}
-            wallet={wallet}
-            signTransactions={signTransactions as never}
-            onWalletChanged={onWalletChanged}
-            onError={onError}
-          />
-        )}
-
-        {lease && (
-          <LeasePanel lease={lease} session={session} onRelease={() => onLeased(null)} />
-        )}
-      </section>
-    </>
+    <Contribute
+      address={activeAddress}
+      session={session}
+      wallet={wallet}
+      signTransactions={signTransactions as SignTransactions}
+      onWalletChanged={onWalletChanged}
+      onError={onError}
+      onOpenTopUp={onOpenTopUp}
+    />
   );
 }
