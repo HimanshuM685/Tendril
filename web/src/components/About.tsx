@@ -50,10 +50,6 @@ export function About() {
 
         <p className="muted small">Open source · no tracking · HTML / CSS / TS</p>
         </div>
-
-        <figure className="about-art">
-          <img src="/hero-art.jpg" alt="Tendril — many hands, one machine" loading="lazy" />
-        </figure>
       </div>
     </section>
   );
