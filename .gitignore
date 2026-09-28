@@ -8,3 +8,4 @@ dist/
 *.sqlite-journal
 data/
 .DS_Store
+v3-images/
