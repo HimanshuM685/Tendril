@@ -1971,7 +1971,7 @@ img {
   margin-bottom: 0;
 }
 
-/* Architecture Embed */
+/* Architecture Embed & Interactive Diagram */
 .docs-arch-wrap {
   background: #ffffff;
   border: 1px solid var(--border-subtle);
@@ -1979,6 +1979,333 @@ img {
   padding: 24px;
   margin: 20px 0 36px;
   box-shadow: var(--shadow-sm);
+}
+
+.arch-component-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.arch-flow-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.arch-toolbar-label {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.arch-flow-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.arch-flow-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: #f6f7f2;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.arch-flow-btn:hover {
+  background-color: #ebeee3;
+  color: var(--text-primary);
+}
+
+.arch-flow-btn.active {
+  background-color: var(--brand-green);
+  color: #ffffff;
+  border-color: var(--brand-green);
+  box-shadow: 0 2px 6px rgba(11, 93, 58, 0.2);
+}
+
+.arch-svg-container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.arch-svg {
+  width: 100%;
+  height: auto;
+  min-width: 760px;
+  max-width: 960px;
+  display: block;
+}
+
+/* SVG Node and Text Styling */
+.arch-node-bg {
+  fill: #ffffff;
+}
+
+.arch-node-border {
+  fill: none;
+  stroke: var(--border-subtle, #e6e7df);
+  stroke-width: 1.5;
+}
+
+.arch-node-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #0B5D3A;
+  letter-spacing: 0.04em;
+}
+
+.arch-node-badge-lime {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #5e8810;
+  letter-spacing: 0.04em;
+}
+
+.arch-node-badge-muted {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #6e7067;
+  letter-spacing: 0.04em;
+}
+
+.arch-node-title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  fill: #171815;
+}
+
+.arch-node-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  fill: #4b4d45;
+}
+
+.arch-node-desc {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  fill: #6e7067;
+}
+
+.arch-flow-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: #171815;
+}
+
+.arch-flow-subtag {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  fill: #6e7067;
+}
+
+.arch-flow-group {
+  transition: opacity 0.2s ease;
+}
+
+.arch-flow-group.dimmed {
+  opacity: 0.18;
+}
+
+.arch-caption-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background-color: #f6f7f2;
+  border-radius: 8px;
+  margin-top: 18px;
+  border: 1px solid var(--border-subtle);
+}
+
+.acb-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-green);
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.acb-desc {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Architecture Tiers Grid */
+.arch-tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0 28px;
+}
+
+.arch-tier-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 18px 20px;
+  transition: all 0.18s ease;
+}
+
+.arch-tier-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-green);
+  box-shadow: var(--shadow-sm);
+}
+
+.atc-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand-green);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.arch-tier-card h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.arch-tier-card p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Core Architectural Pillars */
+.docs-h3 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 36px 0 16px;
+}
+
+.arch-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 20px 0 36px;
+}
+
+.arch-pillar-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 20px 22px;
+  transition: all 0.18s ease;
+}
+
+.arch-pillar-card:hover {
+  border-color: #d1d4c7;
+  box-shadow: var(--shadow-sm);
+}
+
+.apc-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: rgba(11, 93, 58, 0.08);
+  color: var(--brand-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.arch-pillar-card h4 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.arch-pillar-card p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Architecture Lifecycle Timeline */
+.arch-lifecycle-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 20px 0 36px;
+}
+
+.alt-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.alt-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--brand-green);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.alt-content {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 18px;
+  flex: 1;
+}
+
+.alt-content h5 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.alt-content p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 /* Code Blocks */
@@ -2275,7 +2602,9 @@ img {
   }
 
   .docs-feature-cards-grid,
-  .docs-steps-grid {
+  .docs-steps-grid,
+  .arch-tiers-grid,
+  .arch-pillars-grid {
     grid-template-columns: 1fr;
   }
 

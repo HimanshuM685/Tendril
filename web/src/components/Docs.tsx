@@ -689,17 +689,156 @@ export function Docs({ initialTab }: DocsProps) {
               </div>
 
               {/* Architecture Section */}
-              <h2 id="architecture" className="docs-h2">Architecture</h2>
+              <h2 id="architecture" className="docs-h2">System Architecture &amp; Data Flow</h2>
               <p>
-                Three independent pieces talk to one central registry. A <strong>consumer</strong> (a person in this UI,
-                or a headless agent) tops up and rents. The <strong>registry</strong> holds the off-chain balance ledger in
-                Neon, verifies payments through the x402 facilitator and pays out on Algorand, and brokers leases to{" "}
-                <strong>contributors</strong> over a WebSocket. The rented box itself is reached directly — the renter&rsquo;s
-                SSH traffic rides a bore tunnel straight into the sandbox.
+                Tendril decouples execution, orchestration, and settlement into three autonomous planes that communicate
+                over lightweight, resilient protocols. Renters and headless AI agents never interact directly with provider host
+                systems, and providers never open incoming ports on their local networks.
               </p>
 
+              {/* Three Decoupled Tiers */}
+              <div className="arch-tiers-grid">
+                <div className="arch-tier-card">
+                  <div className="atc-tag">TIER 1 · CONTROL PLANE</div>
+                  <h4>Tendril Registry &amp; Ledger</h4>
+                  <p>
+                    Orchestrates leases over WebSockets, maintains high-resolution per-second billing in Neon Postgres,
+                    monitors watchdog heartbeats, and verifies x402 payment claims.
+                  </p>
+                </div>
+
+                <div className="arch-tier-card">
+                  <div className="atc-tag">TIER 2 · EXECUTION PLANE</div>
+                  <h4>Disposable Sandboxes &amp; Bore</h4>
+                  <p>
+                    Hardened throwaway Docker containers spawned on demand by provider daemons. Inbound SSH is forwarded
+                    through an outbound encrypted bore tunnel relay. Destroyed at release.
+                  </p>
+                </div>
+
+                <div className="arch-tier-card">
+                  <div className="atc-tag">TIER 3 · SETTLEMENT PLANE</div>
+                  <h4>Algorand &amp; x402 Facilitator</h4>
+                  <p>
+                    Instant 2.8s finality for USDC asset transfers. Facilitator sponsors all network transaction fees
+                    so payers need zero ALGO balance. Providers withdraw earnings on-chain.
+                  </p>
+                </div>
+              </div>
+
+              {/* Interactive Architecture Diagram */}
               <div className="docs-arch-wrap">
                 <ArchDiagram />
+              </div>
+
+              {/* Deep Dive Pillars: 4 Architectural Guarantees */}
+              <h3 className="docs-h3">Core Architectural Pillars</h3>
+              <div className="arch-pillars-grid">
+                <div className="arch-pillar-card">
+                  <div className="apc-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                  </div>
+                  <h4>Zero-Port Inbound NAT Traversal</h4>
+                  <p>
+                    Standard home PCs and datacenter servers alike can provide compute without port forwarding or static public IPs.
+                    The provider daemon initiates an outbound TCP bore tunnel to the Tendril relay, routing renter SSH traffic
+                    directly into the ephemeral sandbox.
+                  </p>
+                </div>
+
+                <div className="arch-pillar-card">
+                  <div className="apc-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                  </div>
+                  <h4>Cryptographic Wallet Decoupling</h4>
+                  <p>
+                    Provider daemons hold zero private keys or seed phrases. The wallet that mints the API key in the web
+                    dashboard owns the node and accumulates earnings. If a provider server is physically compromised, zero
+                    funds can be stolen.
+                  </p>
+                </div>
+
+                <div className="arch-pillar-card">
+                  <div className="apc-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <h4>Micro-Metered Continuous Billing</h4>
+                  <p>
+                    Rather than forcing blocks of booked hours, runtime is tracked continuously and settled once at lease release.
+                    A $1.00 goodwill runtime grace window protects renters if prepaid credits deplete mid-calculation, preventing
+                    unexpected job truncation.
+                  </p>
+                </div>
+
+                <div className="arch-pillar-card">
+                  <div className="apc-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <h4>Hardened Container Sandbox Isolation</h4>
+                  <p>
+                    Each lease is isolated in an unprivileged container with <code>CAP_DROP=ALL</code>, no host mounts, hard CPU core
+                    and RAM cgroup caps, PID limits, and automated teardown upon session termination.
+                  </p>
+                </div>
+              </div>
+
+              {/* Protocol Lifecycle Breakdown */}
+              <h3 className="docs-h3">Lifecycle: How a Metered Lease Executes</h3>
+              <div className="arch-lifecycle-timeline">
+                <div className="alt-step">
+                  <div className="alt-marker">1</div>
+                  <div className="alt-content">
+                    <h5>Discovery &amp; Gate Fee Opening</h5>
+                    <p>
+                      Renter queries <code>GET /explorer</code> (free read) and chooses a node. Opening a lease requires a 0.01 USDC gate fee
+                      deducted from prepaid credit to establish an active session token.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="alt-step">
+                  <div className="alt-marker">2</div>
+                  <div className="alt-content">
+                    <h5>WebSocket Dispatch &amp; Sandbox Provisioning</h5>
+                    <p>
+                      The registry sends a lease command to the provider daemon over an authenticated WebSocket. The daemon executes{" "}
+                      <code>docker run</code> with resource constraints and launches the internal bore client.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="alt-step">
+                  <div className="alt-marker">3</div>
+                  <div className="alt-content">
+                    <h5>Encrypted Direct SSH Access</h5>
+                    <p>
+                      Renter receives the allocated bore host and port (e.g. <code>bore.tendrilhq.com:38472</code>). Renter SSH traffic
+                      flows straight through the relay tunnel into the container. The host filesystem remains inaccessible.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="alt-step">
+                  <div className="alt-marker">4</div>
+                  <div className="alt-content">
+                    <h5>Watchdog Watch &amp; Per-Second Reconciliation</h5>
+                    <p>
+                      The registry watchdog audits active leases every tick. If runtime reaches zero balance, the grace window activates.
+                      When the renter releases or timeout occurs, the container is destroyed, exact seconds are calculated, and earnings credit to the provider.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Core Concepts */}

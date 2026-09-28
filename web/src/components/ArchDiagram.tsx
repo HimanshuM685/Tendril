@@ -1,117 +1,316 @@
+import { useState } from "react";
 import { network } from "../lib/network";
 
-/**
- * Architecture diagram — hand-drawn inline SVG so it stays on-palette
- * (cream boxes / cream flows on the green field) with no extra deps.
- * Scales fluidly via viewBox.
- */
+type FlowMode = "all" | "lease" | "run" | "settlement";
+
 export function ArchDiagram() {
+  const [activeFlow, setActiveFlow] = useState<FlowMode>("all");
+
+  const isDimmed = (flow: FlowMode) => {
+    if (activeFlow === "all") return false;
+    return activeFlow !== flow;
+  };
+
+  const isHighlighted = (flow: FlowMode) => {
+    return activeFlow === flow;
+  };
+
   return (
-    <figure className="arch">
-      <svg viewBox="0 0 960 600" role="img" aria-labelledby="arch-title arch-desc">
-        <title id="arch-title">Tendril architecture</title>
-        <desc id="arch-desc">
-          A consumer signs in and tops up at the registry, which meters usage against a Neon ledger,
-          settles on Algorand, and orchestrates contributor sandboxes reached over an SSH bore tunnel.
-        </desc>
-
-        <defs>
-          <marker
-            id="ah"
-            markerWidth="10"
-            markerHeight="10"
-            refX="7"
-            refY="3"
-            orient="auto-start-reverse"
+    <div className="arch-component-wrapper">
+      {/* Interactive Flow Switcher */}
+      <div className="arch-flow-toolbar">
+        <span className="arch-toolbar-label">Highlight Flow:</span>
+        <div className="arch-flow-buttons">
+          <button
+            type="button"
+            className={`arch-flow-btn ${activeFlow === "all" ? "active" : ""}`}
+            onClick={() => setActiveFlow("all")}
           >
-            <path d="M0,0 L7,3 L0,6 Z" className="arrowhead" />
-          </marker>
-        </defs>
+            All Flows
+          </button>
+          <button
+            type="button"
+            className={`arch-flow-btn ${activeFlow === "lease" ? "active" : ""}`}
+            onClick={() => setActiveFlow("lease")}
+          >
+            1. Metered SSH Lease
+          </button>
+          <button
+            type="button"
+            className={`arch-flow-btn ${activeFlow === "run" ? "active" : ""}`}
+            onClick={() => setActiveFlow("run")}
+          >
+            2. One-Shot Run (/x402/run)
+          </button>
+          <button
+            type="button"
+            className={`arch-flow-btn ${activeFlow === "settlement" ? "active" : ""}`}
+            onClick={() => setActiveFlow("settlement")}
+          >
+            3. USDC Settlement
+          </button>
+        </div>
+      </div>
 
-        {/* ── flows (drawn first, under the boxes) ───────────────────── */}
-        {/* consumer ↔ sandbox : SSH over bore tunnel */}
-        <line className="flow" x1="290" y1="88" x2="670" y2="88" markerStart="url(#ah)" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="480" y="74" textAnchor="middle">SSH · BORE TUNNEL</text>
+      {/* SVG Canvas */}
+      <div className="arch-svg-container">
+        <svg
+          viewBox="0 0 960 620"
+          className="arch-svg"
+          role="img"
+          aria-label="Tendril Decentralized Compute Architecture"
+        >
+          <defs>
+            {/* Arrowhead Markers */}
+            <marker
+              id="arch-arrow-default"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="4"
+              orient="auto"
+            >
+              <path d="M1,1 L7,4 L1,7 Z" fill="#6e7067" />
+            </marker>
+            <marker
+              id="arch-arrow-green"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="4"
+              orient="auto"
+            >
+              <path d="M1,1 L7,4 L1,7 Z" fill="#0B5D3A" />
+            </marker>
+            <marker
+              id="arch-arrow-lime"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="4"
+              orient="auto"
+            >
+              <path d="M1,1 L7,4 L1,7 Z" fill="#7cb305" />
+            </marker>
 
-        {/* consumer → registry : sign in / top up / rent */}
-        <line className="flow" x1="165" y1="136" x2="165" y2="240" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="178" y="180" textAnchor="start">SIGN IN ·</text>
-        <text className="f-lbl" x="178" y="196" textAnchor="start">TOP UP ·</text>
-        <text className="f-lbl" x="178" y="212" textAnchor="start">RENT</text>
+            {/* Subtle Node Dropshadow */}
+            <filter id="node-shadow" x="-5%" y="-5%" width="115%" height="120%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#14180f" floodOpacity="0.06" />
+            </filter>
+          </defs>
 
-        {/* registry ↔ contributor : websocket */}
-        <line className="flow" x1="360" y1="305" x2="670" y2="305" markerStart="url(#ah)" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="515" y="291" textAnchor="middle">WEBSOCKET</text>
-        <text className="f-lbl" x="515" y="325" textAnchor="middle">LEASE / RELEASE</text>
+          {/* ================= FLOW LINES ================= */}
 
-        {/* contributor → sandbox : docker run */}
-        <line className="flow" x1="795" y1="240" x2="795" y2="136" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="808" y="184" textAnchor="start">DOCKER RUN</text>
-        <text className="f-lbl" x="808" y="200" textAnchor="start">(HARDENED)</text>
+          {/* 1. SSH Direct Tunnel: Consumer ↔ Sandbox (Lease Flow) */}
+          <g
+            className={`arch-flow-group ${isDimmed("lease") ? "dimmed" : ""} ${
+              isHighlighted("lease") ? "highlighted" : ""
+            }`}
+          >
+            <path
+              d="M 280 90 L 680 90"
+              fill="none"
+              stroke={isHighlighted("lease") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("lease") ? "2.5" : "1.8"}
+              strokeDasharray={isHighlighted("lease") ? "6,4" : "none"}
+              markerEnd={isHighlighted("lease") ? "url(#arch-arrow-green)" : "url(#arch-arrow-default)"}
+            />
+            <rect x="420" y="74" width="130" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="485" y="89" textAnchor="middle" className="arch-flow-tag">
+              SSH · BORE TUNNEL
+            </text>
+          </g>
 
-        {/* registry → neon : ledger */}
-        <line className="flow" x1="130" y1="370" x2="130" y2="470" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="143" y="424" textAnchor="start">LEDGER</text>
+          {/* 2. Consumer → Registry: Sign In / Top Up / Rent / Run */}
+          <g
+            className={`arch-flow-group ${
+              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+          >
+            <path
+              d="M 160 145 L 160 250"
+              fill="none"
+              stroke={isHighlighted("lease") || isHighlighted("run") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("lease") || isHighlighted("run") ? "2.5" : "1.8"}
+              markerEnd={
+                isHighlighted("lease") || isHighlighted("run")
+                  ? "url(#arch-arrow-green)"
+                  : "url(#arch-arrow-default)"
+              }
+            />
+            <rect x="75" y="180" width="170" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="160" y="195" textAnchor="middle" className="arch-flow-tag">
+              x402 AUTH · REST API
+            </text>
+          </g>
 
-        {/* registry → algorand : confirm / payout */}
-        <line className="flow" x1="300" y1="370" x2="395" y2="470" markerEnd="url(#ah)" />
-        <text className="f-lbl" x="360" y="415" textAnchor="start">CONFIRM ·</text>
-        <text className="f-lbl" x="360" y="431" textAnchor="start">PAYOUT</text>
+          {/* 3. Registry ↔ Contributor Daemon: WebSocket */}
+          <g
+            className={`arch-flow-group ${
+              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+          >
+            <path
+              d="M 330 315 L 680 315"
+              fill="none"
+              stroke={isHighlighted("lease") || isHighlighted("run") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("lease") || isHighlighted("run") ? "2.5" : "1.8"}
+              strokeDasharray="4,4"
+              markerEnd={
+                isHighlighted("lease") || isHighlighted("run")
+                  ? "url(#arch-arrow-green)"
+                  : "url(#arch-arrow-default)"
+              }
+            />
+            <rect x="440" y="295" width="140" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="510" y="310" textAnchor="middle" className="arch-flow-tag">
+              WEBSOCKET DISPATCH
+            </text>
+            <text x="510" y="332" textAnchor="middle" className="arch-flow-subtag">
+              Heartbeat &amp; Lease Event
+            </text>
+          </g>
 
-        {/* ── boxes ──────────────────────────────────────────────────── */}
-        {/* consumer */}
-        <g>
-          <rect className="box-fill" x="40" y="40" width="250" height="96" />
-          <rect className="box-edge" x="44" y="44" width="242" height="88" />
-          <text className="b-title" x="165" y="80" textAnchor="middle">CONSUMER / AGENT</text>
-          <text className="b-sub" x="165" y="104" textAnchor="middle">BROWSER · HEADLESS BOT</text>
-        </g>
+          {/* 4. Contributor Daemon → Sandbox: Docker Run / Destroy */}
+          <g
+            className={`arch-flow-group ${
+              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+          >
+            <path
+              d="M 800 250 L 800 145"
+              fill="none"
+              stroke={isHighlighted("lease") || isHighlighted("run") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("lease") || isHighlighted("run") ? "2.5" : "1.8"}
+              markerEnd={
+                isHighlighted("lease") || isHighlighted("run")
+                  ? "url(#arch-arrow-green)"
+                  : "url(#arch-arrow-default)"
+              }
+            />
+            <rect x="715" y="180" width="170" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="800" y="195" textAnchor="middle" className="arch-flow-tag">
+              SPAWN HARDENED CONTAINER
+            </text>
+          </g>
 
-        {/* sandbox */}
-        <g>
-          <rect className="box-fill" x="670" y="40" width="250" height="96" />
-          <rect className="box-edge" x="674" y="44" width="242" height="88" />
-          <text className="b-title" x="795" y="80" textAnchor="middle">SANDBOX</text>
-          <text className="b-sub" x="795" y="104" textAnchor="middle">EPHEMERAL DOCKER · SSH</text>
-        </g>
+          {/* 5. Registry ↔ Neon: Off-chain Balance Ledger */}
+          <g
+            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${
+              isHighlighted("settlement") ? "highlighted" : ""
+            }`}
+          >
+            <path
+              d="M 160 380 L 160 480"
+              fill="none"
+              stroke={isHighlighted("settlement") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("settlement") ? "2.5" : "1.8"}
+              markerEnd={isHighlighted("settlement") ? "url(#arch-arrow-green)" : "url(#arch-arrow-default)"}
+            />
+            <rect x="75" y="415" width="170" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="160" y="430" textAnchor="middle" className="arch-flow-tag">
+              PER-SECOND LEDGER
+            </text>
+          </g>
 
-        {/* registry */}
-        <g>
-          <rect className="box-fill" x="40" y="240" width="320" height="130" />
-          <rect className="box-edge" x="44" y="244" width="312" height="122" />
-          <text className="b-title" x="200" y="288" textAnchor="middle">REGISTRY · API</text>
-          <text className="b-sub" x="200" y="312" textAnchor="middle">EXPRESS · SOCKET.IO</text>
-          <text className="b-sub" x="200" y="332" textAnchor="middle">METER · BILLS BY TIME</text>
-        </g>
+          {/* 6. Registry ↔ Algorand: x402 Settle & Payouts */}
+          <g
+            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${
+              isHighlighted("settlement") ? "highlighted" : ""
+            }`}
+          >
+            <path
+              d="M 280 380 L 410 480"
+              fill="none"
+              stroke={isHighlighted("settlement") ? "#0B5D3A" : "#8c9085"}
+              strokeWidth={isHighlighted("settlement") ? "2.5" : "1.8"}
+              markerEnd={isHighlighted("settlement") ? "url(#arch-arrow-green)" : "url(#arch-arrow-default)"}
+            />
+            <rect x="290" y="415" width="150" height="22" rx="4" fill="#ffffff" stroke="#e6e7df" />
+            <text x="365" y="430" textAnchor="middle" className="arch-flow-tag">
+              USDC ON-CHAIN FINALITY
+            </text>
+          </g>
 
-        {/* contributor */}
-        <g>
-          <rect className="box-fill" x="670" y="240" width="250" height="130" />
-          <rect className="box-edge" x="674" y="244" width="242" height="122" />
-          <text className="b-title" x="795" y="298" textAnchor="middle">CONTRIBUTOR PC</text>
-          <text className="b-sub" x="795" y="322" textAnchor="middle">DAEMON · BORE · DOCKER</text>
-        </g>
+          {/* ================= NODE CARDS ================= */}
 
-        {/* neon */}
-        <g>
-          <rect className="box-fill" x="40" y="470" width="200" height="90" />
-          <rect className="box-edge" x="44" y="474" width="192" height="82" />
-          <text className="b-title" x="140" y="510" textAnchor="middle">NEON</text>
-          <text className="b-sub" x="140" y="532" textAnchor="middle">WALLETS · CHARGES</text>
-        </g>
+          {/* Node 1: Consumer / Agent */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="40" y="35" width="240" height="110" rx="10" className="arch-node-bg" />
+            <rect x="40" y="35" width="240" height="110" rx="10" className="arch-node-border" />
+            {/* Header pill */}
+            <rect x="54" y="48" width="105" height="18" rx="4" fill="rgba(11, 93, 58, 0.08)" />
+            <text x="60" y="61" className="arch-node-badge">CLIENT TIER</text>
+            <text x="54" y="90" className="arch-node-title">Consumer / Agent</text>
+            <text x="54" y="110" className="arch-node-sub">Web UI · Python SDK · MCP Agent</text>
+            <text x="54" y="126" className="arch-node-desc">Funds USDC &amp; manages leases</text>
+          </g>
 
-        {/* algorand */}
-        <g>
-          <rect className="box-fill" x="300" y="470" width="200" height="90" />
-          <rect className="box-edge" x="304" y="474" width="192" height="82" />
-          <text className="b-title" x="400" y="510" textAnchor="middle">ALGORAND</text>
-          <text className="b-sub" x="400" y="532" textAnchor="middle">ALGOD · {network.network.toUpperCase()}</text>
-        </g>
-      </svg>
-      <figcaption className="arch-cap">
-        // FIG.1 — money &amp; compute flow. The registry meters time against the Neon ledger and
-        settles in native ALGO; the renter reaches the sandbox directly over the bore tunnel.
-      </figcaption>
-    </figure>
+          {/* Node 2: Ephemeral Docker Sandbox */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="680" y="35" width="240" height="110" rx="10" className="arch-node-bg" />
+            <rect x="680" y="35" width="240" height="110" rx="10" className="arch-node-border" />
+            <rect x="694" y="48" width="115" height="18" rx="4" fill="rgba(124, 179, 5, 0.12)" />
+            <text x="700" y="61" className="arch-node-badge-lime">EXECUTION TIER</text>
+            <text x="694" y="90" className="arch-node-title">Docker Sandbox</text>
+            <text x="694" y="110" className="arch-node-sub">Ubuntu / Debian · Bore Relay</text>
+            <text x="694" y="126" className="arch-node-desc">Destroyed on lease closure</text>
+          </g>
+
+          {/* Node 3: Tendril Registry & API */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="40" y="250" width="290" height="130" rx="10" className="arch-node-bg" />
+            <rect x="40" y="250" width="290" height="130" rx="10" className="arch-node-border" />
+            <rect x="54" y="264" width="115" height="18" rx="4" fill="rgba(11, 93, 58, 0.08)" />
+            <text x="60" y="277" className="arch-node-badge">CONTROL PLANE</text>
+            <text x="54" y="306" className="arch-node-title">Tendril Registry</text>
+            <text x="54" y="328" className="arch-node-sub">Express · Socket.io · Watchdog</text>
+            <text x="54" y="348" className="arch-node-desc">Meters usage down to the second</text>
+            <text x="54" y="364" className="arch-node-desc">Verifies x402 payment headers</text>
+          </g>
+
+          {/* Node 4: Contributor Host Daemon */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="680" y="250" width="240" height="130" rx="10" className="arch-node-bg" />
+            <rect x="680" y="250" width="240" height="130" rx="10" className="arch-node-border" />
+            <rect x="694" y="264" width="125" height="18" rx="4" fill="rgba(124, 179, 5, 0.12)" />
+            <text x="700" y="277" className="arch-node-badge-lime">PROVIDER NODE</text>
+            <text x="694" y="306" className="arch-node-title">Contributor PC</text>
+            <text x="694" y="328" className="arch-node-sub">Daemon · Docker Engine · Bore</text>
+            <text x="694" y="348" className="arch-node-desc">Outbound-only connection</text>
+            <text x="694" y="364" className="arch-node-desc">No wallet keys on machine</text>
+          </g>
+
+          {/* Node 5: Neon Postgres */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="40" y="480" width="240" height="105" rx="10" className="arch-node-bg" />
+            <rect x="40" y="480" width="240" height="105" rx="10" className="arch-node-border" />
+            <rect x="54" y="494" width="95" height="18" rx="4" fill="#f0f1ec" />
+            <text x="60" y="507" className="arch-node-badge-muted">LEDGER DB</text>
+            <text x="54" y="534" className="arch-node-title">Neon Postgres</text>
+            <text x="54" y="554" className="arch-node-sub">Off-chain Balances &amp; History</text>
+            <text x="54" y="570" className="arch-node-desc">Atomic charge reconciliation</text>
+          </g>
+
+          {/* Node 6: Algorand Network */}
+          <g className="arch-node-group" filter="url(#node-shadow)">
+            <rect x="330" y="480" width="250" height="105" rx="10" className="arch-node-bg" />
+            <rect x="330" y="480" width="250" height="105" rx="10" className="arch-node-border" />
+            <rect x="344" y="494" width="125" height="18" rx="4" fill="rgba(11, 93, 58, 0.08)" />
+            <text x="350" y="507" className="arch-node-badge">SETTLEMENT LAYER</text>
+            <text x="344" y="534" className="arch-node-title">Algorand ({network.network})</text>
+            <text x="344" y="554" className="arch-node-sub">USDC ASA · 2.8s Finality</text>
+            <text x="344" y="570" className="arch-node-desc">Gas sponsored by facilitator</text>
+          </g>
+        </svg>
+      </div>
+
+      <div className="arch-caption-bar">
+        <span className="acb-tag">// ARCHITECTURE FLOW</span>
+        <span className="acb-desc">
+          The registry balances micro-metered runtime off-chain in Neon, settles USDC on Algorand with zero network gas for consumers, and orchestrates disposable Docker sandboxes over secure bore tunnels.
+        </span>
+      </div>
+    </div>
   );
 }
