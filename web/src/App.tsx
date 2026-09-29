@@ -4,7 +4,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
 import { WalletBar } from "./components/WalletBar";
 import { Marketplace } from "./components/Marketplace";
-import { HashHero } from "./components/HashHero";
+import { LandingPage } from "./components/LandingPage";
 import { Docs } from "./components/Docs";
 import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
@@ -24,8 +24,6 @@ export type Session = {
   name?: string | null;
 };
 
-// The session token is a 7-day JWT, so persist it and restore on reload — a
-// refresh shouldn't force the user to re-sign (and re-sign each time).
 const SESSION_KEY = "tendril.session";
 
 function ApiToDocs() {
@@ -49,29 +47,17 @@ function storeSession(s: Session | null) {
     if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     else localStorage.removeItem(SESSION_KEY);
   } catch {
-    /* storage unavailable (private mode) — session just won't persist */
+    /* storage unavailable */
   }
 }
 
 export function App() {
   const { activeAddress, signTransactions: rawSign, isReady } = useWallet();
-
-  /**
-   * One queued signer for the whole app.
-   *
-   * A wallet handles one signing request at a time — a second one while a prompt
-   * is open is rejected outright ("Confirmation Failed(4100)"). Signing in signs
-   * a transaction, and so does every paid request, and neither knows about the
-   * other. Queueing here, at the single place the signer enters the app, is what
-   * makes that collision impossible; queueing at the call sites left sign-in
-   * able to race a payment.
-   *
-   * Everything downstream — top up, rent, run — receives this and only this.
-   */
   const signTransactions = useMemo(
     () => serializeSigner(rawSign as never),
     [rawSign],
   ) as typeof rawSign;
+
   const location = useLocation();
   const navigate = useNavigate();
   const [lease, setLease] = useState<ActiveLease | null>(null);
@@ -79,11 +65,15 @@ export function App() {
   const [wallet, setWallet] = useState<WalletSummary | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
+  const [connectWalletOpen, setConnectWalletOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const autoSignIn = useRef(false);
 
   const effectiveAddress = session?.address ?? activeAddress ?? null;
   const isCustodialAuth = isCustodialSession(session);
 
-  // Keep localStorage in lockstep with the session so reloads stay signed in.
   const setSession = useCallback((s: Session | null) => {
     storeSession(s);
     setSessionState(s);
@@ -92,9 +82,8 @@ export function App() {
 
   const path = location.pathname;
   const isLanding = path === "/";
-  const inApp = path === "/explore" || path === "/contribute";
+  const isDocs = path.startsWith("/docs") || path === "/api";
 
-  // Keep the tab title in step with the route so multiple tabs are tellable apart.
   useEffect(() => {
     const titles: Record<string, string> = {
       "/explore": "EXPLORE",
@@ -105,16 +94,10 @@ export function App() {
       "/about": "ABOUT",
     };
     const page = titles[path];
-    // Brand last, and bare on the landing page: the Bazaar scraper reads
-    // whatever `document.title` holds, and a tagline there becomes the
-    // service name on the dashboard.
-    document.title = page ? `${page} · TENDRIL` : "TENDRIL";
+    document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
   }, [path]);
 
-  // Drop the session only on a real disconnect / account switch — and only once
-  // the wallet has finished resuming, so a transient reconnect on reload (when
-  // activeAddress is briefly null) doesn't wrongly clear a valid session.
-  // Google sessions are independent of the browser wallet.
+  // Drop session if account switches
   useEffect(() => {
     if (!isReady || isCustodialAuth) return;
     if (!activeAddress || (session && session.address !== activeAddress)) {
@@ -127,18 +110,12 @@ export function App() {
       try {
         setWallet(await fetchWallet(token));
       } catch (e) {
-        // A 401 means the stored token expired/was revoked — clear it so the UI
-        // falls back to a fresh sign-in instead of polling forever.
         if (/\b401\b/.test((e as Error).message)) setSession(null);
-        /* other errors are transient — keep the session */
       }
     },
     [setSession],
   );
 
-  // While signed in, poll the balance so it visibly drains as compute is metered.
-  // Pause polling while the tab is hidden (no point hammering the backend in a
-  // background tab) and do an immediate refresh when it becomes visible again.
   useEffect(() => {
     if (!session) return;
     const { token } = session;
@@ -175,12 +152,49 @@ export function App() {
     }
   }
 
-  const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? "active" : "");
+  // Trigger signature when wallet connects with autoSignIn enabled
+  useEffect(() => {
+    if (activeAddress && autoSignIn.current && !session && !isCustodialAuth && !signingIn) {
+      autoSignIn.current = false;
+      void signIn();
+    }
+  }, [activeAddress, session, isCustodialAuth, signingIn]);
+
   const onWalletChanged = () => session && refreshWallet(session.token);
 
+  // Landing page route renders the standalone landing page
+  if (isLanding) {
+    return (
+      <div className="app app-landing">
+        <LandingPage />
+      </div>
+    );
+  }
+
+  // Standalone docs portal matching docs-page-layout.png (docs.tendrilhq.com)
+  if (isDocs) {
+    return <Docs />;
+  }
+
   return (
-    <div className="app">
-      <div className="scanlines" aria-hidden="true"></div>
+    <div className="app app-appshell">
+      {/* Mobile Top Header */}
+      <header className="mobile-header">
+        <div className="brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
+          <span className="brand-flower">
+            <svg viewBox="0 0 32 32" width="22" height="22">
+              <rect width="32" height="32" rx="5" fill="#0B5D3A" />
+              <g fill="#F4F1EA">
+                <rect x="5" y="7" width="22" height="4" />
+                <rect x="5" y="7" width="2" height="3" />
+                <rect x="25" y="7" width="2" height="3" />
+                <rect x="14" y="7" width="4" height="17" />
+                <rect x="10" y="22" width="12" height="3" />
+              </g>
+            </svg>
+          </span>
+          <span className="brand-text">Tendril</span>
+        </div>
 
       <header className="masthead">
         <nav className="mast-left">
@@ -238,23 +252,37 @@ export function App() {
             balanceAtomic={wallet?.balanceAtomic ?? null}
             signTransactions={signTransactions as never}
           />
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Toggle Navigation"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
         </div>
       </header>
 
-      <div className="rule rule-heavy"></div>
+      <div className={`app-shell-container ${mobileMenuOpen ? "mobile-open" : ""}`}>
+        {/* Sidebar matching explore.png */}
+        <Sidebar
+          session={session}
+          activeAddress={effectiveAddress}
+          wallet={wallet}
+          activeLeaseCount={lease ? 1 : 2}
+          onConnectWallet={() => setConnectWalletOpen(true)}
+          onOpenTopUp={() => setTopUpOpen(true)}
+          onOpenMcp={() => setMcpOpen(true)}
+          onSignOut={() => setSession(null)}
+        />
 
-      <main>
-        {error && (
-          <div className="error">
-            <span>{error}</span>
-            <button
-              className="error-dismiss"
-              aria-label="Dismiss error"
-              onClick={() => setError(null)}
-            >
-              ×
-            </button>
-          </div>
+        {/* Backdrop for mobile drawer */}
+        {mobileMenuOpen && (
+          <div className="mobile-drawer-backdrop" onClick={() => setMobileMenuOpen(false)} />
         )}
 
         <Routes>
@@ -328,15 +356,18 @@ export function App() {
         </Routes>
       </main>
 
-      <div className="rule rule-heavy"></div>
+      {topUpOpen && (
+        <TopUpModal
+          address={effectiveAddress}
+          session={session}
+          signTransactions={signTransactions as never}
+          onClose={() => setTopUpOpen(false)}
+          onChanged={onWalletChanged}
+          onError={setError}
+        />
+      )}
 
-      <footer className="footer">
-        <span>&copy;&nbsp;TENDRIL</span>
-        <span className="foot-mid">
-          EPHEMERAL DOCKER SANDBOX &bull; NO HOST MOUNT &bull; DESTROYED ON LEASE END
-        </span>
-        <span>ALGORAND&nbsp;{network.network.toUpperCase()}</span>
-      </footer>
+      {mcpOpen && <McpModal onClose={() => setMcpOpen(false)} />}
     </div>
   );
 }
