@@ -1,9 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../landing.css";
 
 const SAMPLE_PROMPT =
   "How does Tendril work for decentralized pay-per-second compute? Compare Tendril with Akash and io.net for renting sandboxed GPU and CPU machines over x402 on Algorand.";
+
+const FAQ_ITEMS = [
+  {
+    q: "What is Tendril, exactly?",
+    a: "Tendril is a lean, agent-first compute marketplace that lets individuals rent out their PC's CPU, GPU, and RAM, and allows developers or autonomous AI agents to rent sandboxed machines by the second using USDC over x402 on Algorand.",
+  },
+  {
+    q: "How does prepaid and per-second metering work?",
+    a: "You deposit USDC to your credit balance once. When you rent a machine, a small 0.01 USDC gate fee opens the session, and your balance is billed to the exact second when you release the box. You never pay for unneeded booked blocks.",
+  },
+  {
+    q: "Is it safe to contribute my PC's compute?",
+    a: "Yes. Safety is enforced by an ephemeral Docker sandbox: zero host filesystem mounts, no inbound host ports (SSH dials out via a bore tunnel), all root capabilities dropped, and hard cgroup caps. The container is completely destroyed upon lease end.",
+  },
+  {
+    q: "Do I need ALGO to pay for compute?",
+    a: "No! The facilitator sponsors all on-chain network transaction fees. You only need USDC on Algorand and zero ALGO to top up and rent.",
+  },
+  {
+    q: "How do I connect to a rented machine?",
+    a: "Once you start a lease, the dashboard provides a copyable SSH command. Your wallet address acts as your default authentication password, or you can provide your own public SSH key.",
+  },
+  {
+    q: "What is POST /x402/run?",
+    a: "If you only need to run a single script or Python workload without managing an SSH session, send your payload directly to POST /x402/run. Tendril automatically selects the highest-value idle node, executes the job, returns stdout, and destroys the sandbox.",
+  },
+  {
+    q: "How are nodes scored and matched?",
+    a: "Nodes are scored by true value: (cores + RAM_GB / 4) / pricePerHourUsd. We route jobs to the most cost-effective hardware rather than artificially slow, cheap instances.",
+  },
+  {
+    q: "What happens if my balance runs out mid-session?",
+    a: "Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can save your artifacts and work. The platform absorbs this cost before the container is cleanly terminated.",
+  },
+  {
+    q: "How do contributors earn and get paid?",
+    a: "Contributors mint an API key in the web app, run our lightweight daemon, and earn USDC directly for every lease second served. Earnings accumulate in their balance and can be withdrawn on-chain to their Algorand wallet at any time.",
+  },
+  {
+    q: "Does my machine need a public IP or open router ports?",
+    a: "No. Contributor nodes establish an outbound tunnel to our bore relay. You never have to configure port forwarding, dynamic DNS, or expose your local network.",
+  },
+  {
+    q: "Can autonomous AI agents rent machines without humans?",
+    a: "Yes! The x402 protocol and HTTP 402 endpoints allow autonomous headless agents to discover nodes via GET /explorer, pay via signed atomic transactions, and run workloads with zero human intervention.",
+  },
+  {
+    q: "Can I cancel or release a lease at any time?",
+    a: "Yes, immediately. Clicking Release in the dashboard or sending a DELETE request stops billing instantly and destroys the remote sandbox.",
+  },
+];
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -12,6 +63,39 @@ export function LandingPage() {
   const [copyPromptText, setCopyPromptText] = useState("Copy prompt");
   const [showToast, setShowToast] = useState(false);
   const [searchStatus, setSearchStatus] = useState("Polling live nodes...");
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const targets = document.querySelectorAll(".reveal-on-scroll");
+
+    if (prefersReducedMotion || !("IntersectionObserver" in window)) {
+      targets.forEach((el) => el.classList.add("revealed"));
+      return;
+    }
+
+    if (!targets.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("revealed");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.08,
+        rootMargin: "0px 0px -40px 0px",
+      }
+    );
+
+    targets.forEach((target) => observer.observe(target));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const scrollToSection = (id: string) => {
     if (id === "top") {
@@ -24,8 +108,8 @@ export function LandingPage() {
     }
   };
 
-  const handleToggleFaq = (index: number, isOpen: boolean) => {
-    setOpenFaqs((prev) => ({ ...prev, [index]: isOpen }));
+  const handleToggleFaq = (index: number) => {
+    setOpenFaqs((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleCopyPrompt = async () => {
@@ -87,8 +171,8 @@ export function LandingPage() {
     <div className="topbar-inner wrap">
       <a href="#top" className="brand" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }}>
         <span className="brand-flower">
-          <svg viewBox="0 0 32 32" width="22" height="22">
-            <rect width="32" height="32" fill="#0B5D3A" />
+          <svg viewBox="0 0 32 32" width="24" height="24">
+            <rect width="32" height="32" rx="6" fill="#0B5D3A" />
             <g fill="#F4F1EA">
               <rect x="5" y="7" width="22" height="4" />
               <rect x="5" y="7" width="2" height="3" />
@@ -105,12 +189,18 @@ export function LandingPage() {
         <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection("how-it-works"); }}>How it works</a>
         <a href="#faq" onClick={(e) => { e.preventDefault(); scrollToSection("faq"); }}>FAQ</a>
         <a href="/docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }}>Docs</a>
-        <a href="/about" onClick={(e) => { e.preventDefault(); navigate("/about"); }}>About</a>
+        {/* <a href="/about" onClick={(e) => { e.preventDefault(); navigate("/about"); }}>About</a> */}
       </nav>
 
       <div className="topbar-actions">
         <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark btn-sm">Explore Marketplace</button>
-        <button className="menu-toggle" aria-label="Toggle navigation menu" id="menuToggle">
+        <button
+          type="button"
+          className={`menu-toggle ${mobileNavOpen ? "open" : ""}`}
+          aria-label="Toggle navigation menu"
+          id="menuToggle"
+          onClick={() => setMobileNavOpen((prev) => !prev)}
+        >
           <span></span>
           <span></span>
           <span></span>
@@ -119,10 +209,47 @@ export function LandingPage() {
     </div>
 
     {/*  Mobile Drawer  */}
-    <div className="mobile-nav" id="mobileNav">
-      <a href="#how-it-works">How it works</a>
-      <a href="#faq">FAQ</a>
-      <a href="#explore" className="btn btn-dark">Explore Marketplace</a>
+    <div className={`mobile-nav ${mobileNavOpen ? "open" : ""}`} id="mobileNav">
+      <a
+        href="#how-it-works"
+        onClick={(e) => {
+          e.preventDefault();
+          setMobileNavOpen(false);
+          scrollToSection("how-it-works");
+        }}
+      >
+        How it works
+      </a>
+      <a
+        href="#faq"
+        onClick={(e) => {
+          e.preventDefault();
+          setMobileNavOpen(false);
+          scrollToSection("faq");
+        }}
+      >
+        FAQ
+      </a>
+      <a
+        href="/docs"
+        onClick={(e) => {
+          e.preventDefault();
+          setMobileNavOpen(false);
+          navigate("/docs");
+        }}
+      >
+        Docs
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          setMobileNavOpen(false);
+          navigate("/explore");
+        }}
+        className="btn btn-dark"
+      >
+        Explore Marketplace
+      </button>
     </div>
   </header>
 
@@ -132,7 +259,7 @@ export function LandingPage() {
     <section className="hero-section wrap">
       <div className="hero-grid">
         {/*  Left Hero Copy  */}
-        <div className="hero-content">
+        <div className="hero-content reveal-on-scroll">
           <h1 className="hero-title">
             Rent real compute.<br />
             Pay by the<br />
@@ -143,12 +270,12 @@ export function LandingPage() {
             metered SSH leases or run instant jobs over x402 on Algorand.
           </p>
           <div className="hero-cta-group">
-            <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark btn-lg">
+            <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark">
               Explore the marketplace
               <span className="btn-arrow">→</span>
             </button>
           </div>
-          <div className="hero-perks">
+          <div className="hero-perks hero-perks-desktop">
             <span className="perk-item">
               <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
                 <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
@@ -169,7 +296,7 @@ export function LandingPage() {
         </div>
 
         {/*  Right Hero Mockup with hills-smudge-art.jpg  */}
-        <div className="hero-visual">
+        <div className="hero-visual reveal-on-scroll reveal-stagger-1">
           <div className="hero-art-frame">
             <img  src="/assets/hills-smudge-art.jpg" alt="Painted green landscape" className="hero-art-img" />
 
@@ -280,11 +407,29 @@ export function LandingPage() {
 
           </div>
         </div>
+
+        {/* Mobile and Tablet Hero Perks (below LIVE COMPUTE REGISTRY card) */}
+        <div className="hero-perks hero-perks-mobile">
+          <span className="perk-item">
+            <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
+              <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            No subscription or lock-in
+          </span>
+          <span className="perk-item">
+            <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
+              <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Zero ALGO needed (fees sponsored)
+          </span>
+        </div>
       </div>
     </section>
 
     {/*  ================= FEATURED & TRUSTED BY =================  */}
-    <section className="trusted-bar">
+    <section className="trusted-bar reveal-on-scroll">
       <div className="wrap trusted-inner">
         <span className="trusted-label">ECOSYSTEM</span>
         <div className="trusted-logos">
@@ -335,14 +480,14 @@ export function LandingPage() {
 
     {/*  ================= 2. THREE STEPS (painting1, painting2, painting3) =================  */}
     <section className="steps-section wrap" id="how-it-works">
-      <div className="section-title-center">
+      <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">HOW IT WORKS</span>
         <h2 className="serif-title">Three steps between you and raw compute.</h2>
       </div>
 
       <div className="steps-grid">
         {/*  Step 1: painting1.jpg  */}
-        <article className="step-card">
+        <article className="step-card reveal-on-scroll">
           <div className="step-card-media">
             <img  src="/assets/painting1.jpg" alt="Cozy painted cottage with lush garden" loading="lazy" />
           </div>
@@ -354,7 +499,7 @@ export function LandingPage() {
         </article>
 
         {/*  Step 2: painting2.jpg  */}
-        <article className="step-card">
+        <article className="step-card reveal-on-scroll reveal-stagger-1">
           <div className="step-card-media">
             <img  src="/assets/painting2.jpg" alt="Vibrant landscape with rolling greens" loading="lazy" />
           </div>
@@ -366,7 +511,7 @@ export function LandingPage() {
         </article>
 
         {/*  Step 3: painting3.jpg  */}
-        <article className="step-card">
+        <article className="step-card reveal-on-scroll reveal-stagger-2">
           <div className="step-card-media">
             <img  src="/assets/painting3.jpg" alt="Scenic mountain valley in paint texture" loading="lazy" />
           </div>
@@ -381,16 +526,16 @@ export function LandingPage() {
 
     {/*  ================= 3. DASHBOARD SHOWCASE (field-paint.jpg) & 6 FEATURES =================  */}
     <section className="platform-section wrap" id="explore">
-      <div className="section-title-center">
+      <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">A COMPLETE DECENTRALIZED PLATFORM</span>
         <h2 className="serif-title">Everything you need to rent or provide compute.</h2>
         <div className="section-cta-row">
-          <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark">Explore live nodes</button>
+          <button type="button" onClick={(e) => e.preventDefault()} className="btn btn-dark">Explore live nodes</button>
         </div>
       </div>
 
       {/*  App Backdrop with field-paint.jpg  */}
-      <div className="app-stage-wrapper">
+      <div className="app-stage-wrapper reveal-on-scroll">
         <div className="app-stage-backdrop">
           <img  src="/assets/field-paint.jpg" alt="Painted green landscape meadow" className="stage-bg-img" loading="lazy" />
         </div>
@@ -402,7 +547,7 @@ export function LandingPage() {
             <div className="sidebar-brand">
               <span className="brand-flower-sm">
                 <svg viewBox="0 0 32 32" width="16" height="16">
-                  <rect width="32" height="32" fill="#0B5D3A" />
+                  <rect width="32" height="32" rx="6" fill="#0B5D3A" />
                   <g fill="#F4F1EA">
                     <rect x="5" y="7" width="22" height="4" />
                     <rect x="5" y="7" width="2" height="3" />
@@ -416,42 +561,40 @@ export function LandingPage() {
             </div>
 
             <nav className="sidebar-menu">
-              <a href="#explore" onClick={(e) => { e.preventDefault(); navigate("/explore"); }} className="sidebar-item active">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path
-                    d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              <a href="#explore" onClick={(e) => e.preventDefault()} className="sidebar-item active">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
                 </svg>
                 <span>Explore</span>
               </a>
-              <a href="#leases" onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }} className="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path
-                    d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                </svg>
-                <span>Active Leases</span>
-              </a>
-              <a href="#contribute" onClick={(e) => { e.preventDefault(); navigate("/contribute"); }} className="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd" />
+              <a href="#contribute" onClick={(e) => e.preventDefault()} className="sidebar-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
                 <span>Contribute</span>
               </a>
-              <a href="#keys" onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }} className="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path fillRule="evenodd"
-                    d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
-                    clipRule="evenodd" />
+              <a href="#dashboard" onClick={(e) => e.preventDefault()} className="sidebar-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="7" height="9" x="3" y="3" rx="1" />
+                  <rect width="7" height="5" x="14" y="3" rx="1" />
+                  <rect width="7" height="9" x="14" y="12" rx="1" />
+                  <rect width="7" height="5" x="3" y="16" rx="1" />
                 </svg>
-                <span>API Keys</span>
+                <span>Dashboard</span>
+              </a>
+              <a href="#metrics" onClick={(e) => e.preventDefault()} className="sidebar-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18" />
+                  <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+                <span>Metrics</span>
               </a>
             </nav>
 
             <div className="sidebar-usage-box">
               <span className="usage-title">PREPAID BALANCE</span>
-              <div className="usage-bar">
-                <div className="usage-fill" style={{ width: "49%" }}></div>
-              </div>
               <div className="usage-stats">
                 <span>24.50 USDC</span>
                 <span>Funds ~102h</span>
@@ -459,18 +602,18 @@ export function LandingPage() {
             </div>
 
             <div className="sidebar-footer-links">
-              <a href="#mcp" onClick={(e) => { e.preventDefault(); navigate("/docs"); }} className="sf-item">
+              <a href="#mcp" onClick={(e) => e.preventDefault()} className="sf-item">
                 <span className="sf-icon">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                   </svg>
                 </span>
                 <span>Connect MCP</span>
               </a>
-              <a href="#docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }} className="sf-item">
+              <a href="#docs" onClick={(e) => e.preventDefault()} className="sf-item">
                 <span className="sf-icon">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -495,12 +638,6 @@ export function LandingPage() {
               <div>
                 <h3 className="app-greeting">Good afternoon, Alex!</h3>
                 <p className="app-greeting-sub">Here's your live compute fleet and balance at a glance.</p>
-              </div>
-              <div className="app-header-controls">
-                <span className="pill-badge pill-green">
-                  <span className="indicator-dot"></span>
-                  Registry Online
-                </span>
               </div>
             </div>
 
@@ -532,25 +669,34 @@ export function LandingPage() {
             <div className="quick-actions-bar">
               <span className="qa-title">Compute Actions</span>
               <div className="qa-buttons">
-                <button type="button" className="qa-btn" onClick={() => navigate("/explore")}>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                  Explore Nodes
+                <button type="button" className="qa-btn" onClick={(e) => e.preventDefault()}>
+                  <span className="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <span className="qa-btn-text">Explore Nodes</span>
                 </button>
-                <button className="qa-btn">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                  </svg>
-                  Mint Contributor Key
+                <button type="button" className="qa-btn" onClick={(e) => e.preventDefault()}>
+                  <span className="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                      <path d="m21 2-9.6 9.6"></path>
+                      <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+                    </svg>
+                  </span>
+                  <span className="qa-btn-text">Mint Contributor Key</span>
                 </button>
-                <button type="button" className="qa-btn qa-btn-accent" onClick={() => navigate("/explore")}>+ Top Up USDC</button>
+                <button type="button" className="qa-btn qa-btn-accent" onClick={(e) => e.preventDefault()}>
+                  <span className="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </span>
+                  <span className="qa-btn-text">Top Up USDC</span>
+                </button>
               </div>
             </div>
 
@@ -563,7 +709,7 @@ export function LandingPage() {
                     <strong>Active &amp; Recent Leases</strong>
                     <small>2 active metered sessions</small>
                   </div>
-                  <a href="#leases" onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }} className="panel-link">View all leases →</a>
+                  <a href="#leases" onClick={(e) => e.preventDefault()} className="panel-link">View all leases →</a>
                 </div>
                 <div className="panel-list">
                   <div className="panel-list-item">
@@ -616,7 +762,7 @@ export function LandingPage() {
                     <strong>Live Hardware Pool</strong>
                     <small>Scored by (cores + RAM/4) / price</small>
                   </div>
-                  <a href="#nodes" onClick={(e) => { e.preventDefault(); navigate("/explore"); }} className="panel-link">View all 142 nodes →</a>
+                  <a href="#nodes" onClick={(e) => e.preventDefault()} className="panel-link">View all 142 nodes →</a>
                 </div>
                 <div className="panel-list">
                   <div className="panel-list-item">
@@ -690,8 +836,8 @@ export function LandingPage() {
       {/*  6 Feature Cards Below Mockup  */}
       <div className="features-six-grid">
         {/*  1. Per-Second Metering  */}
-        <article className="feature-card">
-          <div className="feature-icon-bubble icon-blue">
+        <article className="feature-card reveal-on-scroll">
+          <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
@@ -704,8 +850,8 @@ export function LandingPage() {
         </article>
 
         {/*  2. Ephemeral Docker Sandboxes  */}
-        <article className="feature-card">
-          <div className="feature-icon-bubble icon-blue-subtle">
+        <article className="feature-card reveal-on-scroll reveal-stagger-1">
+          <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <path d="M3 9h18M9 21V9" />
@@ -718,8 +864,8 @@ export function LandingPage() {
         </article>
 
         {/*  3. x402 Native Protocol  */}
-        <article className="feature-card">
-          <div className="feature-icon-bubble icon-purple">
+        <article className="feature-card reveal-on-scroll reveal-stagger-2">
+          <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="M9 12l2 2 4-4" />
@@ -732,8 +878,8 @@ export function LandingPage() {
         </article>
 
         {/*  4. Direct Bore Tunnels  */}
-        <article className="feature-card">
-          <div className="feature-icon-bubble icon-coral">
+        <article className="feature-card reveal-on-scroll">
+          <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="4 17 10 11 4 5" />
               <line x1="12" y1="19" x2="20" y2="19" />
@@ -746,8 +892,8 @@ export function LandingPage() {
         </article>
 
         {/*  5. Instant Script Runs  */}
-        <article className="feature-card">
-          <div className="feature-icon-bubble icon-orange">
+        <article className="feature-card reveal-on-scroll reveal-stagger-1">
+          <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
@@ -759,7 +905,7 @@ export function LandingPage() {
         </article>
 
         {/*  6. Zero-Risk Hardware Sharing  */}
-        <article className="feature-card">
+        <article className="feature-card reveal-on-scroll reveal-stagger-2">
           <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
@@ -776,7 +922,7 @@ export function LandingPage() {
 
     {/*  ================= 4. BUILT ON ACCURACY / TRUST (field-paint.jpg & hills-smudge-art.jpg) =================  */}
     <section className="accuracy-section wrap" id="contribute">
-      <div className="section-title-center">
+      <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">WHY TENDRIL</span>
         <h2 className="serif-title">Built on trust, not centralized clouds.</h2>
         <p className="section-subtitle-max">Big clouds charge heavy markups and lock you into monthly plans. Tendril
@@ -785,7 +931,7 @@ export function LandingPage() {
 
       <div className="comparison-dual-grid">
         {/*  Card 1: field-paint.jpg  */}
-        <div className="comparison-card">
+        <div className="comparison-card reveal-on-scroll">
           <div className="comparison-visual-frame">
             <img  src="/assets/field-paint.jpg" alt="Painted green landscape" className="comparison-bg-art" loading="lazy" />
             <div className="comparison-ui-overlay">
@@ -873,7 +1019,7 @@ export function LandingPage() {
         </div>
 
         {/*  Card 2: hills-smudge-art.jpg  */}
-        <div className="comparison-card">
+        <div className="comparison-card reveal-on-scroll reveal-stagger-1">
           <div className="comparison-visual-frame">
             <img  src="/assets/hills-smudge-art.jpg" alt="Painted mountain slopes" className="comparison-bg-art"
               loading="lazy" />
@@ -926,7 +1072,7 @@ export function LandingPage() {
     {/*  ================= 5. DARK AI-NATIVE MCP SECTION (PRESERVED AS REQUESTED) =================  */}
     <section className="mcp-section">
       <div className="wrap mcp-container">
-        <div className="mcp-intro">
+        <div className="mcp-intro reveal-on-scroll">
           <span className="mcp-eyebrow">AI-NATIVE</span>
           <h2 className="mcp-title">Built for humans and agents.</h2>
           <p className="mcp-desc">
@@ -940,14 +1086,9 @@ export function LandingPage() {
         </div>
 
         {/*  MCP Chat Card Mockup  */}
-        <div className="mcp-card-mockup">
+        <div className="mcp-card-mockup reveal-on-scroll reveal-stagger-1">
           <div className="mcp-card-topbar">
-            <span className="mcp-tag">
-              <svg className="sparkle-icon" viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
-              Tendril MCP
-            </span>
+            <span className="mcp-tag">Tendril MCP</span>
           </div>
 
           <div className="mcp-card-body">
@@ -987,12 +1128,12 @@ export function LandingPage() {
 
     {/*  ================= 6. TESTIMONIAL & RELATABLE CTA =================  */}
     <section className="testimonial-section wrap">
-      <blockquote className="founder-quote">
+      <blockquote className="founder-quote reveal-on-scroll">
         “Every cloud platform out there was expensive, rigid, and bureaucratically bloated. Tendril lets our autonomous
         agents spin up isolated GPU sandboxes and pay in seconds over x402 with zero hassle.”
       </blockquote>
 
-      <div className="founder-profile">
+      <div className="founder-profile reveal-on-scroll reveal-stagger-1">
         <div className="founder-avatar-frame">
           <div className="founder-avatar-img">
             <span>A</span>
@@ -1004,7 +1145,7 @@ export function LandingPage() {
         </div>
       </div>
 
-      <div className="relatable-box">
+      <div className="relatable-box reveal-on-scroll reveal-stagger-2">
         <p className="relatable-text">Need bare-metal compute for your next model or agent?</p>
         <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark">
           Explore the marketplace
@@ -1018,168 +1159,46 @@ export function LandingPage() {
     {/*  ================= 7. COMMON QUESTIONS (FAQ) =================  */}
     <section className="faq-section" id="faq">
       <div className="wrap faq-layout">
-        <div className="faq-header">
+        <div className="faq-header reveal-on-scroll">
           <span className="section-eyebrow">FAQ</span>
           <h2 className="serif-title">Common questions</h2>
         </div>
 
-        <div className="faq-accordion-list">
-          {/*  Q1 (Open by default)  */}
-          <details className="faq-item" open={openFaqs[0]} onToggle={(e) => handleToggleFaq(0, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>What is Tendril, exactly?</span>
-              <span className="faq-toggle-icon">{openFaqs[0] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Tendril is a lean, agent-first compute marketplace that lets individuals rent out their PC's CPU, GPU,
-                and RAM, and allows developers or autonomous AI agents to rent sandboxed machines by the second using
-                USDC over x402 on Algorand.</p>
-            </div>
-          </details>
-
-          {/*  Q2  */}
-          <details className="faq-item" open={openFaqs[1]} onToggle={(e) => handleToggleFaq(1, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>How does prepaid and per-second metering work?</span>
-              <span className="faq-toggle-icon">{openFaqs[1] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>You deposit USDC to your credit balance once. When you rent a machine, a small 0.01 USDC gate fee opens
-                the session, and your balance is billed to the exact second when you release the box. You never pay for
-                unneeded booked blocks.</p>
-            </div>
-          </details>
-
-          {/*  Q3  */}
-          <details className="faq-item" open={openFaqs[2]} onToggle={(e) => handleToggleFaq(2, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>Is it safe to contribute my PC's compute?</span>
-              <span className="faq-toggle-icon">{openFaqs[2] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Yes. Safety is enforced by an ephemeral Docker sandbox: zero host filesystem mounts, no inbound host
-                ports (SSH dials out via a bore tunnel), all root capabilities dropped, and hard cgroup caps. The
-                container is completely destroyed upon lease end.</p>
-            </div>
-          </details>
-
-          {/*  Q4  */}
-          <details className="faq-item" open={openFaqs[3]} onToggle={(e) => handleToggleFaq(3, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>Do I need ALGO to pay for compute?</span>
-              <span className="faq-toggle-icon">{openFaqs[3] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>No! The facilitator sponsors all on-chain network transaction fees. You only need USDC on Algorand and
-                zero ALGO to top up and rent.</p>
-            </div>
-          </details>
-
-          {/*  Q5  */}
-          <details className="faq-item" open={openFaqs[4]} onToggle={(e) => handleToggleFaq(4, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>How do I connect to a rented machine?</span>
-              <span className="faq-toggle-icon">{openFaqs[4] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Once you start a lease, the dashboard provides a copyable SSH command. Your wallet address acts as your
-                default authentication password, or you can provide your own public SSH key.</p>
-            </div>
-          </details>
-
-          {/*  Q6  */}
-          <details className="faq-item" open={openFaqs[5]} onToggle={(e) => handleToggleFaq(5, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>What is POST /x402/run?</span>
-              <span className="faq-toggle-icon">{openFaqs[5] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>If you only need to run a single script or Python workload without managing an SSH session, send your
-                payload directly to POST /x402/run. Tendril automatically selects the highest-value idle node, executes
-                the job, returns stdout, and destroys the sandbox.</p>
-            </div>
-          </details>
-
-          {/*  Q7  */}
-          <details className="faq-item" open={openFaqs[6]} onToggle={(e) => handleToggleFaq(6, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>How are nodes scored and matched?</span>
-              <span className="faq-toggle-icon">{openFaqs[6] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Nodes are scored by true value: (cores + RAM_GB / 4) / pricePerHourUsd. We route jobs to the most
-                cost-effective hardware rather than artificially slow, cheap instances.</p>
-            </div>
-          </details>
-
-          {/*  Q8  */}
-          <details className="faq-item" open={openFaqs[7]} onToggle={(e) => handleToggleFaq(7, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>What happens if my balance runs out mid-session?</span>
-              <span className="faq-toggle-icon">{openFaqs[7] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can
-                save your artifacts and work. The platform absorbs this cost before the container is cleanly terminated.
-              </p>
-            </div>
-          </details>
-
-          {/*  Q9  */}
-          <details className="faq-item" open={openFaqs[8]} onToggle={(e) => handleToggleFaq(8, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>How do contributors earn and get paid?</span>
-              <span className="faq-toggle-icon">{openFaqs[8] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Contributors mint an API key in the web app, run our lightweight daemon, and earn USDC directly for
-                every lease second served. Earnings accumulate in their balance and can be withdrawn on-chain to their
-                Algorand wallet at any time.</p>
-            </div>
-          </details>
-
-          {/*  Q10  */}
-          <details className="faq-item" open={openFaqs[9]} onToggle={(e) => handleToggleFaq(9, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>Does my machine need a public IP or open router ports?</span>
-              <span className="faq-toggle-icon">{openFaqs[9] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>No. Contributor nodes establish an outbound tunnel to our bore relay. You never have to configure port
-                forwarding, dynamic DNS, or expose your local network.</p>
-            </div>
-          </details>
-
-          {/*  Q11  */}
-          <details className="faq-item" open={openFaqs[10]} onToggle={(e) => handleToggleFaq(10, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>Can autonomous AI agents rent machines without humans?</span>
-              <span className="faq-toggle-icon">{openFaqs[10] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Yes! The x402 protocol and HTTP 402 endpoints allow autonomous headless agents to discover nodes via
-                GET /explorer, pay via signed atomic transactions, and run workloads with zero human intervention.</p>
-            </div>
-          </details>
-
-          {/*  Q12  */}
-          <details className="faq-item" open={openFaqs[11]} onToggle={(e) => handleToggleFaq(11, e.currentTarget.open)}>
-            <summary className="faq-question">
-              <span>Can I cancel or release a lease at any time?</span>
-              <span className="faq-toggle-icon">{openFaqs[11] ? "−" : "+"}</span>
-            </summary>
-            <div className="faq-answer">
-              <p>Yes, immediately. Clicking Release in the dashboard or sending a DELETE request stops billing instantly
-                and destroys the remote sandbox.</p>
-            </div>
-          </details>
+        <div className="faq-accordion-list reveal-on-scroll reveal-stagger-1">
+          {FAQ_ITEMS.map((item, index) => {
+            const isOpen = !!openFaqs[index];
+            return (
+              <div
+                key={index}
+                className={`faq-item ${isOpen ? "is-open" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="faq-question"
+                  onClick={() => handleToggleFaq(index)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{item.q}</span>
+                  <span className="faq-toggle-icon" aria-hidden="true">
+                    <span className="faq-toggle-line-h" />
+                    <span className="faq-toggle-line-v" />
+                  </span>
+                </button>
+                <div className="faq-answer-wrapper">
+                  <div className="faq-answer">
+                    <p>{item.a}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
 
     {/*  ================= 8. ASK AI SECTION (Still not sure?) =================  */}
     <section className="ask-ai-section wrap">
-      <div className="ask-ai-card">
+      <div className="ask-ai-card reveal-on-scroll">
         <div className="ask-ai-left">
           <span className="ask-ai-eyebrow">ASK AI</span>
           <h3 className="ask-ai-title">Still not sure?</h3>
@@ -1263,7 +1282,7 @@ export function LandingPage() {
         <div className="final-cta-overlay"></div>
       </div>
 
-      <div className="wrap final-cta-content">
+      <div className="wrap final-cta-content reveal-on-scroll">
         <h2 className="final-cta-title">
           Real compute is now<br />
           simpler than ever.
@@ -1284,13 +1303,13 @@ export function LandingPage() {
 
   {/*  ================= 10. FOOTER (lime-field-paint.jpg) =================  */}
   <footer className="site-footer">
-    <div className="wrap footer-main-grid">
+    <div className="wrap footer-main-grid reveal-on-scroll">
       {/*  Brand & Mission  */}
       <div className="footer-brand-col">
         <a href="#top" className="brand" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }}>
           <span className="brand-flower">
-            <svg viewBox="0 0 32 32" width="22" height="22">
-              <rect width="32" height="32" fill="#0B5D3A" />
+            <svg viewBox="0 0 32 32" width="24" height="24">
+              <rect width="32" height="32" rx="6" fill="#0B5D3A" />
               <g fill="#F4F1EA">
                 <rect x="5" y="7" width="22" height="4" />
                 <rect x="5" y="7" width="2" height="3" />
@@ -1362,7 +1381,7 @@ export function LandingPage() {
     <div className="wrap footer-bottom-bar">
       <div className="footer-copyright">
         © 2026 Tendril Compute. Crafted with
-        <svg className="heart-icon" viewBox="0 0 24 24" width="12" height="12" fill="#e11d48">
+        <svg className="heart-icon" viewBox="0 0 24 24" width="12" height="12" fill="#84cc16">
           <path
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
         </svg>
