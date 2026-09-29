@@ -69,7 +69,7 @@
     <section class="hero-section wrap">
       <div class="hero-grid">
         <!-- Left Hero Copy -->
-        <div class="hero-content">
+        <div class="hero-content reveal-on-scroll">
           <h1 class="hero-title">
             Rent real compute.<br>
             Pay by the<br>
@@ -80,12 +80,12 @@
             metered SSH leases or run instant jobs over x402 on Algorand.
           </p>
           <div class="hero-cta-group">
-            <a href="#explore" class="btn btn-dark btn-lg">
+            <a href="#explore" class="btn btn-dark">
               Explore the marketplace
               <span class="btn-arrow">→</span>
             </a>
           </div>
-          <div class="hero-perks">
+          <div class="hero-perks hero-perks-desktop">
             <span class="perk-item">
               <svg class="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
                 <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
@@ -106,7 +106,7 @@
         </div>
 
         <!-- Right Hero Mockup with hills-smudge-art.jpg -->
-        <div class="hero-visual">
+        <div class="hero-visual reveal-on-scroll reveal-stagger-1">
           <div class="hero-art-frame">
             <img src="assets/hills-smudge-art.jpg" alt="Painted green landscape" class="hero-art-img">
 
@@ -217,11 +217,31 @@
 
           </div>
         </div>
+
+        <!-- Mobile and Tablet Hero Perks (below LIVE COMPUTE REGISTRY card) -->
+        <div class="hero-perks hero-perks-mobile">
+          <span class="perk-item">
+            <svg class="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
+              <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            No subscription or lock-in
+          </span>
+          <span class="perk-item">
+            <svg class="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
+              <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            Zero ALGO needed (fees sponsored)
+          </span>
+        </div>
       </div>
     </section>
 
     <!-- ================= FEATURED & TRUSTED BY ================= -->
-    <section class="trusted-bar">
+    <section class="trusted-bar reveal-on-scroll">
       <div class="wrap trusted-inner">
         <span class="trusted-label">ECOSYSTEM</span>
         <div class="trusted-logos">
@@ -272,14 +292,14 @@
 
     <!-- ================= 2. THREE STEPS (painting1, painting2, painting3) ================= -->
     <section class="steps-section wrap" id="how-it-works">
-      <div class="section-title-center">
+      <div class="section-title-center reveal-on-scroll">
         <span class="section-eyebrow">HOW IT WORKS</span>
         <h2 class="serif-title">Three steps between you and raw compute.</h2>
       </div>
 
       <div class="steps-grid">
         <!-- Step 1: painting1.jpg -->
-        <article class="step-card">
+        <article class="step-card reveal-on-scroll">
           <div class="step-card-media">
             <img src="assets/painting1.jpg" alt="Cozy painted cottage with lush garden" loading="lazy">
           </div>
@@ -291,7 +311,7 @@
         </article>
 
         <!-- Step 2: painting2.jpg -->
-        <article class="step-card">
+        <article class="step-card reveal-on-scroll reveal-stagger-1">
           <div class="step-card-media">
             <img src="assets/painting2.jpg" alt="Vibrant landscape with rolling greens" loading="lazy">
           </div>
@@ -303,7 +323,7 @@
         </article>
 
         <!-- Step 3: painting3.jpg -->
-        <article class="step-card">
+        <article class="step-card reveal-on-scroll reveal-stagger-2">
           <div class="step-card-media">
             <img src="assets/painting3.jpg" alt="Scenic mountain valley in paint texture" loading="lazy">
           </div>
@@ -318,16 +338,16 @@
 
     <!-- ================= 3. DASHBOARD SHOWCASE (field-paint.jpg) & 6 FEATURES ================= -->
     <section class="platform-section wrap" id="explore">
-      <div class="section-title-center">
+      <div class="section-title-center reveal-on-scroll">
         <span class="section-eyebrow">A COMPLETE DECENTRALIZED PLATFORM</span>
         <h2 class="serif-title">Everything you need to rent or provide compute.</h2>
         <div class="section-cta-row">
-          <a href="#explore" class="btn btn-dark">Explore live nodes</a>
+          <a href="#explore" class="btn btn-dark" onclick="return false;">Explore live nodes</a>
         </div>
       </div>
 
       <!-- App Backdrop with field-paint.jpg -->
-      <div class="app-stage-wrapper">
+      <div class="app-stage-wrapper reveal-on-scroll">
         <div class="app-stage-backdrop">
           <img src="assets/field-paint.jpg" alt="Painted green landscape meadow" class="stage-bg-img" loading="lazy">
         </div>
@@ -353,43 +373,40 @@
             </div>
 
             <nav class="sidebar-menu">
-              <a href="#explore" class="sidebar-item active">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path
-                    d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              <a href="#explore" class="sidebar-item active" onclick="return false;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>
                 <span>Explore</span>
               </a>
-              <a href="#leases" class="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path
-                    d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                </svg>
-                <span>Active Leases</span>
-                <span class="nav-count">2</span>
-              </a>
-              <a href="#contribute" class="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clip-rule="evenodd" />
+              <a href="#contribute" class="sidebar-item" onclick="return false;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 <span>Contribute</span>
               </a>
-              <a href="#keys" class="sidebar-item">
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
-                    clip-rule="evenodd" />
+              <a href="#dashboard" class="sidebar-item" onclick="return false;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                  <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                  <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                  <rect width="7" height="5" x="3" y="16" rx="1"></rect>
                 </svg>
-                <span>API Keys</span>
+                <span>Dashboard</span>
+              </a>
+              <a href="#metrics" class="sidebar-item" onclick="return false;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"></path>
+                  <path d="m19 9-5 5-4-4-3 3"></path>
+                </svg>
+                <span>Metrics</span>
               </a>
             </nav>
 
             <div class="sidebar-usage-box">
               <span class="usage-title">PREPAID BALANCE</span>
-              <div class="usage-bar">
-                <div class="usage-fill" style="width: 49%;"></div>
-              </div>
               <div class="usage-stats">
                 <span>24.50 USDC</span>
                 <span>Funds ~102h</span>
@@ -397,30 +414,18 @@
             </div>
 
             <div class="sidebar-footer-links">
-              <a href="#mcp" class="sf-item">
+              <a href="#mcp" class="sf-item" onclick="return false;">
                 <span class="sf-icon">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                   </svg>
                 </span>
                 <span>Connect MCP</span>
               </a>
-              <a href="#settings" class="sf-item">
+              <a href="#docs" class="sf-item" onclick="return false;">
                 <span class="sf-icon">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path
-                      d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                    </path>
-                  </svg>
-                </span>
-                <span>Node Settings</span>
-              </a>
-              <a href="#docs" class="sf-item">
-                <span class="sf-icon">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -445,12 +450,6 @@
               <div>
                 <h3 class="app-greeting">Good afternoon, Alex!</h3>
                 <p class="app-greeting-sub">Here's your live compute fleet and balance at a glance.</p>
-              </div>
-              <div class="app-header-controls">
-                <span class="pill-badge pill-green">
-                  <span class="indicator-dot"></span>
-                  Registry Online
-                </span>
               </div>
             </div>
 
@@ -482,25 +481,34 @@
             <div class="quick-actions-bar">
               <span class="qa-title">Compute Actions</span>
               <div class="qa-buttons">
-                <button class="qa-btn">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                  Explore Nodes
+                <button type="button" class="qa-btn">
+                  <span class="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <span class="qa-btn-text">Explore Nodes</span>
                 </button>
-                <button class="qa-btn">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                  </svg>
-                  Mint Contributor Key
+                <button type="button" class="qa-btn">
+                  <span class="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                      <path d="m21 2-9.6 9.6"></path>
+                      <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+                    </svg>
+                  </span>
+                  <span class="qa-btn-text">Mint Contributor Key</span>
                 </button>
-                <button class="qa-btn qa-btn-accent">+ Top Up USDC</button>
+                <button type="button" class="qa-btn qa-btn-accent">
+                  <span class="qa-btn-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </span>
+                  <span class="qa-btn-text">Top Up USDC</span>
+                </button>
               </div>
             </div>
 
@@ -513,7 +521,7 @@
                     <strong>Active &amp; Recent Leases</strong>
                     <small>2 active metered sessions</small>
                   </div>
-                  <a href="#leases" class="panel-link">View all leases →</a>
+                  <a href="#leases" class="panel-link" onclick="return false;">View all leases →</a>
                 </div>
                 <div class="panel-list">
                   <div class="panel-list-item">
@@ -566,7 +574,7 @@
                     <strong>Live Hardware Pool</strong>
                     <small>Scored by (cores + RAM/4) / price</small>
                   </div>
-                  <a href="#nodes" class="panel-link">View all 142 nodes →</a>
+                  <a href="#nodes" class="panel-link" onclick="return false;">View all 142 nodes →</a>
                 </div>
                 <div class="panel-list">
                   <div class="panel-list-item">
@@ -640,8 +648,8 @@
       <!-- 6 Feature Cards Below Mockup -->
       <div class="features-six-grid">
         <!-- 1. Per-Second Metering -->
-        <article class="feature-card">
-          <div class="feature-icon-bubble icon-blue">
+        <article class="feature-card reveal-on-scroll">
+          <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
@@ -654,8 +662,8 @@
         </article>
 
         <!-- 2. Ephemeral Docker Sandboxes -->
-        <article class="feature-card">
-          <div class="feature-icon-bubble icon-blue-subtle">
+        <article class="feature-card reveal-on-scroll reveal-stagger-1">
+          <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <path d="M3 9h18M9 21V9" />
@@ -668,8 +676,8 @@
         </article>
 
         <!-- 3. x402 Native Protocol -->
-        <article class="feature-card">
-          <div class="feature-icon-bubble icon-purple">
+        <article class="feature-card reveal-on-scroll reveal-stagger-2">
+          <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="M9 12l2 2 4-4" />
@@ -682,8 +690,8 @@
         </article>
 
         <!-- 4. Direct Bore Tunnels -->
-        <article class="feature-card">
-          <div class="feature-icon-bubble icon-coral">
+        <article class="feature-card reveal-on-scroll">
+          <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="4 17 10 11 4 5" />
               <line x1="12" y1="19" x2="20" y2="19" />
@@ -696,8 +704,8 @@
         </article>
 
         <!-- 5. Instant Script Runs -->
-        <article class="feature-card">
-          <div class="feature-icon-bubble icon-orange">
+        <article class="feature-card reveal-on-scroll reveal-stagger-1">
+          <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
@@ -709,7 +717,7 @@
         </article>
 
         <!-- 6. Zero-Risk Hardware Sharing -->
-        <article class="feature-card">
+        <article class="feature-card reveal-on-scroll reveal-stagger-2">
           <div class="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
@@ -726,7 +734,7 @@
 
     <!-- ================= 4. BUILT ON ACCURACY / TRUST (field-paint.jpg & hills-smudge-art.jpg) ================= -->
     <section class="accuracy-section wrap" id="contribute">
-      <div class="section-title-center">
+      <div class="section-title-center reveal-on-scroll">
         <span class="section-eyebrow">WHY TENDRIL</span>
         <h2 class="serif-title">Built on trust, not centralized clouds.</h2>
         <p class="section-subtitle-max">Big clouds charge heavy markups and lock you into monthly plans. Tendril
@@ -735,7 +743,7 @@
 
       <div class="comparison-dual-grid">
         <!-- Card 1: field-paint.jpg -->
-        <div class="comparison-card">
+        <div class="comparison-card reveal-on-scroll">
           <div class="comparison-visual-frame">
             <img src="assets/field-paint.jpg" alt="Painted green landscape" class="comparison-bg-art" loading="lazy">
             <div class="comparison-ui-overlay">
@@ -823,7 +831,7 @@
         </div>
 
         <!-- Card 2: hills-smudge-art.jpg -->
-        <div class="comparison-card">
+        <div class="comparison-card reveal-on-scroll reveal-stagger-1">
           <div class="comparison-visual-frame">
             <img src="assets/hills-smudge-art.jpg" alt="Painted mountain slopes" class="comparison-bg-art"
               loading="lazy">
@@ -876,7 +884,7 @@
     <!-- ================= 5. DARK AI-NATIVE MCP SECTION (PRESERVED AS REQUESTED) ================= -->
     <section class="mcp-section">
       <div class="wrap mcp-container">
-        <div class="mcp-intro">
+        <div class="mcp-intro reveal-on-scroll">
           <span class="mcp-eyebrow">AI-NATIVE</span>
           <h2 class="mcp-title">Built for humans and agents.</h2>
           <p class="mcp-desc">
@@ -890,14 +898,9 @@
         </div>
 
         <!-- MCP Chat Card Mockup -->
-        <div class="mcp-card-mockup">
+        <div class="mcp-card-mockup reveal-on-scroll reveal-stagger-1">
           <div class="mcp-card-topbar">
-            <span class="mcp-tag">
-              <svg class="sparkle-icon" viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
-              Tendril MCP
-            </span>
+            <span class="mcp-tag">Tendril MCP</span>
           </div>
 
           <div class="mcp-card-body">
@@ -937,12 +940,12 @@
 
     <!-- ================= 6. TESTIMONIAL & RELATABLE CTA ================= -->
     <section class="testimonial-section wrap">
-      <blockquote class="founder-quote">
+      <blockquote class="founder-quote reveal-on-scroll">
         “Every cloud platform out there was expensive, rigid, and bureaucratically bloated. Tendril lets our autonomous
         agents spin up isolated GPU sandboxes and pay in seconds over x402 with zero hassle.”
       </blockquote>
 
-      <div class="founder-profile">
+      <div class="founder-profile reveal-on-scroll reveal-stagger-1">
         <div class="founder-avatar-frame">
           <div class="founder-avatar-img">
             <span>A</span>
@@ -954,7 +957,7 @@
         </div>
       </div>
 
-      <div class="relatable-box">
+      <div class="relatable-box reveal-on-scroll reveal-stagger-2">
         <p class="relatable-text">Need bare-metal compute for your next model or agent?</p>
         <a href="#explore" class="btn btn-dark">
           Explore the marketplace
@@ -968,168 +971,228 @@
     <!-- ================= 7. COMMON QUESTIONS (FAQ) ================= -->
     <section class="faq-section" id="faq">
       <div class="wrap faq-layout">
-        <div class="faq-header">
+        <div class="faq-header reveal-on-scroll">
           <span class="section-eyebrow">FAQ</span>
           <h2 class="serif-title">Common questions</h2>
         </div>
 
-        <div class="faq-accordion-list">
+        <div class="faq-accordion-list reveal-on-scroll reveal-stagger-1">
           <!-- Q1 (Open by default) -->
-          <details class="faq-item" open>
-            <summary class="faq-question">
+          <div class="faq-item is-open">
+            <button type="button" class="faq-question" aria-expanded="true">
               <span>What is Tendril, exactly?</span>
-              <span class="faq-toggle-icon">−</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Tendril is a lean, agent-first compute marketplace that lets individuals rent out their PC's CPU, GPU,
-                and RAM, and allows developers or autonomous AI agents to rent sandboxed machines by the second using
-                USDC over x402 on Algorand.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Tendril is a lean, agent-first compute marketplace that lets individuals rent out their PC's CPU, GPU,
+                  and RAM, and allows developers or autonomous AI agents to rent sandboxed machines by the second using
+                  USDC over x402 on Algorand.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q2 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>How does prepaid and per-second metering work?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>You deposit USDC to your credit balance once. When you rent a machine, a small 0.01 USDC gate fee opens
-                the session, and your balance is billed to the exact second when you release the box. You never pay for
-                unneeded booked blocks.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>You deposit USDC to your credit balance once. When you rent a machine, a small 0.01 USDC gate fee opens
+                  the session, and your balance is billed to the exact second when you release the box. You never pay for
+                  unneeded booked blocks.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q3 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>Is it safe to contribute my PC's compute?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Yes. Safety is enforced by an ephemeral Docker sandbox: zero host filesystem mounts, no inbound host
-                ports (SSH dials out via a bore tunnel), all root capabilities dropped, and hard cgroup caps. The
-                container is completely destroyed upon lease end.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Yes. Safety is enforced by an ephemeral Docker sandbox: zero host filesystem mounts, no inbound host
+                  ports (SSH dials out via a bore tunnel), all root capabilities dropped, and hard cgroup caps. The
+                  container is completely destroyed upon lease end.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q4 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>Do I need ALGO to pay for compute?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>No! The facilitator sponsors all on-chain network transaction fees. You only need USDC on Algorand and
-                zero ALGO to top up and rent.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>No! The facilitator sponsors all on-chain network transaction fees. You only need USDC on Algorand and
+                  zero ALGO to top up and rent.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q5 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>How do I connect to a rented machine?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Once you start a lease, the dashboard provides a copyable SSH command. Your wallet address acts as your
-                default authentication password, or you can provide your own public SSH key.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Once you start a lease, the dashboard provides a copyable SSH command. Your wallet address acts as your
+                  default authentication password, or you can provide your own public SSH key.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q6 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>What is POST /x402/run?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>If you only need to run a single script or Python workload without managing an SSH session, send your
-                payload directly to POST /x402/run. Tendril automatically selects the highest-value idle node, executes
-                the job, returns stdout, and destroys the sandbox.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>If you only need to run a single script or Python workload without managing an SSH session, send your
+                  payload directly to POST /x402/run. Tendril automatically selects the highest-value idle node, executes
+                  the job, returns stdout, and destroys the sandbox.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q7 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>How are nodes scored and matched?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Nodes are scored by true value: (cores + RAM_GB / 4) / pricePerHourUsd. We route jobs to the most
-                cost-effective hardware rather than artificially slow, cheap instances.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Nodes are scored by true value: (cores + RAM_GB / 4) / pricePerHourUsd. We route jobs to the most
+                  cost-effective hardware rather than artificially slow, cheap instances.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q8 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>What happens if my balance runs out mid-session?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can
-                save your artifacts and work. The platform absorbs this cost before the container is cleanly terminated.
-              </p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can
+                  save your artifacts and work. The platform absorbs this cost before the container is cleanly terminated.
+                </p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q9 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>How do contributors earn and get paid?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Contributors mint an API key in the web app, run our lightweight daemon, and earn USDC directly for
-                every lease second served. Earnings accumulate in their balance and can be withdrawn on-chain to their
-                Algorand wallet at any time.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Contributors mint an API key in the web app, run our lightweight daemon, and earn USDC directly for
+                  every lease second served. Earnings accumulate in their balance and can be withdrawn on-chain to their
+                  Algorand wallet at any time.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q10 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>Does my machine need a public IP or open router ports?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>No. Contributor nodes establish an outbound tunnel to our bore relay. You never have to configure port
-                forwarding, dynamic DNS, or expose your local network.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>No. Contributor nodes establish an outbound tunnel to our bore relay. You never have to configure port
+                  forwarding, dynamic DNS, or expose your local network.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q11 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>Can autonomous AI agents rent machines without humans?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Yes! The x402 protocol and HTTP 402 endpoints allow autonomous headless agents to discover nodes via
-                GET /explorer, pay via signed atomic transactions, and run workloads with zero human intervention.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Yes! The x402 protocol and HTTP 402 endpoints allow autonomous headless agents to discover nodes via
+                  GET /explorer, pay via signed atomic transactions, and run workloads with zero human intervention.</p>
+              </div>
             </div>
-          </details>
+          </div>
 
           <!-- Q12 -->
-          <details class="faq-item">
-            <summary class="faq-question">
+          <div class="faq-item">
+            <button type="button" class="faq-question" aria-expanded="false">
               <span>Can I cancel or release a lease at any time?</span>
-              <span class="faq-toggle-icon">+</span>
-            </summary>
-            <div class="faq-answer">
-              <p>Yes, immediately. Clicking Release in the dashboard or sending a DELETE request stops billing instantly
-                and destroys the remote sandbox.</p>
+              <span class="faq-toggle-icon" aria-hidden="true">
+                <span class="faq-toggle-line-h"></span>
+                <span class="faq-toggle-line-v"></span>
+              </span>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer">
+                <p>Yes, immediately. Clicking Release in the dashboard or sending a DELETE request stops billing instantly
+                  and destroys the remote sandbox.</p>
+              </div>
             </div>
-          </details>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- ================= 8. ASK AI SECTION (Still not sure?) ================= -->
     <section class="ask-ai-section wrap">
-      <div class="ask-ai-card">
+      <div class="ask-ai-card reveal-on-scroll">
         <div class="ask-ai-left">
           <span class="ask-ai-eyebrow">ASK AI</span>
           <h3 class="ask-ai-title">Still not sure?</h3>
@@ -1213,7 +1276,7 @@
         <div class="final-cta-overlay"></div>
       </div>
 
-      <div class="wrap final-cta-content">
+      <div class="wrap final-cta-content reveal-on-scroll">
         <h2 class="final-cta-title">
           Real compute is now<br>
           simpler than ever.
@@ -1234,7 +1297,7 @@
 
   <!-- ================= 10. FOOTER (lime-field-paint.jpg) ================= -->
   <footer class="site-footer">
-    <div class="wrap footer-main-grid">
+    <div class="wrap footer-main-grid reveal-on-scroll">
       <!-- Brand & Mission -->
       <div class="footer-brand-col">
         <a href="#top" class="brand">
@@ -1312,7 +1375,7 @@
     <div class="wrap footer-bottom-bar">
       <div class="footer-copyright">
         © 2026 Tendril Compute. Crafted with
-        <svg class="heart-icon" viewBox="0 0 24 24" width="12" height="12" fill="#e11d48">
+        <svg class="heart-icon" viewBox="0 0 24 24" width="12" height="12" fill="#84cc16">
           <path
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
         </svg>

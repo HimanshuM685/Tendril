@@ -6,7 +6,7 @@ import { WalletBar } from "./components/WalletBar";
 import { Marketplace } from "./components/Marketplace";
 import { LandingPage } from "./components/LandingPage";
 import { Docs } from "./components/Docs";
-import { About } from "./components/About";
+// import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
@@ -190,8 +190,8 @@ export function App() {
       <header className="mobile-header">
         <div className="brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
           <span className="brand-flower">
-            <svg viewBox="0 0 32 32" width="22" height="22">
-              <rect width="32" height="32" rx="5" fill="#0B5D3A" />
+            <svg viewBox="0 0 32 32" width="24" height="24">
+              <rect width="32" height="32" rx="6" fill="#0B5D3A" />
               <g fill="#F4F1EA">
                 <rect x="5" y="7" width="22" height="4" />
                 <rect x="5" y="7" width="2" height="3" />

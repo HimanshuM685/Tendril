@@ -75,25 +75,13 @@ export function Metrics() {
       </div>
 
       {/* 2-Column Section */}
-      <div className="explore-columns-grid">
-        {/* Left Column: Users Over Time Chart */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div className="explore-columns-grid metrics-columns-grid">
+        {/* Left Column: Users Over Time Chart & Top Hardware Contributors */}
+        <div className="metrics-column metrics-column-left">
           <LineCard
             title="Users Over Time"
             series={data.usersOverTime}
             now={data.totalUsers}
-          />
-        </div>
-
-        {/* Right Column: Leaderboards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <Board
-            title="Top Network Users"
-            tabs={[
-              { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatUsdc(v) },
-              { label: "Lease time", rows: data.topUsers.leaseTime, fmt: fmtDur },
-              { label: "Lease span", rows: data.topUsers.leaseSpan, fmt: (v) => `${v} leases` },
-            ]}
           />
 
           <Board
@@ -102,6 +90,20 @@ export function Metrics() {
               { label: "Time served", rows: data.topContributors.timeServed, fmt: fmtDur },
               { label: "Times served", rows: data.topContributors.timesServed, fmt: (v) => `${v}×` },
             ]}
+            className="metrics-contributors-card"
+          />
+        </div>
+
+        {/* Right Column: Top Network Users Leaderboard */}
+        <div className="metrics-column metrics-column-right">
+          <Board
+            title="Top Network Users"
+            tabs={[
+              { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatUsdc(v) },
+              { label: "Lease time", rows: data.topUsers.leaseTime, fmt: fmtDur },
+              { label: "Lease span", rows: data.topUsers.leaseSpan, fmt: (v) => `${v} leases` },
+            ]}
+            className="metrics-users-card"
           />
         </div>
       </div>
@@ -166,7 +168,7 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
 
   if (series.length === 0) {
     return (
-      <div className="explore-card">
+      <div className="explore-card metrics-chart-card">
         <div className="explore-card-head">
           <div>
             <h3 className="card-head-title">{title}</h3>
@@ -208,7 +210,7 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
   const ticks = Array.from({ length: tickCount }, (_, k) => t0 + (k * span) / (tickCount - 1));
 
   return (
-    <div className="explore-card">
+    <div className="explore-card metrics-chart-card">
       <div className="explore-card-head">
         <div>
           <h3 className="card-head-title">{title}</h3>
@@ -252,13 +254,13 @@ interface BoardTab {
   fmt: (v: number) => string;
 }
 
-function Board({ title, tabs }: { title: string; tabs: BoardTab[] }) {
+function Board({ title, tabs, className = "" }: { title: string; tabs: BoardTab[]; className?: string }) {
   const [active, setActive] = useState(0);
   const tab = tabs[active];
   const max = useMemo(() => Math.max(...tab.rows.map((r) => r.value), 1), [tab]);
 
   return (
-    <div className="explore-card">
+    <div className={`explore-card ${className}`.trim()}>
       <div className="explore-card-head">
         <div>
           <h3 className="card-head-title">{title}</h3>

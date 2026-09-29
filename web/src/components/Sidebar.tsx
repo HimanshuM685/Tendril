@@ -36,7 +36,6 @@ export function Sidebar({
   const balanceAtomic = wallet?.balanceAtomic ?? 0;
   const balanceDisplay = wallet ? (balanceAtomic / 1_000_000).toFixed(2) : "0.00";
   const fundedHours = Math.round(Number(balanceDisplay) / 0.24);
-  const fillPct = Math.min(100, Math.round((Number(balanceDisplay) / 20) * 100));
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `nav-item ${isActive ? "active" : ""}`;
@@ -55,7 +54,7 @@ export function Sidebar({
       {/* Brand Header */}
       <div className="sidebar-brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
         <span className="brand-flower">
-          <svg viewBox="0 0 32 32" width="26" height="26">
+          <svg viewBox="0 0 32 32" width="24" height="24">
             <rect width="32" height="32" rx="6" fill="#0B5D3A" />
             <g fill="#F4F1EA">
               <rect x="5" y="7" width="22" height="4" />
@@ -81,18 +80,6 @@ export function Sidebar({
           <span className="nav-label">Explore</span>
         </NavLink>
 
-        <NavLink to="/dashboard#leases" className={navClass}>
-          <span className="nav-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
-              <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
-              <line x1="6" y1="6" x2="6.01" y2="6" />
-              <line x1="6" y1="18" x2="6.01" y2="18" />
-            </svg>
-          </span>
-          <span className="nav-label">Active Leases</span>
-        </NavLink>
-
         <NavLink to="/contribute" className={navClass}>
           <span className="nav-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,17 +88,6 @@ export function Sidebar({
             </svg>
           </span>
           <span className="nav-label">Contribute</span>
-        </NavLink>
-
-        <NavLink to="/contribute#keys" className={navClass}>
-          <span className="nav-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="7.5" cy="15.5" r="5.5" />
-              <path d="m21 2-9.6 9.6" />
-              <path d="m15.5 7.5 3 3L22 7l-3-3" />
-            </svg>
-          </span>
-          <span className="nav-label">API Keys</span>
         </NavLink>
 
         <NavLink to="/dashboard" className={navClass}>
@@ -140,9 +116,6 @@ export function Sidebar({
       {/* Prepaid Balance Widget */}
       <div className="sidebar-balance-widget" onClick={onOpenTopUp} role="button" tabIndex={0} title="Click to Top Up">
         <div className="sb-label">PREPAID BALANCE</div>
-        <div className="sb-bar">
-          <div className="sb-bar-fill" style={{ width: `${fillPct}%` }}></div>
-        </div>
         <div className="sb-row">
           <span className="sb-amount">{balanceDisplay} USDC</span>
           <span className="sb-funds">{fundedHours > 0 ? `Funds ~${fundedHours}h` : "No funds"}</span>
@@ -164,8 +137,7 @@ export function Sidebar({
         <NavLink to="/docs" className="sec-item">
           <span className="sec-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="4 17 10 11 4 5" />
-              <line x1="12" y1="19" x2="20" y2="19" />
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </span>
           <span>CLI &amp; Docs</span>
