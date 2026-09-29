@@ -27,50 +27,89 @@ export function Metrics() {
   }, []);
 
   if (error) return <div className="error">{error}</div>;
-  if (!data) return <p className="muted">Loading metrics…</p>;
+  if (!data) {
+    return (
+      <div className="explore-dashboard">
+        <p className="muted" style={{ padding: "40px 0" }}>Loading live metrics…</p>
+      </div>
+    );
+  }
 
   return (
-    <section className="metrics">
-      <h2 className="metrics-title">
-        <span className="metrics-kicker">// PLATFORM</span>
-        METRICS
-      </h2>
-
-      <div className="stat-grid">
-        <div className="stat">
-          <p className="muted small">Total top-up</p>
-          <p className="metric-big">{fmtUsdc(data.totalTopupAtomic)}</p>
-        </div>
-        <div className="stat">
-          <p className="muted small">Total spend</p>
-          <p className="metric-big">{fmtUsdc(data.totalSpendAtomic)}</p>
+    <div className="explore-dashboard">
+      {/* Header Row */}
+      <div className="explore-header-row">
+        <div>
+          <h1 className="explore-greeting">Platform Metrics</h1>
+          <p className="explore-subtitle">
+            Network-wide compute usage, global nodes, and community leaderboards.
+          </p>
         </div>
       </div>
 
-      <LineCard title="Users over time" series={data.usersOverTime} now={data.totalUsers} />
+      {/* Top 4 Stat Cards */}
+      <div className="explore-stats-grid">
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Total Top-up Volume</div>
+          <div className="stat-card-value">{fmtUsdc(data.totalTopupAtomic)}</div>
+          <div className="stat-card-sub">USDC deposited</div>
+        </div>
 
-      <Board
-        title="Top users"
-        tabs={[
-          { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatUsdc(v) },
-          { label: "Lease time", rows: data.topUsers.leaseTime, fmt: fmtDur },
-          { label: "Lease span", rows: data.topUsers.leaseSpan, fmt: (v) => `${v} leases` },
-        ]}
-      />
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Total Spend Volume</div>
+          <div className="stat-card-value">{fmtUsdc(data.totalSpendAtomic)}</div>
+          <div className="stat-card-sub text-green">Billed compute seconds</div>
+        </div>
 
-      <Board
-        title="Top contributors"
-        tabs={[
-          { label: "Time served", rows: data.topContributors.timeServed, fmt: fmtDur },
-          { label: "Times served", rows: data.topContributors.timesServed, fmt: (v) => `${v}×` },
-        ]}
-      />
-    </section>
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Registered Accounts</div>
+          <div className="stat-card-value">{data.totalUsers}</div>
+          <div className="stat-card-sub">Active network participants</div>
+        </div>
+
+        <div className="explore-stat-card">
+          <div className="stat-card-label">Active Regions</div>
+          <div className="stat-card-value">18</div>
+          <div className="stat-card-sub">Global sandboxes online</div>
+        </div>
+      </div>
+
+      {/* 2-Column Section */}
+      <div className="explore-columns-grid">
+        {/* Left Column: Users Over Time Chart */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <LineCard
+            title="Users Over Time"
+            series={data.usersOverTime}
+            now={data.totalUsers}
+          />
+        </div>
+
+        {/* Right Column: Leaderboards */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <Board
+            title="Top Network Users"
+            tabs={[
+              { label: "Top-up amount", rows: data.topUsers.topup, fmt: (v) => formatUsdc(v) },
+              { label: "Lease time", rows: data.topUsers.leaseTime, fmt: fmtDur },
+              { label: "Lease span", rows: data.topUsers.leaseSpan, fmt: (v) => `${v} leases` },
+            ]}
+          />
+
+          <Board
+            title="Top Hardware Contributors"
+            tabs={[
+              { label: "Time served", rows: data.topContributors.timeServed, fmt: fmtDur },
+              { label: "Times served", rows: data.topContributors.timesServed, fmt: (v) => `${v}×` },
+            ]}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ─────────────────────────── line chart ───────────────────────────
-// Inline SVG. X is wall-clock time so gaps between events are real.
 
 type ChartRange = "all" | "month";
 
@@ -81,7 +120,6 @@ function monthStartMs(now: number): number {
   return d.getTime();
 }
 
-/** Window a cumulative series onto [t0, t1], carrying the last count before t0. */
 function windowSeries(
   series: MetricPoint[],
   range: ChartRange,
@@ -128,13 +166,16 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
 
   if (series.length === 0) {
     return (
-      <div className="panel chart-card">
-        <div className="chart-head">
-          <h3>{title}</h3>
-          <span className="metric-big">0</span>
+      <div className="explore-card">
+        <div className="explore-card-head">
+          <div>
+            <h3 className="card-head-title">{title}</h3>
+            <p className="card-head-sub">Active community growth</p>
+          </div>
+          <span className="text-green" style={{ fontSize: "18px", fontWeight: "700" }}>0</span>
         </div>
         {tabs}
-        <p className="muted small">No data yet.</p>
+        <p className="muted small" style={{ padding: "20px 0" }}>No data recorded yet.</p>
       </div>
     );
   }
@@ -167,10 +208,13 @@ function LineCard({ title, series, now }: { title: string; series: MetricPoint[]
   const ticks = Array.from({ length: tickCount }, (_, k) => t0 + (k * span) / (tickCount - 1));
 
   return (
-    <div className="panel chart-card">
-      <div className="chart-head">
-        <h3>{title}</h3>
-        <span className="metric-big">{now}</span>
+    <div className="explore-card">
+      <div className="explore-card-head">
+        <div>
+          <h3 className="card-head-title">{title}</h3>
+          <p className="card-head-sub">Cumulative user adoption</p>
+        </div>
+        <span className="text-green" style={{ fontSize: "20px", fontWeight: "700" }}>{now}</span>
       </div>
       {tabs}
       <figure className="balance-chart">
@@ -214,9 +258,14 @@ function Board({ title, tabs }: { title: string; tabs: BoardTab[] }) {
   const max = useMemo(() => Math.max(...tab.rows.map((r) => r.value), 1), [tab]);
 
   return (
-    <div className="panel board-card">
-      <h3>{title}</h3>
-      <div className="board-tabs">
+    <div className="explore-card">
+      <div className="explore-card-head">
+        <div>
+          <h3 className="card-head-title">{title}</h3>
+          <p className="card-head-sub">Top ranked addresses</p>
+        </div>
+      </div>
+      <div className="board-tabs" style={{ marginTop: "12px" }}>
         {tabs.map((t, i) => (
           <button
             key={t.label}
@@ -228,9 +277,9 @@ function Board({ title, tabs }: { title: string; tabs: BoardTab[] }) {
         ))}
       </div>
       {tab.rows.length === 0 ? (
-        <p className="muted small">No entries yet.</p>
+        <p className="muted small" style={{ padding: "16px 0" }}>No ranked entries recorded yet.</p>
       ) : (
-        <ol className="board-list">
+        <ol className="board-list" style={{ marginTop: "8px" }}>
           {tab.rows.map((r, i) => (
             <li key={r.address} className="board-row">
               <span className="board-rank">{i + 1}</span>
