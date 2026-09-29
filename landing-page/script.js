@@ -23,21 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. FAQ Accordion: Synchronize +/- toggle icons
+  // 2. FAQ Accordion: Smooth accordion toggle
   const faqItems = document.querySelectorAll('.faq-item');
   faqItems.forEach(item => {
-    const icon = item.querySelector('.faq-toggle-icon');
-    
-    // Initial state
-    if (icon) {
-      icon.textContent = item.hasAttribute('open') ? '−' : '+';
+    const questionBtn = item.querySelector('.faq-question');
+    if (questionBtn) {
+      questionBtn.addEventListener('click', () => {
+        const isOpen = item.classList.contains('is-open');
+        item.classList.toggle('is-open');
+        questionBtn.setAttribute('aria-expanded', !isOpen);
+      });
     }
-
-    item.addEventListener('toggle', () => {
-      if (icon) {
-        icon.textContent = item.open ? '−' : '+';
-      }
-    });
   });
 
   // 3. Ask AI Prompt Copy
@@ -153,4 +149,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // 7. Scroll Reveal Animation
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const revealElements = document.querySelectorAll('.reveal-on-scroll');
+
+  if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+    revealElements.forEach(el => el.classList.add('revealed'));
+  } else if (revealElements.length) {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.08,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    revealElements.forEach(el => revealObserver.observe(el));
+  }
 });

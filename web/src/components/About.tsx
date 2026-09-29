@@ -1,6 +1,7 @@
+/*
 import { network } from "../lib/network";
 
-/** Static about page — presentational only. */
+// Static about page — presentational only.
 export function About() {
   return (
     <section className="page">
@@ -54,3 +55,5 @@ export function About() {
     </section>
   );
 }
+*/
+export {};
