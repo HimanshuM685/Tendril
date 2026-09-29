@@ -19,6 +19,12 @@ export function ConnectWalletModal({ onClose, onCustodialSession, onWalletConnec
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (isLocalhost) {
+      setGoogleEnabled(true);
+      setEmailEnabled(true);
+      return;
+    }
     void fetchGoogleEnabled().then(setGoogleEnabled);
     void fetchEmailEnabled().then(setEmailEnabled);
   }, []);
@@ -62,6 +68,19 @@ export function ConnectWalletModal({ onClose, onCustodialSession, onWalletConnec
   }
 
   function handleGoogleLogin() {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (isLocalhost) {
+      onCustodialSession({
+        token: "mock_google_token_" + Date.now(),
+        address: "FMXQL6JONASWALKERTESTZL6U",
+        authType: "google",
+        email: "wjonas387@gmail.com",
+        name: "Jonas Walker",
+        balanceAtomic: 0,
+      });
+      onClose();
+      return;
+    }
     window.location.href = googleLoginUrl();
   }
 
