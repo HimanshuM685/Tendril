@@ -1230,6 +1230,10 @@ img {
 }
 
 /* Charts */
+.balance-chart {
+  margin: 16px 0 0 0;
+}
+
 .balance-chart svg {
   display: block;
   width: 100%;
@@ -1340,6 +1344,53 @@ img {
   white-space: nowrap;
 }
 
+/* Platform Metrics Layout */
+.metrics-columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.metrics-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  height: 100%;
+}
+
+.metrics-column-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+
+.metrics-column-right {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.metrics-chart-card {
+  height: auto !important;
+  flex: 0 0 auto;
+}
+
+.metrics-contributors-card {
+  flex: 1;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.metrics-users-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ===========================================================================
    RESPONSIVE DESIGN (Mobile / Tablet drawer)
    =========================================================================== */
@@ -1405,6 +1456,22 @@ img {
   .explore-columns-grid {
     grid-template-columns: 1fr;
   }
+
+  .metrics-columns-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-column,
+  .metrics-column-left,
+  .metrics-column-right {
+    height: auto;
+  }
+
+  .metrics-contributors-card,
+  .metrics-users-card {
+    height: auto;
+    flex: 0 0 auto;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1431,6 +1498,35 @@ img {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .board-row {
+    grid-template-columns: 24px minmax(75px, 120px) 1fr auto;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .board-addr {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .board-val {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .board-row {
+    grid-template-columns: 20px 85px 1fr auto;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .board-tab {
+    padding: 5px 10px;
+    font-size: 11px;
   }
 }
 
