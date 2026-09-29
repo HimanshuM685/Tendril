@@ -1,8 +1,8 @@
 {
   "nodes": [
     {
-      "id": "assets_clouds_painting_cloudscape",
-      "label": "Sage-green cloudscape oil painting",
+      "id": "assets_clouds_painting",
+      "label": "Clouds Painting",
       "file_type": "image",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -12,8 +12,8 @@
       "contributor": null
     },
     {
-      "id": "assets_clouds_painting_cumulus_masses",
-      "label": "Billowing cumulus cloud masses filling the frame",
+      "id": "assets_clouds_painting_cloudscape",
+      "label": "Panoramic Cloudscape",
       "file_type": "concept",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -23,8 +23,8 @@
       "contributor": null
     },
     {
-      "id": "assets_clouds_painting_sage_cream_palette",
-      "label": "Muted sage, cream, and olive palette",
+      "id": "assets_clouds_painting_cumulus_forms",
+      "label": "Cumulus Cloud Forms",
       "file_type": "concept",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -34,8 +34,8 @@
       "contributor": null
     },
     {
-      "id": "assets_clouds_painting_impasto",
-      "label": "Visible impasto oil brushstrokes",
+      "id": "assets_clouds_painting_sage_green_palette",
+      "label": "Sage Green Monochrome Palette",
       "file_type": "concept",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -45,8 +45,8 @@
       "contributor": null
     },
     {
-      "id": "assets_clouds_painting_panoramic_band",
-      "label": "Wide horizontal panoramic composition",
+      "id": "assets_clouds_painting_impasto_technique",
+      "label": "Impasto Oil Technique",
       "file_type": "concept",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -56,8 +56,30 @@
       "contributor": null
     },
     {
-      "id": "assets_clouds_painting_allover_field",
-      "label": "All-over cloud field with no horizon or ground",
+      "id": "assets_clouds_painting_horizontal_banner",
+      "label": "Horizontal Banner Format",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "assets_clouds_painting_atmospheric_mood",
+      "label": "Soft Atmospheric Mood",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "assets_clouds_painting_light_shadow_modeling",
+      "label": "Light and Shadow Cloud Modeling",
       "file_type": "concept",
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
@@ -69,68 +91,78 @@
   ],
   "edges": [
     {
-      "source": "assets_clouds_painting_cloudscape",
-      "target": "assets_clouds_painting_cumulus_masses",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "assets_clouds_painting_cloudscape",
-      "target": "assets_clouds_painting_sage_cream_palette",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "assets_clouds_painting_cloudscape",
-      "target": "assets_clouds_painting_impasto",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "assets_clouds_painting_cloudscape",
-      "target": "assets_clouds_painting_panoramic_band",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "assets_clouds_painting_cloudscape",
-      "target": "assets_clouds_painting_allover_field",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
-      "source_location": null,
-      "weight": 1.0
-    },
-    {
-      "source": "assets_clouds_painting_cumulus_masses",
-      "target": "assets_clouds_painting_allover_field",
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_cloudscape",
       "relation": "conceptually_related_to",
-      "confidence": "INFERRED",
-      "confidence_score": 0.95,
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
       "weight": 1.0
     },
     {
-      "source": "assets_clouds_painting_impasto",
-      "target": "assets_clouds_painting_cumulus_masses",
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_cumulus_forms",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_sage_green_palette",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_impasto_technique",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_horizontal_banner",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting_cloudscape",
+      "target": "assets_clouds_painting_cumulus_forms",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting_cumulus_forms",
+      "target": "assets_clouds_painting_light_shadow_modeling",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting_impasto_technique",
+      "target": "assets_clouds_painting_light_shadow_modeling",
       "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
@@ -139,17 +171,63 @@
       "weight": 1.0
     },
     {
-      "source": "assets_clouds_painting_sage_cream_palette",
-      "target": "assets_clouds_painting_cumulus_masses",
+      "source": "assets_clouds_painting_sage_green_palette",
+      "target": "assets_clouds_painting_atmospheric_mood",
       "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting",
+      "target": "assets_clouds_painting_atmospheric_mood",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting_horizontal_banner",
+      "target": "assets_clouds_painting_cloudscape",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_clouds_painting_impasto_technique",
+      "target": "assets_clouds_painting_cumulus_forms",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
       "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg",
       "source_location": null,
       "weight": 1.0
     }
   ],
-  "hyperedges": [],
+  "hyperedges": [
+    {
+      "id": "assets_clouds_painting_painterly_sky",
+      "label": "Painterly Green Sky Composition",
+      "nodes": [
+        "assets_clouds_painting",
+        "assets_clouds_painting_cloudscape",
+        "assets_clouds_painting_sage_green_palette",
+        "assets_clouds_painting_impasto_technique",
+        "assets_clouds_painting_atmospheric_mood"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/clouds-painting.jpg"
+    }
+  ],
   "input_tokens": 0,
   "output_tokens": 0
 }

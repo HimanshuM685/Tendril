@@ -1,6 +1,358 @@
 {
   "nodes": [
     {
+      "id": "components_adminlayout",
+      "label": "AdminLayout.tsx",
+      "file_type": "code",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_adminlayout_links",
+      "label": "LINKS",
+      "file_type": "code",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_adminlayout_adminlayout",
+      "label": "AdminLayout()",
+      "file_type": "code",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db",
+      "label": "db.ts",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_pool",
+      "label": "pool",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L42",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_row",
+      "label": "Row",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L64",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_transientdberror",
+      "label": "transientDbError()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L66",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_intransaction",
+      "label": "inTransaction()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L81",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_q",
+      "label": "q()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L111",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_initdb",
+      "label": "initDb()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L126",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_dbuser",
+      "label": "DbUser",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L294",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_finduserbygooglesub",
+      "label": "findUserByGoogleSub()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L307",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_finduserbyid",
+      "label": "findUserById()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L312",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_finduserbyemail",
+      "label": "findUserByEmail()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L317",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_createuser",
+      "label": "createUser()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L322",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_createemailuser",
+      "label": "createEmailUser()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L339",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_isemailauthenabled",
+      "label": "isEmailAuthEnabled()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L358",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_setemailauthenabled",
+      "label": "setEmailAuthEnabled()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L367",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_touchuserlogin",
+      "label": "touchUserLogin()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L375",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_setgasgrantineligible",
+      "label": "setGasGrantIneligible()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L379",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_iswalletgasgranteligible",
+      "label": "isWalletGasGrantEligible()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L383",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_setwalletgasgrantineligible",
+      "label": "setWalletGasGrantIneligible()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L391",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_gasrequeststatus",
+      "label": "GasRequestStatus",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L401",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_dbgasrequest",
+      "label": "DbGasRequest",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L403",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_findgasrequestbyuserid",
+      "label": "findGasRequestByUserId()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L418",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_findgasrequestbyaddress",
+      "label": "findGasRequestByAddress()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L423",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_findgasrequestbyid",
+      "label": "findGasRequestById()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L428",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_creategasrequest",
+      "label": "createGasRequest()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L433",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_listgasrequests",
+      "label": "listGasRequests()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L450",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_countgasrequestsbystatus",
+      "label": "countGasRequestsByStatus()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L460",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_resolvegasrequest",
+      "label": "resolveGasRequest()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L468",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_listgoogleusers",
+      "label": "listGoogleUsers()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L484",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_countgoogleusers",
+      "label": "countGoogleUsers()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L491",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_walletsummary",
+      "label": "walletSummary()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L496",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_hashkey",
+      "label": "hashKey()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L610",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_createapikey",
+      "label": "createApiKey()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L613",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_listapikeys",
+      "label": "listApiKeys()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L630",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_revokeapikey",
+      "label": "revokeApiKey()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L652",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_ownerofapikey",
+      "label": "ownerOfApiKey()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L661",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_recordwithdrawal",
+      "label": "recordWithdrawal()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L673",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_cumulativebychange",
+      "label": "cumulativeByChange()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L692",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_activewindow",
+      "label": "ActiveWindow",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L698",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_activeusersbychange",
+      "label": "activeUsersByChange()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L717",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_db_metrics",
+      "label": "metrics()",
+      "file_type": "code",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L751",
+      "_origin": "ast"
+    },
+    {
       "id": "src_app",
       "label": "App.tsx",
       "file_type": "code",
@@ -13,7 +365,7 @@
       "label": "Session",
       "file_type": "code",
       "source_file": "web/src/App.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "_origin": "ast"
     },
     {
@@ -21,7 +373,7 @@
       "label": "ApiToDocs()",
       "file_type": "code",
       "source_file": "web/src/App.tsx",
-      "source_location": "L29",
+      "source_location": "L32",
       "_origin": "ast"
     },
     {
@@ -29,7 +381,7 @@
       "label": "loadSession()",
       "file_type": "code",
       "source_file": "web/src/App.tsx",
-      "source_location": "L34",
+      "source_location": "L37",
       "_origin": "ast"
     },
     {
@@ -37,7 +389,7 @@
       "label": "storeSession()",
       "file_type": "code",
       "source_file": "web/src/App.tsx",
-      "source_location": "L45",
+      "source_location": "L48",
       "_origin": "ast"
     },
     {
@@ -45,7 +397,7 @@
       "label": "App()",
       "file_type": "code",
       "source_file": "web/src/App.tsx",
-      "source_location": "L54",
+      "source_location": "L57",
       "_origin": "ast"
     },
     {
@@ -185,6 +537,86 @@
       "_origin": "ast"
     },
     {
+      "id": "components_docs",
+      "label": "Docs.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_markdowndocs",
+      "label": "MarkdownDocs",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_doctab",
+      "label": "DocTab",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_tabs",
+      "label": "TABS",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_parsedoc",
+      "label": "parseDoc()",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_docs",
+      "label": "Docs()",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_docs_manual",
+      "label": "Manual()",
+      "file_type": "code",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L66",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_emailauthmodal",
+      "label": "EmailAuthModal.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_emailauthmodal_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_emailauthmodal_emailauthmodal",
+      "label": "EmailAuthModal()",
+      "file_type": "code",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
       "id": "components_explore",
       "label": "Explore.tsx",
       "file_type": "code",
@@ -205,7 +637,7 @@
       "label": "fmtCountdown()",
       "file_type": "code",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast"
     },
     {
@@ -213,7 +645,7 @@
       "label": "fmtDuration()",
       "file_type": "code",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast"
     },
     {
@@ -221,7 +653,7 @@
       "label": "Explore()",
       "file_type": "code",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "_origin": "ast"
     },
     {
@@ -467,6 +899,724 @@
   ],
   "edges": [
     {
+      "source": "components_adminlayout",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_adminlayout",
+      "target": "users_fusion_code_gitrepos_tendril_admin_src_app_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_adminlayout",
+      "target": "src_app_useadminauth",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_adminlayout",
+      "target": "components_adminlayout_links",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_adminlayout",
+      "target": "components_adminlayout_adminlayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "admin/src/components/AdminLayout.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "node_crypto",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "nanoid",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "pg",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_apikeyinfo",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_charge",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_metricpoint",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_metrics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_payout",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_topup",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_walletstats",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_index_withdrawal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "users_fusion_code_gitrepos_tendril_backend_src_config_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_config_config",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_pool",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_row",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_transientdberror",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_intransaction",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_q",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_initdb",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_dbuser",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L294",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_finduserbygooglesub",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L307",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_finduserbyid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L312",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_finduserbyemail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L317",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_createuser",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L322",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_createemailuser",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L339",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_isemailauthenabled",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L358",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_setemailauthenabled",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L367",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_touchuserlogin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L375",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_setgasgrantineligible",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L379",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_iswalletgasgranteligible",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L383",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_setwalletgasgrantineligible",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L391",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_gasrequeststatus",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L401",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_dbgasrequest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L403",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_findgasrequestbyuserid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L418",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_findgasrequestbyaddress",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L423",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_findgasrequestbyid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L428",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_creategasrequest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L433",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_listgasrequests",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L450",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_countgasrequestsbystatus",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L460",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_resolvegasrequest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L468",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_listgoogleusers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L484",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_countgoogleusers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L491",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_walletsummary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L496",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_hashkey",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L610",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_createapikey",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L613",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_listapikeys",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L630",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_revokeapikey",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L652",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_ownerofapikey",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L661",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_recordwithdrawal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L673",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_cumulativebychange",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L692",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_activewindow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L698",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_activeusersbychange",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L717",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db",
+      "target": "src_db_metrics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L751",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_intransaction",
+      "target": "src_db_transientdberror",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_q",
+      "target": "src_db_intransaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_initdb",
+      "target": "src_db_intransaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_setemailauthenabled",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L368",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_touchuserlogin",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L376",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_setgasgrantineligible",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L380",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_setwalletgasgrantineligible",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L392",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_listgasrequests",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L452",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_listgoogleusers",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L485",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_walletsummary",
+      "target": "src_db_intransaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L509",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_createapikey",
+      "target": "src_db_hashkey",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L622",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_ownerofapikey",
+      "target": "src_db_hashkey",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L667",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_recordwithdrawal",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L678",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_metrics",
+      "target": "src_db_q",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L757",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_metrics",
+      "target": "src_db_cumulativebychange",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L795",
+      "weight": 1.0
+    },
+    {
+      "source": "src_db_metrics",
+      "target": "src_db_activeusersbychange",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/src/db.ts",
+      "source_location": "L799",
+      "weight": 1.0
+    },
+    {
       "source": "src_app",
       "target": "react",
       "relation": "imports_from",
@@ -578,7 +1728,7 @@
     },
     {
       "source": "src_app",
-      "target": "users_fusion_code_gitrepos_tendril_web_src_components_docs_tsx",
+      "target": "components_docs",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -678,12 +1828,92 @@
     },
     {
       "source": "src_app",
-      "target": "users_fusion_code_gitrepos_tendril_web_src_wallet_ts",
+      "target": "components_sidebar",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
       "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_sidebar_sidebar",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_topupmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_topupmodal_topupmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_mcpmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_mcpmodal_mcpmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_connectwalletmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_connectwalletmodal_connectwalletmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_wallet_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -693,7 +1923,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L13",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -703,7 +1933,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L14",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -713,7 +1943,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L14",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -723,7 +1953,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L14",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -733,7 +1963,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L15",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -743,27 +1973,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L15",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_network_ts",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "web/src/App.tsx",
-      "source_location": "L16",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "lib_network_network",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "web/src/App.tsx",
-      "source_location": "L16",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -773,7 +1983,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L17",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -783,7 +1993,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L17",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -792,7 +2002,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -801,7 +2011,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L29",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -810,7 +2020,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L34",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -819,7 +2029,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L45",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -828,7 +2038,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/App.tsx",
-      "source_location": "L54",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -1000,7 +2210,7 @@
     },
     {
       "source": "components_connectwalletmodal",
-      "target": "users_fusion_code_gitrepos_tendril_web_src_components_emailauthmodal_tsx",
+      "target": "components_emailauthmodal",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -1590,6 +2800,208 @@
       "weight": 1.0
     },
     {
+      "source": "components_docs",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_archdiagram",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_archdiagram_archdiagram",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_apidocs_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_apidocs_mddocid",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_markdowndocs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_doctab",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_tabs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_parsedoc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_docs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs",
+      "target": "components_docs_manual",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "components_docs_docs",
+      "target": "components_docs_parsedoc",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Docs.tsx",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "src_index_emailsessionresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_custodialclient_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "lib_custodialclient_loginwithemail",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "lib_custodialclient_registerwithemail",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "components_emailauthmodal_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_emailauthmodal",
+      "target": "components_emailauthmodal_emailauthmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/EmailAuthModal.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
       "source": "components_explore",
       "target": "react",
       "relation": "imports_from",
@@ -1854,7 +3266,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -1863,7 +3275,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -1872,7 +3284,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -1882,7 +3294,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L183",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -1892,7 +3304,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "web/src/components/Explore.tsx",
-      "source_location": "L340",
+      "source_location": "L343",
       "weight": 1.0
     },
     {
@@ -2757,7 +4169,7 @@
     },
     {
       "source": "components_walletbar",
-      "target": "users_fusion_code_gitrepos_tendril_web_src_components_emailauthmodal_tsx",
+      "target": "components_emailauthmodal",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",

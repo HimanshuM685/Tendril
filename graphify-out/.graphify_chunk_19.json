@@ -1,1 +1,55 @@
-{"nodes": [{"id": "assets_usdc_logo", "label": "USDC logo", "file_type": "image", "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}, {"id": "assets_usdc_brand", "label": "USDC", "file_type": "concept", "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [{"source": "assets_usdc_logo", "target": "assets_usdc_brand", "relation": "references", "confidence": "INFERRED", "confidence_score": 0.85, "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg", "source_location": null, "weight": 1.0}], "hyperedges": [], "input_tokens": 0, "output_tokens": 0}
+{
+  "nodes": [
+    {
+      "id": "assets_usdc",
+      "label": "USDC logo",
+      "type": "asset",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "description": "SVG brand mark for USD Coin (USDC): viewBox 0 0 96 96, rendered 18x18, fill=currentColor. Single evenodd path: outer circle, left/right arc rings, and central dollar-sign glyph."
+    },
+    {
+      "id": "usdc_brand",
+      "label": "USDC (USD Coin)",
+      "type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "description": "Circle stablecoin brand (USD Coin) represented by this logo asset; used as token/currency icon in UI."
+    },
+    {
+      "id": "usdc_svg_path",
+      "label": "USDC compound path",
+      "type": "shape",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg:2",
+      "description": "Single path with fill-rule evenodd combining outer disc (center 48,48 r≈47), bilateral ring arcs, and stylized $ mark in center; monochrome via currentColor."
+    },
+    {
+      "id": "svg_fill_currentcolor",
+      "label": "currentColor fill",
+      "type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "description": "SVG uses fill=currentColor so icon inherits text color from parent CSS."
+    }
+  ],
+  "edges": [
+    {
+      "source": "assets_usdc",
+      "target": "usdc_brand",
+      "relation": "represents",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg"
+    },
+    {
+      "source": "assets_usdc",
+      "target": "usdc_svg_path",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg"
+    },
+    {
+      "source": "assets_usdc",
+      "target": "svg_fill_currentcolor",
+      "relation": "uses",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg"
+    }
+  ]
+}

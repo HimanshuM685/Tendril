@@ -1,0 +1,244 @@
+{
+  "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+  "stem": "assets_hills_smudge_art",
+  "file_type": "image",
+  "nodes": [
+    {
+      "id": "assets_hills_smudge_art",
+      "label": "hills-smudge-art.jpg",
+      "type": "image_asset",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Impressionistic oil landscape painting: alpine mountain valley with lake, dense conifers, snow-capped peak; thick smudged/impasto brushwork; muted sage-green monochrome palette"
+    },
+    {
+      "id": "assets_hills_smudge_art_subject_mountain",
+      "label": "Central snow-capped mountain peak",
+      "type": "visual_subject",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Dominant jagged alpine peak with pale snow/ice near summit; steep rocky faces in layered greens and greys; center-background focal point"
+    },
+    {
+      "id": "assets_hills_smudge_art_subject_lake",
+      "label": "Alpine lake",
+      "type": "visual_subject",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Calm mid-ground body of water nestled in forested valley; cool grey-green surface reflecting sky"
+    },
+    {
+      "id": "assets_hills_smudge_art_subject_forest",
+      "label": "Coniferous forest slopes",
+      "type": "visual_subject",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Dense evergreen forest covering left and right valley walls and lake shore; vertical pine/fir silhouettes"
+    },
+    {
+      "id": "assets_hills_smudge_art_subject_foreground",
+      "label": "Rocky meadow foreground",
+      "type": "visual_subject",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Grassy clearing with scattered pale rocks, fallen logs/driftwood, sparse wildflowers; leads eye toward lake"
+    },
+    {
+      "id": "assets_hills_smudge_art_subject_sky",
+      "label": "Overcast cloudy sky",
+      "type": "visual_subject",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Soft broken cloud cover in pale olive-cream tones; diffuse light over mountain range"
+    },
+    {
+      "id": "assets_hills_smudge_art_style_impasto",
+      "label": "Impasto / smudge brushwork",
+      "type": "art_technique",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Visible thick directional strokes and paint texture; painterly smudge aesthetic matching filename hills-smudge-art"
+    },
+    {
+      "id": "assets_hills_smudge_art_style_palette",
+      "label": "Sage-green monochrome palette",
+      "type": "art_technique",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Near-monochrome harmony of olive, sage, forest green, muted grey-green; limited warm accents on rocks and snow"
+    },
+    {
+      "id": "assets_hills_smudge_art_genre_landscape",
+      "label": "Alpine landscape painting",
+      "type": "art_genre",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Classical mountain-lake-forest composition; impressionistic rather than photorealistic rendering"
+    },
+    {
+      "id": "assets_hills_smudge_art_composition_depth",
+      "label": "Layered depth composition",
+      "type": "art_composition",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Foreground meadow → mid-ground lake and trees → background mountain and sky; V-shaped valley framing peak"
+    },
+    {
+      "id": "assets_hills_smudge_art_mood",
+      "label": "Serene wilderness mood",
+      "type": "aesthetic_quality",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "description": "Quiet, remote, contemplative alpine atmosphere; soft overcast light without harsh contrast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_subject_mountain",
+      "relation": "depicts",
+      "description": "Image centers on snow-capped mountain peak as primary focal subject"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_subject_lake",
+      "relation": "depicts",
+      "description": "Image includes alpine lake in mid-ground valley"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_subject_forest",
+      "relation": "depicts",
+      "description": "Image shows dense conifer forests on valley slopes and shoreline"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_subject_foreground",
+      "relation": "depicts",
+      "description": "Image has rocky grassy foreground with logs and stones"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_subject_sky",
+      "relation": "depicts",
+      "description": "Image topped by overcast cloudy sky"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_style_impasto",
+      "relation": "uses_technique",
+      "description": "Rendered with thick impasto/smudge oil brushwork"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_style_palette",
+      "relation": "uses_technique",
+      "description": "Unified sage-green monochrome color scheme"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_genre_landscape",
+      "relation": "belongs_to_genre",
+      "description": "Work is alpine landscape painting"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_composition_depth",
+      "relation": "uses_composition",
+      "description": "Uses layered foreground-midground-background depth and valley framing"
+    },
+    {
+      "source": "assets_hills_smudge_art",
+      "target": "assets_hills_smudge_art_mood",
+      "relation": "evokes",
+      "description": "Evokes serene remote wilderness mood"
+    },
+    {
+      "source": "assets_hills_smudge_art_subject_mountain",
+      "target": "assets_hills_smudge_art_subject_sky",
+      "relation": "silhouetted_against",
+      "description": "Peak rises into and is outlined by cloudy sky"
+    },
+    {
+      "source": "assets_hills_smudge_art_subject_forest",
+      "target": "assets_hills_smudge_art_subject_lake",
+      "relation": "surrounds",
+      "description": "Conifer stands frame and border the lake shores"
+    },
+    {
+      "source": "assets_hills_smudge_art_subject_forest",
+      "target": "assets_hills_smudge_art_subject_mountain",
+      "relation": "climbs_toward",
+      "description": "Forested slopes rise toward mountain base"
+    },
+    {
+      "source": "assets_hills_smudge_art_subject_foreground",
+      "target": "assets_hills_smudge_art_subject_lake",
+      "relation": "leads_to",
+      "description": "Meadow and rocks guide viewer eye toward lake"
+    },
+    {
+      "source": "assets_hills_smudge_art_subject_lake",
+      "target": "assets_hills_smudge_art_subject_mountain",
+      "relation": "situated_before",
+      "description": "Lake sits in valley below mountain massif"
+    },
+    {
+      "source": "assets_hills_smudge_art_composition_depth",
+      "target": "assets_hills_smudge_art_subject_foreground",
+      "relation": "orders",
+      "description": "Composition places meadow as nearest spatial layer"
+    },
+    {
+      "source": "assets_hills_smudge_art_composition_depth",
+      "target": "assets_hills_smudge_art_subject_lake",
+      "relation": "orders",
+      "description": "Composition places lake as mid-depth layer"
+    },
+    {
+      "source": "assets_hills_smudge_art_composition_depth",
+      "target": "assets_hills_smudge_art_subject_mountain",
+      "relation": "orders",
+      "description": "Composition places mountain as far depth layer"
+    },
+    {
+      "source": "assets_hills_smudge_art_style_impasto",
+      "target": "assets_hills_smudge_art_style_palette",
+      "relation": "combined_with",
+      "description": "Smudge strokes carry the limited sage-green palette across forms"
+    },
+    {
+      "source": "assets_hills_smudge_art_genre_landscape",
+      "target": "assets_hills_smudge_art_mood",
+      "relation": "supports",
+      "description": "Alpine landscape genre supports serene wilderness mood"
+    },
+    {
+      "source": "assets_hills_smudge_art_style_palette",
+      "target": "assets_hills_smudge_art_mood",
+      "relation": "reinforces",
+      "description": "Muted monochrome greens reinforce calm contemplative atmosphere"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "assets_hills_smudge_art_scene_ensemble",
+      "label": "Full alpine valley scene",
+      "members": [
+        "assets_hills_smudge_art_subject_mountain",
+        "assets_hills_smudge_art_subject_lake",
+        "assets_hills_smudge_art_subject_forest",
+        "assets_hills_smudge_art_subject_foreground",
+        "assets_hills_smudge_art_subject_sky"
+      ],
+      "relation": "co_constitute_scene",
+      "description": "Mountain, lake, forest, foreground meadow, and sky together form complete alpine valley tableau"
+    },
+    {
+      "id": "assets_hills_smudge_art_style_bundle",
+      "label": "Smudge landscape style bundle",
+      "members": [
+        "assets_hills_smudge_art_style_impasto",
+        "assets_hills_smudge_art_style_palette",
+        "assets_hills_smudge_art_genre_landscape",
+        "assets_hills_smudge_art_composition_depth"
+      ],
+      "relation": "define_visual_identity",
+      "description": "Impasto technique, sage palette, landscape genre, and depth composition define asset visual identity"
+    }
+  ],
+  "input_refs": [
+    "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg"
+  ],
+  "chunk_index": 11,
+  "total_chunks": 19
+}

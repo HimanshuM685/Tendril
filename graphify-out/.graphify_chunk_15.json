@@ -1,0 +1,136 @@
+{
+  "nodes": [
+    {
+      "id": "assets_painting2",
+      "label": "painting2.jpg",
+      "type": "asset",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Impressionist oil landscape: flower-strewn meadow, winding dirt path, seated pair, tree cluster left, distant village and hills under clouded sky. Web public brand/atmosphere asset."
+    },
+    {
+      "id": "assets_painting2_meadow_path",
+      "label": "Winding dirt path",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Pale ochre footpath enters from lower center, curves through daisy field toward mid-ground where figures rest, then fades into rolling green."
+    },
+    {
+      "id": "assets_painting2_daisy_field",
+      "label": "White wildflower meadow",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Dense scatter of white daisy-like blooms across green grass in foreground and middle ground; broken impressionist dabs."
+    },
+    {
+      "id": "assets_painting2_seated_figures",
+      "label": "Seated pair on path",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Two small human figures mid-ground on path: darker-clad figure and light/white-dressed companion, seated or crouching among flowers."
+    },
+    {
+      "id": "assets_painting2_left_tree_cluster",
+      "label": "Left tree cluster",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Tall leafy trees left of center; mix of deep green canopy and warm golden-ochre foliage suggesting late summer or early autumn."
+    },
+    {
+      "id": "assets_painting2_distant_village",
+      "label": "Distant village roofs",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Small reddish-brown rooftops and buildings on far rolling hills near horizon, right of center."
+    },
+    {
+      "id": "assets_painting2_clouded_sky",
+      "label": "Clouded blue sky",
+      "type": "visual_element",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Upper half filled with soft blue sky and large cream-white cumulus painted in loose impressionist strokes."
+    },
+    {
+      "id": "assets_painting2_impressionist_landscape",
+      "label": "Impressionist pastoral landscape",
+      "type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Genre/style: 19th-c. French impressionist countryside scene (path, meadow, trees, sky) used as atmospheric web imagery."
+    },
+    {
+      "id": "assets_painting2_pastoral_atmosphere",
+      "label": "Pastoral calm atmosphere",
+      "type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "description": "Quiet rural mood: open light, soft greens, human scale tiny in nature; brand-adjacent warmth and openness for marketing UI."
+    }
+  ],
+  "edges": [
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_meadow_path",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_daisy_field",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_seated_figures",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_left_tree_cluster",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_distant_village",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_clouded_sky",
+      "relation": "contains",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_impressionist_landscape",
+      "relation": "represents",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2_meadow_path",
+      "target": "assets_painting2_seated_figures",
+      "relation": "leads_to",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2_daisy_field",
+      "target": "assets_painting2_meadow_path",
+      "relation": "surrounds",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2_impressionist_landscape",
+      "target": "assets_painting2_pastoral_atmosphere",
+      "relation": "evokes",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    },
+    {
+      "source": "assets_painting2",
+      "target": "assets_painting2_pastoral_atmosphere",
+      "relation": "evokes",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg"
+    }
+  ]
+}
