@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
@@ -10,12 +10,6 @@ import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
-import { Sidebar } from "./components/Sidebar";
-import { TopUpModal } from "./components/TopUpModal";
-import { McpModal } from "./components/McpModal";
-import { ConnectWalletModal } from "./components/ConnectWalletModal";
-// ~90KB of markdown compiles into this page; keep it out of the landing bundle.
-const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
@@ -31,6 +25,11 @@ export type Session = {
 };
 
 const SESSION_KEY = "tendril.session";
+
+function ApiToDocs() {
+  const { hash } = useLocation();
+  return <Navigate to={`/docs?doc=api${hash}`} replace />;
+}
 
 function loadSession(): Session | null {
   try {
@@ -87,13 +86,12 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-      "/explore": "Explore",
-      "/contribute": "Contribute",
-      "/dashboard": "Dashboard",
-      "/metrics": "Metrics",
-      "/api": "API",
-      "/docs": "Docs",
-      "/about": "About",
+      "/explore": "EXPLORE",
+      "/contribute": "CONTRIBUTE",
+      "/dashboard": "DASHBOARD",
+      "/metrics": "METRICS",
+      "/docs": "DOCS",
+      "/about": "ABOUT",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
@@ -198,7 +196,42 @@ export function App() {
           <span className="brand-text">Tendril</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <header className="masthead">
+        <nav className="mast-left">
+          {inApp ? (
+            <>
+              <NavLink to="/explore" className={navClass}>
+                EXPLORE
+              </NavLink>
+              <NavLink to="/contribute" className={navClass}>
+                CONTRIBUTE
+              </NavLink>
+            </>
+          ) : (
+            !isLanding && (
+              <NavLink to="/explore" className={navClass}>
+                EXPLORE&nbsp;→
+              </NavLink>
+            )
+          )}
+          <NavLink to="/dashboard" className={navClass}>
+            DASHBOARD
+          </NavLink>
+          <NavLink to="/metrics" className={navClass}>
+            METRICS
+          </NavLink>
+          <NavLink to="/docs" className={navClass}>
+            DOCS
+          </NavLink>
+          <NavLink to="/about" className={navClass}>
+            ABOUT
+          </NavLink>
+        </nav>
+        <span className="wordmark" onClick={() => navigate("/")} role="button" tabIndex={0}>
+          TENDRIL<span className="wm-tld">.ALGO</span>
+        </span>
+        <div className="mast-right">
+          {/* Shown on the landing page too — connecting is the first thing to do. */}
           <WalletBar
             session={session}
             signedIn={!!session}
@@ -252,113 +285,76 @@ export function App() {
           <div className="mobile-drawer-backdrop" onClick={() => setMobileMenuOpen(false)} />
         )}
 
-        {/* Main Content View */}
-        <main className="app-main-content">
-          {error && (
-            <div className="error" style={{ marginBottom: "20px" }}>
-              <span>{error}</span>
-              <button
-                className="error-dismiss"
-                aria-label="Dismiss error"
-                onClick={() => setError(null)}
-              >
-                &times;
-              </button>
-            </div>
-          )}
-
-          <Routes>
-            <Route
-              path="/auth/google"
-              element={<GoogleCallback onSession={(s) => setSession(s)} />}
-            />
-            <Route
-              path="/explore"
-              element={
-                <Marketplace
-                  tab="explore"
-                  session={session}
-                  wallet={wallet}
-                  activeAddress={effectiveAddress}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeased={setLease}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
-                />
-              }
-            />
-            <Route
-              path="/contribute"
-              element={
-                <Marketplace
-                  tab="contribute"
-                  session={session}
-                  wallet={wallet}
-                  activeAddress={effectiveAddress}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeased={setLease}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
-                />
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <Dashboard
-                  session={session}
-                  wallet={wallet}
-                  address={effectiveAddress}
-                  signedIn={!!session}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeaseEnded={() => setLease(null)}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                />
-              }
-            />
-            <Route path="/metrics" element={<Metrics />} />
-            <Route
-              path="/api"
-              element={
-                <Suspense fallback={<p className="muted dash-note">Loading API reference…</p>}>
-                  <ApiDocs />
-                </Suspense>
-              }
-            />
-            <Route path="/docs" element={<Docs />} />
-            <Route path="/about" element={<About />} />
-            <Route path="*" element={<Navigate to="/explore" replace />} />
-          </Routes>
-        </main>
-      </div>
-
-      {/* Global Modals */}
-      {connectWalletOpen && (
-        <ConnectWalletModal
-          onClose={() => setConnectWalletOpen(false)}
-          onCustodialSession={(res) => {
-            setSession({
-              token: res.token,
-              address: res.address,
-              authType: res.authType,
-              email: res.email,
-              name: res.name,
-            });
-          }}
-          onWalletConnected={() => {
-            autoSignIn.current = true;
-          }}
-        />
-      )}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HashHero
+                onEnter={() => navigate("/explore")}
+                onDocs={() => navigate("/docs")}
+                onAbout={() => navigate("/about")}
+              />
+            }
+          />
+          <Route
+            path="/auth/google"
+            element={<GoogleCallback onSession={(s) => setSession(s)} />}
+          />
+          <Route
+            path="/explore"
+            element={
+              <Marketplace
+                tab="explore"
+                session={session}
+                wallet={wallet}
+                activeAddress={effectiveAddress}
+                signTransactions={signTransactions}
+                onWalletChanged={onWalletChanged}
+                onError={setError}
+                lease={lease}
+                onLeased={setLease}
+              />
+            }
+          />
+          <Route
+            path="/contribute"
+            element={
+              <Marketplace
+                tab="contribute"
+                session={session}
+                wallet={wallet}
+                activeAddress={effectiveAddress}
+                signTransactions={signTransactions}
+                onWalletChanged={onWalletChanged}
+                onError={setError}
+                lease={lease}
+                onLeased={setLease}
+              />
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <Dashboard
+                session={session}
+                wallet={wallet}
+                address={effectiveAddress}
+                signedIn={!!session}
+                signTransactions={signTransactions}
+                onWalletChanged={onWalletChanged}
+                onError={setError}
+                lease={lease}
+                onLeaseEnded={() => setLease(null)}
+              />
+            }
+          />
+          <Route path="/metrics" element={<Metrics />} />
+          <Route path="/api" element={<ApiToDocs />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/about" element={<About />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
 
       {topUpOpen && (
         <TopUpModal
