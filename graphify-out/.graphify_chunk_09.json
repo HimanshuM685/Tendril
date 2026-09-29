@@ -1,0 +1,461 @@
+{
+  "nodes": [
+    {
+      "id": "assets_field_paint_meadow_landscape",
+      "label": "Flowering Meadow Landscape Painting",
+      "file_type": "image",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Oil landscape of a sunlit meadow. High horizon, sky in the upper half, flowering grass in the foreground, trees at both sides, open pasture and low hills beyond."
+    },
+    {
+      "id": "assets_field_paint_cumulus_sky",
+      "label": "Cumulus Sky",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Pale blue sky filled with large cream-white cumulus clouds, some cooler gray-blue shadows, occupying the upper half of the canvas."
+    },
+    {
+      "id": "assets_field_paint_wildflower_meadow",
+      "label": "White Wildflower Meadow",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Foreground grass thick with many small white flower heads, densest at left and center, thinning along the path."
+    },
+    {
+      "id": "assets_field_paint_dirt_path",
+      "label": "Winding Dirt Path",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Pale ochre track enters at the bottom center and curves up through the flowers toward the seated pair."
+    },
+    {
+      "id": "assets_field_paint_seated_pair",
+      "label": "Seated Pair",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Two small human figures sit together in the grass just beside the path, left of center and low in the middle distance. No tools or work posture are visible."
+    },
+    {
+      "id": "assets_field_paint_dark_clothed_figure",
+      "label": "Dark-Clothed Figure",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Left figure of the pair, painted in a dark navy mass, seated on the grass."
+    },
+    {
+      "id": "assets_field_paint_light_clothed_figure",
+      "label": "Light-Clothed Figure",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Right figure of the pair, painted in a pale white or light-blue garment, seated against the dark figure."
+    },
+    {
+      "id": "assets_field_paint_left_woodland",
+      "label": "Left Woodland Mass",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Tall dark-green deciduous trees packed along the left edge, trunks rising out of the flowering grass."
+    },
+    {
+      "id": "assets_field_paint_ochre_tree",
+      "label": "Ochre Foliage Tree",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "One tree in the left group has yellow-ochre foliage, set against the surrounding dark green crowns."
+    },
+    {
+      "id": "assets_field_paint_right_trees",
+      "label": "Scattered Right Trees",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Smaller trees and shrubs spaced along the right side of the pasture, including one narrow dark upright tree."
+    },
+    {
+      "id": "assets_field_paint_green_pasture",
+      "label": "Open Green Pasture",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Broad mowed or grazed green field in the middle ground, between the foreground flowers and the distant tree line."
+    },
+    {
+      "id": "assets_field_paint_distant_rooftops",
+      "label": "Distant Rooftops",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Small pale and warm-brown roof shapes clustered on the horizon beyond the pasture."
+    },
+    {
+      "id": "assets_field_paint_horizon_settlement",
+      "label": "Horizon Settlement",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The roof cluster reads as a village or farm settlement. Individual buildings are too small to name."
+    },
+    {
+      "id": "assets_field_paint_horizon_hills",
+      "label": "Low Horizon Hills",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "A low blue-gray hill line closes the view under the sky, behind the distant trees and roofs."
+    },
+    {
+      "id": "assets_field_paint_impressionist_brushwork",
+      "label": "Impressionist Broken Brushwork",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Short broken strokes, high-key daylight, and an outdoor landscape motif read as plein-air impressionist handling. The style name is a reading of the paint, not a caption on the file."
+    },
+    {
+      "id": "assets_field_paint_corner_signature",
+      "label": "Lower-Right Signature",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Dark cursive paint marks sit in the lower right corner. The strokes are a signature; the name is not legible."
+    }
+  ],
+  "edges": [
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_cumulus_sky",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_wildflower_meadow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_dirt_path",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_seated_pair",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_left_woodland",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_right_trees",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_green_pasture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_distant_rooftops",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_horizon_hills",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_corner_signature",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_dirt_path",
+      "target": "assets_field_paint_wildflower_meadow",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_dirt_path",
+      "target": "assets_field_paint_seated_pair",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_seated_pair",
+      "target": "assets_field_paint_dark_clothed_figure",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_seated_pair",
+      "target": "assets_field_paint_light_clothed_figure",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_dark_clothed_figure",
+      "target": "assets_field_paint_light_clothed_figure",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_left_woodland",
+      "target": "assets_field_paint_ochre_tree",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_meadow_landscape",
+      "target": "assets_field_paint_ochre_tree",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_left_woodland",
+      "target": "assets_field_paint_green_pasture",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_right_trees",
+      "target": "assets_field_paint_green_pasture",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_green_pasture",
+      "target": "assets_field_paint_distant_rooftops",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_distant_rooftops",
+      "target": "assets_field_paint_horizon_hills",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_cumulus_sky",
+      "target": "assets_field_paint_horizon_hills",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_impressionist_brushwork",
+      "target": "assets_field_paint_meadow_landscape",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_dirt_path",
+      "target": "assets_field_paint_green_pasture",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_seated_pair",
+      "target": "assets_field_paint_wildflower_meadow",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_field_paint_distant_rooftops",
+      "target": "assets_field_paint_horizon_settlement",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

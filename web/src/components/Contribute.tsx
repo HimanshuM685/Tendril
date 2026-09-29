@@ -70,9 +70,17 @@ export function Contribute({
       setNewSecret(null);
       return;
     }
-    fetchApiKeys(session.token)
-      .then(setKeys)
-      .catch(() => {});
+    let alive = true;
+    const load = () =>
+      fetchApiKeys(session.token)
+        .then((k) => alive && setKeys(k))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 8000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, [session]);
 
   useEffect(() => {
@@ -193,9 +201,9 @@ export function Contribute({
         </div>
 
         <div className="explore-stat-card">
-          <div className="stat-card-label">Platform Settlement Fee</div>
-          <div className="stat-card-value">5%</div>
-          <div className="stat-card-sub">Sponsors network fees</div>
+          <div className="stat-card-label">Payout</div>
+          <div className="stat-card-value">On-chain</div>
+          <div className="stat-card-sub">Earnings leave via Withdraw</div>
         </div>
       </div>
 

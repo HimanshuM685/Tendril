@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
 import { WalletBar } from "./components/WalletBar";
@@ -10,10 +10,13 @@ import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
+import { Sidebar } from "./components/Sidebar";
+import { TopUpModal } from "./components/TopUpModal";
+import { McpModal } from "./components/McpModal";
+import { ConnectWalletModal } from "./components/ConnectWalletModal";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
-import { network } from "./lib/network";
 import { isCustodialSession } from "./lib/session";
 
 export type Session = {
@@ -97,10 +100,12 @@ export function App() {
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
   }, [path]);
 
-  // Drop session if account switches
+  // A null activeAddress on reload is the wallet still resuming, not a disconnect.
+  // Clearing the session there made every signed-in action (withdraw, mint, balance)
+  // look empty until the user signed in again.
   useEffect(() => {
     if (!isReady || isCustodialAuth) return;
-    if (!activeAddress || (session && session.address !== activeAddress)) {
+    if (activeAddress && session && session.address !== activeAddress) {
       setSession(null);
     }
   }, [isReady, activeAddress, session, setSession, isCustodialAuth]);
@@ -171,6 +176,10 @@ export function App() {
     );
   }
 
+  if (path === "/api") {
+    return <ApiToDocs />;
+  }
+
   // Standalone docs portal matching docs-page-layout.png (docs.tendrilhq.com)
   if (isDocs) {
     return <Docs />;
@@ -178,7 +187,6 @@ export function App() {
 
   return (
     <div className="app app-appshell">
-      {/* Mobile Top Header */}
       <header className="mobile-header">
         <div className="brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
           <span className="brand-flower">
@@ -195,166 +203,129 @@ export function App() {
           </span>
           <span className="brand-text">Tendril</span>
         </div>
-
-      <header className="masthead">
-        <nav className="mast-left">
-          {inApp ? (
-            <>
-              <NavLink to="/explore" className={navClass}>
-                EXPLORE
-              </NavLink>
-              <NavLink to="/contribute" className={navClass}>
-                CONTRIBUTE
-              </NavLink>
-            </>
-          ) : (
-            !isLanding && (
-              <NavLink to="/explore" className={navClass}>
-                EXPLORE&nbsp;→
-              </NavLink>
-            )
-          )}
-          <NavLink to="/dashboard" className={navClass}>
-            DASHBOARD
-          </NavLink>
-          <NavLink to="/metrics" className={navClass}>
-            METRICS
-          </NavLink>
-          <NavLink to="/docs" className={navClass}>
-            DOCS
-          </NavLink>
-          <NavLink to="/about" className={navClass}>
-            ABOUT
-          </NavLink>
-        </nav>
-        <span className="wordmark" onClick={() => navigate("/")} role="button" tabIndex={0}>
-          TENDRIL<span className="wm-tld">.ALGO</span>
-        </span>
-        <div className="mast-right">
-          {/* Shown on the landing page too — connecting is the first thing to do. */}
-          <WalletBar
-            session={session}
-            signedIn={!!session}
-            canSignIn={!!activeAddress && !isCustodialAuth}
-            signingIn={signingIn}
-            onSignIn={signIn}
-            onSignOut={() => setSession(null)}
-            onCustodialSession={(res) =>
-              setSession({
-                token: res.token,
-                address: res.address,
-                authType: res.authType,
-                email: res.email,
-                name: res.name,
-              })
-            }
-            onAccountRefresh={onWalletChanged}
-            balanceAtomic={wallet?.balanceAtomic ?? null}
-            signTransactions={signTransactions as never}
-          />
-          <button
-            type="button"
-            className="mobile-menu-toggle"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Toggle Navigation"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        </div>
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          onClick={() => setMobileMenuOpen((v) => !v)}
+          aria-label="Toggle Navigation"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
       </header>
 
       <div className={`app-shell-container ${mobileMenuOpen ? "mobile-open" : ""}`}>
-        {/* Sidebar matching explore.png */}
         <Sidebar
           session={session}
           activeAddress={effectiveAddress}
           wallet={wallet}
-          activeLeaseCount={lease ? 1 : 2}
+          activeLeaseCount={lease ? 1 : 0}
           onConnectWallet={() => setConnectWalletOpen(true)}
           onOpenTopUp={() => setTopUpOpen(true)}
           onOpenMcp={() => setMcpOpen(true)}
           onSignOut={() => setSession(null)}
         />
 
-        {/* Backdrop for mobile drawer */}
         {mobileMenuOpen && (
           <div className="mobile-drawer-backdrop" onClick={() => setMobileMenuOpen(false)} />
         )}
 
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HashHero
-                onEnter={() => navigate("/explore")}
-                onDocs={() => navigate("/docs")}
-                onAbout={() => navigate("/about")}
-              />
-            }
-          />
-          <Route
-            path="/auth/google"
-            element={<GoogleCallback onSession={(s) => setSession(s)} />}
-          />
-          <Route
-            path="/explore"
-            element={
-              <Marketplace
-                tab="explore"
-                session={session}
-                wallet={wallet}
-                activeAddress={effectiveAddress}
-                signTransactions={signTransactions}
-                onWalletChanged={onWalletChanged}
-                onError={setError}
-                lease={lease}
-                onLeased={setLease}
-              />
-            }
-          />
-          <Route
-            path="/contribute"
-            element={
-              <Marketplace
-                tab="contribute"
-                session={session}
-                wallet={wallet}
-                activeAddress={effectiveAddress}
-                signTransactions={signTransactions}
-                onWalletChanged={onWalletChanged}
-                onError={setError}
-                lease={lease}
-                onLeased={setLease}
-              />
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <Dashboard
-                session={session}
-                wallet={wallet}
-                address={effectiveAddress}
-                signedIn={!!session}
-                signTransactions={signTransactions}
-                onWalletChanged={onWalletChanged}
-                onError={setError}
-                lease={lease}
-                onLeaseEnded={() => setLease(null)}
-              />
-            }
-          />
-          <Route path="/metrics" element={<Metrics />} />
-          <Route path="/api" element={<ApiToDocs />} />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="/about" element={<About />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
+        <main className="app-main-content">
+          <div className="shell-wallet">
+            <WalletBar
+              session={session}
+              signedIn={!!session}
+              canSignIn={!!activeAddress && !isCustodialAuth}
+              signingIn={signingIn}
+              onSignIn={signIn}
+              onSignOut={() => setSession(null)}
+              onCustodialSession={(res) =>
+                setSession({
+                  token: res.token,
+                  address: res.address,
+                  authType: res.authType,
+                  email: res.email,
+                  name: res.name,
+                })
+              }
+              onAccountRefresh={onWalletChanged}
+              balanceAtomic={wallet?.balanceAtomic ?? null}
+              signTransactions={signTransactions as never}
+            />
+          </div>
+          {error && (
+            <div className="error">
+              <span>{error}</span>
+              <button className="error-dismiss" aria-label="Dismiss error" onClick={() => setError(null)}>
+                ×
+              </button>
+            </div>
+          )}
+          <Routes>
+            <Route path="/auth/google" element={<GoogleCallback onSession={(s) => setSession(s)} />} />
+            <Route
+              path="/explore"
+              element={
+                <Marketplace
+                  tab="explore"
+                  session={session}
+                  wallet={wallet}
+                  activeAddress={effectiveAddress}
+                  signTransactions={signTransactions}
+                  onWalletChanged={onWalletChanged}
+                  onError={setError}
+                  lease={lease}
+                  onLeased={setLease}
+                  onOpenTopUp={() => setTopUpOpen(true)}
+                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
+                />
+              }
+            />
+            <Route
+              path="/contribute"
+              element={
+                <Marketplace
+                  tab="contribute"
+                  session={session}
+                  wallet={wallet}
+                  activeAddress={effectiveAddress}
+                  signTransactions={signTransactions}
+                  onWalletChanged={onWalletChanged}
+                  onError={setError}
+                  lease={lease}
+                  onLeased={setLease}
+                  onOpenTopUp={() => setTopUpOpen(true)}
+                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
+                />
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <Dashboard
+                  session={session}
+                  wallet={wallet}
+                  address={effectiveAddress}
+                  signedIn={!!session}
+                  signTransactions={signTransactions}
+                  onWalletChanged={onWalletChanged}
+                  onError={setError}
+                  lease={lease}
+                  onLeaseEnded={() => setLease(null)}
+                  onOpenTopUp={() => setTopUpOpen(true)}
+                />
+              }
+            />
+            <Route path="/metrics" element={<Metrics />} />
+            <Route path="/api" element={<ApiToDocs />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<Navigate to="/explore" replace />} />
+          </Routes>
+        </main>
+      </div>
 
       {topUpOpen && (
         <TopUpModal
@@ -364,6 +335,24 @@ export function App() {
           onClose={() => setTopUpOpen(false)}
           onChanged={onWalletChanged}
           onError={setError}
+        />
+      )}
+
+      {connectWalletOpen && (
+        <ConnectWalletModal
+          onClose={() => setConnectWalletOpen(false)}
+          onCustodialSession={(res) =>
+            setSession({
+              token: res.token,
+              address: res.address,
+              authType: res.authType,
+              email: res.email,
+              name: res.name,
+            })
+          }
+          onWalletConnected={() => {
+            autoSignIn.current = true;
+          }}
         />
       )}
 

@@ -1,0 +1,2968 @@
+{
+  "nodes": [
+    {
+      "id": "src_app",
+      "label": "App.tsx",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_session",
+      "label": "Session",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_apitodocs",
+      "label": "ApiToDocs()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_loadsession",
+      "label": "loadSession()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_storesession",
+      "label": "storeSession()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L45",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_app",
+      "label": "App()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L54",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_about",
+      "label": "About.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/About.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_about_about",
+      "label": "About()",
+      "file_type": "code",
+      "source_file": "web/src/components/About.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_archdiagram",
+      "label": "ArchDiagram.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_archdiagram_flowmode",
+      "label": "FlowMode",
+      "file_type": "code",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_archdiagram_archdiagram",
+      "label": "ArchDiagram()",
+      "file_type": "code",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_connectwalletmodal",
+      "label": "ConnectWalletModal.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_connectwalletmodal_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_connectwalletmodal_connectwalletmodal",
+      "label": "ConnectWalletModal()",
+      "file_type": "code",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_contribute",
+      "label": "Contribute.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_contribute_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_contribute_contribute",
+      "label": "Contribute()",
+      "file_type": "code",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard",
+      "label": "Dashboard.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard_fmtduration",
+      "label": "fmtDuration()",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard_short",
+      "label": "short()",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard_resolvestats",
+      "label": "resolveStats()",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L41",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_dashboard_dashboard",
+      "label": "Dashboard()",
+      "file_type": "code",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L54",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explore",
+      "label": "Explore.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explore_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explore_fmtcountdown",
+      "label": "fmtCountdown()",
+      "file_type": "code",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explore_fmtduration",
+      "label": "fmtDuration()",
+      "file_type": "code",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L33",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explore_explore",
+      "label": "Explore()",
+      "file_type": "code",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L45",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_landingpage",
+      "label": "LandingPage.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_landingpage_landingpage",
+      "label": "LandingPage()",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_marketplace",
+      "label": "Marketplace.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_marketplace_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_marketplace_marketplace",
+      "label": "Marketplace()",
+      "file_type": "code",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mcpmodal",
+      "label": "McpModal.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/McpModal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mcpmodal_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/McpModal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mcpmodal_mcpmodal",
+      "label": "McpModal()",
+      "file_type": "code",
+      "source_file": "web/src/components/McpModal.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics",
+      "label": "Metrics.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_shortaddr",
+      "label": "shortAddr()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_fmtusdc",
+      "label": "fmtUsdc()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_fmtdur",
+      "label": "fmtDur()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_metrics",
+      "label": "Metrics()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_chartrange",
+      "label": "ChartRange",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L114",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_monthstartms",
+      "label": "monthStartMs()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L116",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_windowseries",
+      "label": "windowSeries()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L123",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_linecard",
+      "label": "LineCard()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L144",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_boardtab",
+      "label": "BoardTab",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L249",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_metrics_board",
+      "label": "Board()",
+      "file_type": "code",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L255",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_sidebar",
+      "label": "Sidebar.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_sidebar_sidebarprops",
+      "label": "SidebarProps",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_sidebar_shortaddr",
+      "label": "shortAddr()",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_sidebar_sidebar",
+      "label": "Sidebar()",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_topupmodal",
+      "label": "TopUpModal.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_topupmodal_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_topupmodal_topupmodal",
+      "label": "TopUpModal()",
+      "file_type": "code",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_walletbar",
+      "label": "WalletBar.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_walletbar_props",
+      "label": "Props",
+      "file_type": "code",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_walletbar_short",
+      "label": "short()",
+      "file_type": "code",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L36",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_walletbar_walletbar",
+      "label": "WalletBar()",
+      "file_type": "code",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L38",
+      "_origin": "ast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "src_app",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "use_wallet_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_walletbar",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_walletbar_walletbar",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_marketplace",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_marketplace_marketplace",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_landingpage",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_landingpage_landingpage",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_docs_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_docs_docs",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_about",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_about_about",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_dashboard",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_dashboard_dashboard",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_metrics",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_metrics_metrics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_googlecallback_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_googlecallback_googlecallback",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_wallet_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_wallet_loginwithwallet",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_api_fetchwallet",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_api_activelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "lib_x402client_serializesigner",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_network_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_session_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "lib_session_iscustodialsession",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_session",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_apitodocs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_loadsession",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_storesession",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "components_about",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_network_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/About.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_about",
+      "target": "lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/About.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_about",
+      "target": "components_about_about",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/About.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_archdiagram",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_archdiagram",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_network_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_archdiagram",
+      "target": "lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_archdiagram",
+      "target": "components_archdiagram_flowmode",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_archdiagram",
+      "target": "components_archdiagram_archdiagram",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ArchDiagram.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "use_wallet_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "src_index_emailsessionresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "src_index_googlesessionresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_custodialclient_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "lib_custodialclient_fetchemailenabled",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "lib_custodialclient_fetchgoogleenabled",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "lib_custodialclient_googleloginurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_emailauthmodal_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "components_emailauthmodal_emailauthmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "components_connectwalletmodal_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_connectwalletmodal",
+      "target": "components_connectwalletmodal_connectwalletmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/ConnectWalletModal.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_index_apikeyinfo",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_index_computenode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_index_createapikeyresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_index_formatusdc",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_createapikey",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_fetchapikeys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_fetchmynodes",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_fetchplatform",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_revokeapikey",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_api_withdrawearnings",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_clipboard_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_clipboard_writeclipboard",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_context_custodialsigncontext_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "context_custodialsigncontext_usecustodialsign",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "lib_x402client_paystage",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "lib_x402client_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_session_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "lib_session_iscustodialsession",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "components_contribute_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute",
+      "target": "components_contribute_contribute",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_index_walletstats",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_index_formatusdcexact",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_balancechart_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_balancechart_balancechart",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_leasepanel_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_leasepanel_leasepanel",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_topupcontrol_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_topupcontrol_topupcontrol",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_api_exploreraddrurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_api_explorertxurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_api_activelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "lib_x402client_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_dashboard_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_dashboard_fmtduration",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_dashboard_short",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_dashboard_resolvestats",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard",
+      "target": "components_dashboard_dashboard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard_dashboard",
+      "target": "components_dashboard_resolvestats",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard_dashboard",
+      "target": "components_dashboard_fmtduration",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_index_explorernode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_index_x402rentresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_index_formatusdc",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_api_activelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_api_fetchexplorer",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_api_rentnode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_api_releaselease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_api_toactivelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "lib_x402client_paystage",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "lib_x402client_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_context_custodialsigncontext_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "context_custodialsigncontext_usecustodialsign",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_session_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "lib_session_iscustodialsession",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_clipboard_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "src_clipboard_writeclipboard",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "components_explore_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "components_explore_fmtcountdown",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "components_explore_fmtduration",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore",
+      "target": "components_explore_explore",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore_explore",
+      "target": "components_explore_fmtduration",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L183",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore_explore",
+      "target": "components_explore_fmtcountdown",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L340",
+      "weight": 1.0
+    },
+    {
+      "source": "components_landingpage",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_landingpage",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_landingpage",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_landing_css",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_landingpage",
+      "target": "components_landingpage_landingpage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "src_api_activelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "lib_x402client_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_explore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_explore_explore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_contribute",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_contribute_contribute",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_marketplace_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace",
+      "target": "components_marketplace_marketplace",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mcpmodal",
+      "target": "components_mcpmodal_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/McpModal.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mcpmodal",
+      "target": "components_mcpmodal_mcpmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/McpModal.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "src_index_metricpoint",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "src_index_metrics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "src_index_rankrow",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "src_index_formatusdc",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_api_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "src_api_fetchmetrics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_shortaddr",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_fmtusdc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_fmtdur",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_metrics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_chartrange",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_monthstartms",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_windowseries",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_linecard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L144",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_boardtab",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L249",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics",
+      "target": "components_metrics_board",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L255",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics_metrics",
+      "target": "components_metrics_fmtusdc",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics_windowseries",
+      "target": "components_metrics_monthstartms",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "components_metrics_linecard",
+      "target": "components_metrics_windowseries",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Metrics.tsx",
+      "source_location": "L150",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_network_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "components_sidebar_sidebarprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "components_sidebar_shortaddr",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar",
+      "target": "components_sidebar_sidebar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar_sidebar",
+      "target": "components_sidebar_shortaddr",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_x402client_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "lib_x402client_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_topupcontrol_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "components_topupcontrol_topupcontrol",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "components_topupmodal_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal",
+      "target": "components_topupmodal_topupmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "use_wallet_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_index_emailsessionresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_index_gasrequestinfo",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_index_googlesessionresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_shared_src_index_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_index_formatusdc",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_index_formatusdcexact",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_custodialclient_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_custodialclient_fetchemailenabled",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_custodialclient_fetchgoogleenabled",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_custodialclient_googleloginurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_walletaccount_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_walletaccount_fetchonchainbalances",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_walletaccount_fetchwalletaccount",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_walletaccount_fetchwalletgasrequest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_walletaccount_optinusdcwithwallet",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_walletaccount_submitwalletgasrequest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_wallet_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_wallet_signtransactions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_googlewalletbar_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_googlewalletbar_googlewalletbar",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_emailauthmodal_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_emailauthmodal_emailauthmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_onchainaccountpanel_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_onchainaccountpanel_onchainaccountpanel",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_lib_session_ts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "lib_session_iscustodialsession",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "users_fusion_code_gitrepos_tendril_web_src_components_onchainaccountpanel_tsx",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_onchainaccountpanel_onchainpanelstate",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_connectwalletmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_connectwalletmodal_connectwalletmodal",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_walletbar_props",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_walletbar_short",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar",
+      "target": "components_walletbar_walletbar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar_walletbar",
+      "target": "components_walletbar_short",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L293",
+      "weight": 1.0
+    },
+    {
+      "source": "components_contribute_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Contribute.tsx",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dashboard_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Dashboard.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explore_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Explore.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_marketplace_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Marketplace.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_sidebar_sidebarprops",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_topupmodal_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TopUpModal.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_walletbar_props",
+      "target": "src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/WalletBar.tsx",
+      "source_location": "L24",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

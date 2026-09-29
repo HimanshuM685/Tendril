@@ -1,0 +1,323 @@
+{
+  "nodes": [
+    {
+      "id": "assets_lime_field_paint_painting",
+      "label": "Lime Field Painting",
+      "file_type": "image",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Wide banner landscape painted entirely in lime and olive greens. No figures, animals, lettering, or signature."
+    },
+    {
+      "id": "assets_lime_field_paint_panoramic_crop",
+      "label": "Panoramic Banner Crop",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Extreme wide aspect. Horizon sits near the vertical middle so sky and field each take about half the frame."
+    },
+    {
+      "id": "assets_lime_field_paint_lime_monochrome",
+      "label": "Lime Monochrome Palette",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Every region stays inside yellow-green: pale sky, mid olive field, darker tree masses. No other hue."
+    },
+    {
+      "id": "assets_lime_field_paint_impasto_brushwork",
+      "label": "Impasto Brushwork",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Short directional strokes stay visible across sky, field, and foliage. Surface reads as paint, not a photograph."
+    },
+    {
+      "id": "assets_lime_field_paint_pale_sky",
+      "label": "Pale Lime Sky",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Upper band is the lightest value. Horizontal and diagonal strokes, no clouds drawn as objects."
+    },
+    {
+      "id": "assets_lime_field_paint_distant_hills",
+      "label": "Distant Rolling Hills",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Low muted ridge along the horizon, slightly darker than the sky, running the full width behind the buildings."
+    },
+    {
+      "id": "assets_lime_field_paint_farmstead",
+      "label": "Midground Farmstead",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Small cluster of pitched-roof buildings left of center, sitting on the horizon line."
+    },
+    {
+      "id": "assets_lime_field_paint_gabled_farmhouse",
+      "label": "Gabled Farmhouse",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Longer low mass with a pitched roof, lighter walls, and small dark openings that read as windows."
+    },
+    {
+      "id": "assets_lime_field_paint_adjacent_barn",
+      "label": "Adjacent Barn",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Shorter structure immediately right of the house. Darker, steeper roof. Rural pairing supports reading it as a barn rather than a second house."
+    },
+    {
+      "id": "assets_lime_field_paint_scattered_trees",
+      "label": "Scattered Field Trees",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Isolated trees across the middle distance: thin saplings at the far left, a fuller crown left of the farm, and medium crowns to the right of the buildings."
+    },
+    {
+      "id": "assets_lime_field_paint_right_edge_tree",
+      "label": "Large Right-Edge Tree",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Dominant canopy cut by the right frame. Darker mass than the other trees, with pale yellow-green dabs in the crown."
+    },
+    {
+      "id": "assets_lime_field_paint_foreground_pasture",
+      "label": "Furrowed Foreground Pasture",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Lower half is an open field. Horizontal and diagonal ridges, plus darker olive clumps, read as furrows or grass rather than a path or water."
+    }
+  ],
+  "edges": [
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_panoramic_crop",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_lime_monochrome",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_impasto_brushwork",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_pale_sky",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_distant_hills",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_farmstead",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_scattered_trees",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_right_edge_tree",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_painting",
+      "target": "assets_lime_field_paint_foreground_pasture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_farmstead",
+      "target": "assets_lime_field_paint_gabled_farmhouse",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_farmstead",
+      "target": "assets_lime_field_paint_adjacent_barn",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_gabled_farmhouse",
+      "target": "assets_lime_field_paint_adjacent_barn",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_pale_sky",
+      "target": "assets_lime_field_paint_lime_monochrome",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_farmstead",
+      "target": "assets_lime_field_paint_distant_hills",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_right_edge_tree",
+      "target": "assets_lime_field_paint_scattered_trees",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_impasto_brushwork",
+      "target": "assets_lime_field_paint_foreground_pasture",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "assets_lime_field_paint_foreground_pasture",
+      "target": "assets_lime_field_paint_farmstead",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

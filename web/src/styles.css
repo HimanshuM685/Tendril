@@ -431,6 +431,12 @@ img {
    MAIN CONTENT AREA & EXPLORE DASHBOARD (Matching explore.png)
    =========================================================================== */
 
+.shell-wallet {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 .app-main-content {
   flex: 1;
   min-width: 0;

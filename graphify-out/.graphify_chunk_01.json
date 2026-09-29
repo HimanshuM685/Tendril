@@ -1,0 +1,326 @@
+{
+  "nodes": [
+    {
+      "id": "web_index_tendril",
+      "label": "TENDRIL",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The Bazaar scrapes this page for listing metadata, so the document title is the service name and nothing else. A tagline in the title becomes the name shown on the Bazaar dashboard. The product description belongs in og:description, not the title."
+    },
+    {
+      "id": "web_index_bazaar",
+      "label": "The Bazaar",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L6-L8",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "External listing scraper. It reads this page's title as the service name on its dashboard, which forces the title to stay a bare name."
+    },
+    {
+      "id": "web_index_open_graph",
+      "label": "Open Graph Metadata",
+      "file_type": "code",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L14-L26",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Canonical place for the product description. og:site_name and og:title repeat the bare service name; og:description carries the tagline the title must not."
+    },
+    {
+      "id": "web_index_twitter_card",
+      "label": "Twitter Card Metadata",
+      "file_type": "code",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L27-L32",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_index_og_image",
+      "label": "Open Graph Image",
+      "file_type": "code",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L22-L26",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Image URL must be absolute https. A relative URL is ignored by consumers. Declared as image/png at 1200x630 and reused as twitter:image."
+    },
+    {
+      "id": "web_index_canonical_site",
+      "label": "tendrilhq.com",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_index_sandboxed_ssh",
+      "label": "Sandboxed SSH Machine Rental",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Product offer stated in og:description and twitter:description: rent a sandboxed SSH machine by the hour."
+    },
+    {
+      "id": "web_index_x402",
+      "label": "x402 Pay-Per-Call",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Payment mechanism named in the listing description: pay per call with x402, settled on Algorand in USDC."
+    },
+    {
+      "id": "web_index_algorand",
+      "label": "Algorand",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_index_usdc",
+      "label": "USDC",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_index_spa_root",
+      "label": "SPA Root Mount",
+      "file_type": "code",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L41",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_index_main_module",
+      "label": "main.tsx Module Entry",
+      "file_type": "code",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L42",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "web_index_bazaar",
+      "target": "web_index_tendril",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L6-L9",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_tendril",
+      "target": "web_index_open_graph",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L6-L8",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_tendril",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L14-L15",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_twitter_card",
+      "target": "web_index_tendril",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_twitter_card",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L16-L32",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_og_image",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L22-L26",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_twitter_card",
+      "target": "web_index_og_image",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_canonical_site",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_og_image",
+      "target": "web_index_canonical_site",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_sandboxed_ssh",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_open_graph",
+      "target": "web_index_x402",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_x402",
+      "target": "web_index_algorand",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_x402",
+      "target": "web_index_usdc",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_sandboxed_ssh",
+      "target": "web_index_x402",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "web_index_main_module",
+      "target": "web_index_spa_root",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html",
+      "source_location": "L41-L42",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "web_index_public_listing_identity",
+      "label": "Public Listing Identity",
+      "nodes": [
+        "web_index_bazaar",
+        "web_index_tendril",
+        "web_index_open_graph",
+        "web_index_twitter_card"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html"
+    },
+    {
+      "id": "web_index_ssh_x402_payment",
+      "label": "Hourly SSH Rental Paid via x402",
+      "nodes": [
+        "web_index_sandboxed_ssh",
+        "web_index_x402",
+        "web_index_algorand",
+        "web_index_usdc"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/index.html"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

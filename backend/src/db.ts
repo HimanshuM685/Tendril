@@ -13,7 +13,6 @@ import type {
   Withdrawal,
 } from "@tendril/shared";
 import { config } from "./config.js";
-import { creditBalance, earningsBalance } from "./x402/credit.js";
 
 // Neon is plain Postgres over TLS. A pool suits the long-running registry.
 // Only money state lives here: wallets + their history. Nodes and leases are
@@ -43,6 +42,19 @@ if (!/^[a-z]+$/.test(SCHEMA)) {
 const pool = new pg.Pool({
   connectionString: config.databaseUrl,
   ssl: config.databaseUrl?.includes("localhost") ? undefined : { rejectUnauthorized: false },
+  // Neon drops idle sockets. Release them before that, and fail fast instead of
+  // queueing forever when the pool is saturated.
+  max: 10,
+  idleTimeoutMillis: 20_000,
+  connectionTimeoutMillis: 15_000,
+  keepAlive: true,
+});
+
+// An idle client Neon already closed emits 'error'. Without a listener Node
+// treats that as unhandled and the registry dies — the "DB connection is unstable"
+// symptom.
+pool.on("error", (err) => {
+  console.error("[db] idle client error:", err.message);
 });
 
 // int8/bigint comes back as a string by default; we store epoch-ms + atomic
@@ -51,24 +63,49 @@ pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 
 type Row = Record<string, unknown>;
 
+function transientDbError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  const msg = e.message ?? "";
+  return (
+    e.code === "57P01" ||
+    e.code === "08006" ||
+    e.code === "08003" ||
+    e.code === "40001" ||
+    e.code === "53300" ||
+    /connection terminated|ECONNRESET|ETIMEDOUT|Connection terminated|Client has encountered a connection error|sorry, too many clients/i.test(
+      msg,
+    )
+  );
+}
+
 export async function inTransaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-    const out = await fn(client);
-    await client.query("COMMIT");
-    return out;
-  } catch (err) {
+  let last: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const client = await pool.connect();
+    let committed = false;
     try {
-      await client.query("ROLLBACK");
-    } catch {
-      /* client may already be dead */
+      await client.query("BEGIN");
+      await client.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      const out = await fn(client);
+      await client.query("COMMIT");
+      committed = true;
+      return out;
+    } catch (err) {
+      if (!committed) {
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          /* client may already be dead */
+        }
+      }
+      last = err;
+      // Only retry work that did not commit. A failed COMMIT is not safe to repeat.
+      if (committed || !transientDbError(err) || attempt === 1) throw err;
+    } finally {
+      client.release();
     }
-    throw err;
-  } finally {
-    client.release();
   }
+  throw last;
 }
 
 export async function q<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
@@ -457,6 +494,8 @@ export async function countGoogleUsers(): Promise<number> {
 }
 
 export async function walletSummary(address: string): Promise<WalletSummary> {
+  // One connection, one transaction. The old Promise.all opened nine pool
+  // clients per poll (the UI hits this every 5s) and starved Neon.
   const [
     balance,
     earnings,
@@ -467,44 +506,50 @@ export async function walletSummary(address: string): Promise<WalletSummary> {
     chargeAgg,
     topupAgg,
     payoutAgg,
-  ] = await Promise.all([
-    creditBalance(address),
-    earningsBalance(address),
-    q<{ txid: string; address: string; amount_micro: number; created_at: number }>(
-      "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
-      [address],
-    ),
-    q<{ id: number; address: string; lease_id: string; pay_to: string; amount_micro: number; seconds: number; created_at: number }>(
-      "SELECT * FROM charges WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
-      [address],
-    ),
-    q<{ id: number; to_addr: string; lease_id: string; amount_micro: number; txid: string | null; created_at: number }>(
-      "SELECT * FROM payouts WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
-      [address],
-    ),
-    q<{ id: number; to_addr: string; amount_micro: number; txid: string | null; status: string; created_at: number }>(
-      "SELECT * FROM withdrawals WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
-      [address],
-    ),
-    // Lifetime aggregates (not capped by the history LIMITs above). SUM(bigint)
-    // is numeric, so cast back to bigint for the int8→Number parser.
-    q<{ spent: number; secs: number; cnt: number }>(
-      `SELECT COALESCE(SUM(amount_micro),0)::bigint AS spent,
-              COALESCE(SUM(seconds),0)::bigint AS secs,
-              COUNT(*)::bigint AS cnt
-         FROM charges WHERE address = $1`,
-      [address],
-    ),
-    q<{ topped: number }>(
-      "SELECT COALESCE(SUM(amount_micro),0)::bigint AS topped FROM topups WHERE address = $1",
-      [address],
-    ),
-    q<{ earned: number; pcnt: number }>(
-      `SELECT COALESCE(SUM(amount_micro),0)::bigint AS earned, COUNT(*)::bigint AS pcnt
-         FROM payouts WHERE to_addr = $1`,
-      [address],
-    ),
-  ]);
+  ] = await inTransaction(async (client) => {
+    const one = async <T>(sql: string, params: unknown[] = []) =>
+      (await client.query(sql, params)).rows as T[];
+    return Promise.all([
+      one<{ amount_atomic: number }>("SELECT amount_atomic FROM credits WHERE address = $1", [address]).then(
+        (rows) => rows[0]?.amount_atomic ?? 0,
+      ),
+      one<{ amount_atomic: number }>("SELECT amount_atomic FROM earnings WHERE address = $1", [address]).then(
+        (rows) => rows[0]?.amount_atomic ?? 0,
+      ),
+      one<{ txid: string; address: string; amount_micro: number; created_at: number }>(
+        "SELECT * FROM topups WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
+        [address],
+      ),
+      one<{ id: number; address: string; lease_id: string; pay_to: string; amount_micro: number; seconds: number; created_at: number }>(
+        "SELECT * FROM charges WHERE address = $1 ORDER BY created_at DESC LIMIT 50",
+        [address],
+      ),
+      one<{ id: number; to_addr: string; lease_id: string; amount_micro: number; txid: string | null; created_at: number }>(
+        "SELECT * FROM payouts WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
+        [address],
+      ),
+      one<{ id: number; to_addr: string; amount_micro: number; txid: string | null; status: string; created_at: number }>(
+        "SELECT * FROM withdrawals WHERE to_addr = $1 ORDER BY created_at DESC LIMIT 50",
+        [address],
+      ),
+      one<{ spent: number; secs: number; cnt: number }>(
+        `SELECT COALESCE(SUM(amount_micro),0)::bigint AS spent,
+                COALESCE(SUM(seconds),0)::bigint AS secs,
+                COUNT(*)::bigint AS cnt
+           FROM charges WHERE address = $1`,
+        [address],
+      ),
+      one<{ topped: number }>(
+        "SELECT COALESCE(SUM(amount_micro),0)::bigint AS topped FROM topups WHERE address = $1",
+        [address],
+      ),
+      one<{ earned: number; pcnt: number }>(
+        `SELECT COALESCE(SUM(amount_micro),0)::bigint AS earned, COUNT(*)::bigint AS pcnt
+           FROM payouts WHERE to_addr = $1`,
+        [address],
+      ),
+    ] as const);
+  });
   const topups: TopUp[] = topupRows.map((t) => ({
     txid: t.txid,
     address: t.address,
