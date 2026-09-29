@@ -18,12 +18,11 @@ Graphify. Default fast path: if graphify-out/graph.json exists + natural-languag
 
 When user asks "How does X work?" / "What calls Y?" / "Trace the data flow through Z" on existing graph: run graphify query "<question>" immediately. Do not detect. Do not rebuild.
 
-Key invariants from last full rebuild:
-- 912 nodes, 1871 edges, 69 communities
-- God nodes: Fetch (31 edges), apiError(), formatUsdc(), Session, creditBalance()
-- High-betweenness bridges: Fetch crosses Admin SPA ↔ Custodial Auth ↔ Wallet Onboarding ↔ Contributor Pages ↔ API Docs UI
-- formatUsdc() bridges 11 communities — shared formatter between UI and auth/custodial flows
-- Cache: 14/14 semantic files hit on update; zero LLM tokens when all cached
+Key invariants from last update rebuild:
+- 1307 nodes, 2304 edges, 93 communities
+- God nodes: check GRAPH_REPORT.md (Fetch / apiError / formatUsdc / Session still core)
+- New assets: web/public assets (brand SVGs + hero paintings) + web/index.html SPA entry
+- Pruned deleted: web/public/hero-art.jpg
 - Shrink guard (graphify-out/graph.json #479): never overwrite with smaller graph without force=True
 
 For /graphify query: expand question against graph vocabulary first. If graphify query CLI unavailable, fall back to inline NetworkX traversal of graphify-out/graph.json. Quote source_location when citing facts.
