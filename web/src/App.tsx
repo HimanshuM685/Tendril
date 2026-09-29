@@ -6,7 +6,6 @@ import { WalletBar } from "./components/WalletBar";
 import { Marketplace } from "./components/Marketplace";
 import { LandingPage } from "./components/LandingPage";
 import { Docs } from "./components/Docs";
-// import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
@@ -321,7 +320,6 @@ export function App() {
             />
             <Route path="/metrics" element={<Metrics />} />
             <Route path="/api" element={<ApiToDocs />} />
-            <Route path="/about" element={<About />} />
             <Route path="*" element={<Navigate to="/explore" replace />} />
           </Routes>
         </main>
