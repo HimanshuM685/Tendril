@@ -86,7 +86,9 @@ function Manual() {
         straight into the sandbox.
       </p>
 
-      <ArchDiagram />
+      <div className="docs-arch-wrap">
+        <ArchDiagram />
+      </div>
 
       <h3>1 · Connect &amp; sign in</h3>
       <p>
