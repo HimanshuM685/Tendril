@@ -45,6 +45,7 @@ export function Marketplace({
         onLeased={onLeased}
         onOpenTopUp={onOpenTopUp}
         onOpenConnectWallet={onOpenConnectWallet}
+        onWalletChanged={onWalletChanged}
       />
     );
   }

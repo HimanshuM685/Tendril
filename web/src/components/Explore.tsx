@@ -19,6 +19,7 @@ interface Props {
   onLeased: (lease: ActiveLease | null) => void;
   onOpenTopUp?: () => void;
   onOpenConnectWallet?: () => void;
+  onWalletChanged?: () => void;
 }
 
 function fmtCountdown(ms: number): string {
@@ -52,6 +53,7 @@ export function Explore({
   onLeased,
   onOpenTopUp,
   onOpenConnectWallet,
+  onWalletChanged,
 }: Props) {
   const navigate = useNavigate();
   const { runCustodialAction } = useCustodialSign();
@@ -84,10 +86,9 @@ export function Explore({
           setNodes(n);
           setError(null);
         })
-        .catch(() => {
+        .catch((err) => {
           if (!alive) return;
-          // When backend is not running on localhost, keep nodes empty without throwing red banner
-          setNodes([]);
+          setError((err as Error).message);
         })
         .finally(() => alive && setLoading(false));
 
@@ -134,6 +135,7 @@ export function Explore({
       }
       const targetNode = nodes.find((n) => n.id === nodeId);
       onLeased(toActiveLease(res, targetNode?.label ?? nodeId));
+      onWalletChanged?.();
     } catch (e) {
       if ((e as Error).message !== "cancelled") setError((e as Error).message);
     } finally {
@@ -156,6 +158,7 @@ export function Explore({
         await releaseLease(lease.leaseId, lease.leaseToken);
       }
       onLeased(null);
+      onWalletChanged?.();
     } catch (e) {
       setError(`Release error: ${(e as Error).message}`);
     } finally {

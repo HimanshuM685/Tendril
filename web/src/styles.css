@@ -122,7 +122,11 @@ img {
 .app-shell-container {
   display: flex;
   flex: 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -443,16 +447,26 @@ img {
    MAIN CONTENT AREA & EXPLORE DASHBOARD (Matching explore.png)
    =========================================================================== */
 
+.shell-wallet {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 .app-main-content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   padding: 36px 44px 64px;
   background-color: var(--bg-primary);
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
 .explore-dashboard {
-  max-width: var(--maxw);
+  width: 100%;
+  max-width: min(var(--maxw), 100%);
+  min-width: 0;
   margin: 0 auto;
 }
 
@@ -503,12 +517,14 @@ img {
   box-shadow: 0 0 6px rgba(22, 163, 74, 0.45);
 }
 
-/* 4 Top Stat Cards Grid */
+/* Stat cards wrap instead of clipping the last column off the viewport. */
 .explore-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  width: 100%;
+  min-width: 0;
 }
 
 .explore-stat-card {
@@ -538,6 +554,7 @@ img {
   line-height: 1.15;
   color: var(--text-primary);
   margin: 6px 0 4px;
+  overflow-wrap: anywhere;
 }
 
 .stat-card-sub {
@@ -559,9 +576,11 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .ca-title {
@@ -624,7 +643,7 @@ img {
 /* 2-Column Grid (Active Leases & Hardware Pool) */
 .explore-columns-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   align-items: stretch;
 }
@@ -638,6 +657,7 @@ img {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 .explore-card-head {
@@ -1403,6 +1423,12 @@ img {
   display: none;
 }
 
+@media (max-width: 1280px) {
+  .explore-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1024px) {
   .mobile-header {
     display: flex;
@@ -2084,9 +2110,81 @@ img {
   background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  padding: 24px;
-  margin: 20px 0 36px;
+  padding: 20px 20px 8px;
+  margin: 28px 0 36px;
   box-shadow: var(--shadow-sm);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  clear: both;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: static;
+  overflow: hidden;
+}
+
+.page {
+  max-width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 28px 32px 72px;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.prose {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.prose p,
+.prose h3,
+.prose ul,
+.prose pre {
+  display: block;
+  max-width: 100%;
+}
+
+.prose p {
+  margin: 0 0 12px;
+  line-height: 1.65;
+}
+
+.prose h3 {
+  margin: 28px 0 8px;
+}
+
+.prose .docs-arch-wrap {
+  max-width: none;
+}
+
+.dash-addr-pill {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.ssh-access {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ssh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.ssh-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .arch-component-wrapper {
@@ -2096,13 +2194,16 @@ img {
 
 .arch-flow-toolbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 8px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-subtle);
+  position: static;
+  float: none;
 }
 
 .arch-toolbar-label {
@@ -2147,18 +2248,19 @@ img {
 
 .arch-svg-container {
   width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding: 10px 0;
-  display: flex;
-  justify-content: center;
+  display: block;
 }
 
 .arch-svg {
   width: 100%;
-  height: auto;
-  min-width: 760px;
   max-width: 960px;
+  height: auto;
+  aspect-ratio: 960 / 620;
   display: block;
+  margin: 0 auto;
 }
 
 /* SVG Node and Text Styling */
