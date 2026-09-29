@@ -454,7 +454,10 @@ img {
 }
 
 .app-main-content {
-  flex: 1;
+  /* width 0 + flex 1: column takes leftover space beside the sidebar.
+     A 100% width here paints past the window and clips the last stat card. */
+  flex: 1 1 0%;
+  width: 0;
   min-width: 0;
   max-width: 100%;
   padding: 36px 44px 64px;
@@ -520,11 +523,12 @@ img {
 /* Stat cards wrap instead of clipping the last column off the viewport. */
 .explore-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
   margin-bottom: 24px;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .explore-stat-card {
@@ -533,6 +537,7 @@ img {
   border-radius: var(--radius-md);
   padding: 18px 20px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -581,6 +586,7 @@ img {
   margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
   min-width: 0;
+  max-width: 100%;
 }
 
 .ca-title {
@@ -595,6 +601,8 @@ img {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ca-btn {
@@ -1181,6 +1189,9 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .error-dismiss {
@@ -2160,6 +2171,7 @@ img {
 
 .dash-addr-pill {
   max-width: 100%;
+  min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-all;
 }

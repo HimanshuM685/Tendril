@@ -87,13 +87,23 @@ export function App() {
   const isDocs = path.startsWith("/docs") || path === "/api";
 
   useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [path]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     const titles: Record<string, string> = {
       "/explore": "EXPLORE",
       "/contribute": "CONTRIBUTE",
       "/dashboard": "DASHBOARD",
       "/metrics": "METRICS",
       "/docs": "DOCS",
-      "/about": "ABOUT",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
