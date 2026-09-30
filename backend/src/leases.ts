@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
-import type { Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
+import type { ComputeProvider, Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
 import { fundedSeconds, proratedCost } from "@tendril/shared";
 import { chargeUsage, creditBalance, creditEarnings } from "./x402/credit.js";
-import { destroyContainer } from "./ws.js";
+import { destroyForLease } from "./providers/index.js";
 import { config } from "./config.js";
 
 /**
@@ -28,6 +28,7 @@ export interface NewLease {
   paymentTxid: string | null;
   /** See `Lease.allowOverdraft`. Off unless the caller says otherwise. */
   allowOverdraft?: boolean;
+  provider: ComputeProvider;
 }
 
 export function createLease(args: NewLease): Lease {
@@ -73,11 +74,11 @@ export function setLeaseStatus(id: string, status: LeaseStatus): void {
  * charge to correct and nothing to refund, and running the normal close path
  * here would credit the payer for a payment that never settled.
  */
-export function abandonLease(id: string): void {
+export async function abandonLease(id: string): Promise<void> {
   const lease = leases.get(id);
   if (!lease) return;
-  destroyContainer(lease.nodeId, lease.id); // best-effort; may never have started
   leases.delete(id);
+  await destroyForLease(lease);
 }
 
 /**
@@ -157,7 +158,11 @@ export async function closeLease(
   const wasActive = lease.status === "active" && lease.startedAt > 0;
   lease.status = "ended"; // claim it synchronously to prevent re-entry
 
-  destroyContainer(lease.nodeId, lease.id); // best-effort teardown
+  try {
+    await destroyForLease(lease);
+  } catch (err) {
+    console.error(`[sandbox] teardown ${lease.id} failed:`, (err as Error).message);
+  }
 
   const usedSeconds = wasActive
     ? Math.max(0, Math.round((Date.now() - lease.startedAt) / 1000))
@@ -177,14 +182,18 @@ export async function closeLease(
       `[bill] lease ${lease.id} (${reason}): ran ${usedSeconds}s = ${usedAtomic}, ` +
         `charged ${charged} to ${lease.payerAddr} (balance ${balance})`,
     );
-    // Pay the contributor out of what was actually collected, never out of what
-    // was merely owed — otherwise an overrun would be funded by the platform.
-    if (charged > 0) await payoutContributor(lease, charged);
+    // Modal compute is platform inventory. The charge stays; no payout row.
+    if (charged > 0 && earnsPayout(lease.provider)) await payoutContributor(lease, charged);
     return { usedSeconds, usedAtomic, chargedAtomic: charged, balance };
   } catch (err) {
     console.error(`[bill] failed to bill lease ${lease.id}:`, (err as Error).message);
     return null;
   }
+}
+
+/** Contributor leases credit earnings. Hosted Modal leases do not. */
+export function earnsPayout(provider: ComputeProvider): boolean {
+  return provider !== "modal";
 }
 
 /**

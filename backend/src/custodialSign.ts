@@ -16,8 +16,8 @@ const TTL_MS = 2 * 60 * 1000;
 export type PrepareAction =
   | { action: "topup"; amountAtomic: number }
   | { action: "optin" }
-  | { action: "rent"; nodeId: string; sshPubKey?: string | null }
-  | { action: "run"; code: string; minRamMb?: number }
+  | { action: "rent"; nodeId: string; sshPubKey?: string | null; surface?: "ssh" | "jupyter" }
+  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number }
   | { action: "release"; leaseId: string; leaseToken: string }
   | { action: "mintkey"; label?: string };
 
@@ -93,13 +93,19 @@ export async function prepareCustodialSign(
       details = `Open a metered session (gate fee applies).`;
       const nodeId = body.nodeId;
       const sshPubKey = body.sshPubKey ?? null;
-      const url = `${internalRegistryUrl()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`;
+      const surface = body.surface === "jupyter" ? "jupyter" : undefined;
+      const url =
+        `${internalRegistryUrl()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}` +
+        (surface ? `&surface=${surface}` : "");
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(sshPubKey ? { sshPubKey } : {}),
+          body: JSON.stringify({
+            ...(sshPubKey ? { sshPubKey } : {}),
+            ...(surface ? { surface } : {}),
+          }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -113,12 +119,15 @@ export async function prepareCustodialSign(
       summary = "Run code (leaseless)";
       details = `Execute a one-shot job; billed from credit when done.`;
       const url = `${internalRegistryUrl()}/x402/run`;
+      const requestBody = body.notebook
+        ? { notebook: body.notebook }
+        : { payload: body.code };
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ payload: body.code }),
+          body: JSON.stringify(requestBody),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));

@@ -174,16 +174,19 @@ export async function rentNode(
   sign: SignTransactions,
   nodeId: string,
   onStage?: (stage: PayStage) => void,
+  surface?: "ssh" | "jupyter",
 ): Promise<X402RentResponse> {
+  const q = new URLSearchParams({ nodeId });
+  if (surface) q.set("surface", surface);
   const res = await payingFetch(address, sign, onStage)(
-    `${REGISTRY_URL}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`,
+    `${REGISTRY_URL}/x402/rent?${q.toString()}`,
     {
       method: "POST",
       headers: {
         "content-type": "application/json",
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify(surface ? { surface } : {}),
     },
   );
   if (!res.ok) throw await apiError(res, "rent");
@@ -192,10 +195,12 @@ export async function rentNode(
 
 /** Map a rent response into the shape the lease panel renders. */
 export function toActiveLease(r: X402RentResponse, label: string): ActiveLease {
+  const access = r.jupyter ?? r.ssh;
+  if (!access) throw new Error("rent returned no access details");
   return {
     leaseId: r.leaseId,
     leaseToken: r.leaseToken,
-    access: r.ssh,
+    access,
     expiresAt: r.fundedUntil === "never" ? Infinity : Date.parse(r.fundedUntil),
     rateAtomicPerHour: Number(r.billing.rateAtomicPerHour),
     billing: r.billing,
@@ -211,6 +216,30 @@ export async function fetchLease(leaseId: string, leaseToken: string): Promise<L
   });
   if (!res.ok) throw await apiError(res, "lease");
   return (await res.json()).lease as Lease;
+}
+
+/**
+ * Execute an uploaded notebook with no lease: `POST /x402/run` `{ notebook }`.
+ * The executed notebook and any files it wrote come back in the response.
+ * Seconds are billed from credit after the run, same as a Python payload.
+ */
+export async function runNotebook(
+  token: string | null,
+  address: string,
+  sign: SignTransactions,
+  notebook: Record<string, unknown>,
+  onStage?: (stage: PayStage) => void,
+): Promise<RunResponse> {
+  const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ notebook }),
+  });
+  if (!res.ok) throw await apiError(res, "run");
+  return res.json();
 }
 
 /**

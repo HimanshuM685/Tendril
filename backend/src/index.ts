@@ -20,7 +20,7 @@ const corsOrigin = allowedOrigin();
 
 const app = express();
 app.use(corsPolicy());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 // One line per request, with the duration. Paid requests are slow by nature —
 // verify, provision, settle — so when a client reports "failed to fetch" the
@@ -73,6 +73,9 @@ async function main(): Promise<void> {
     console.log(`[registry] x402 → ${config.platformPayTo || "(PLATFORM_PAYTO not set!)"} in asset ${config.assetId} (${config.assetSymbol}) on ${config.x402Network}`);
     console.log(`[registry] facilitator ${config.facilitatorUrl}`);
     console.log(`[registry] payouts ${config.platformPrivateKey ? "enabled" : "DISABLED (set PLATFORM_PRIVATE_KEY)"}, platform fee ${config.platformFeePct}%`);
+    console.log(
+      `[registry] modal hosted ${config.modalTokenId && config.modalTokenSecret ? "enabled" : "off (set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET)"}`,
+    );
   });
 }
 

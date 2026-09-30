@@ -106,7 +106,7 @@ async function main() {
 
   // 3. Choose: cheapest node meeting the RAM requirement, then rent a block.
   const node = nodes
-    .filter((n) => n.ramMb >= MIN_RAM_MB)
+    .filter((n) => n.provider !== "modal" && n.ramMb >= MIN_RAM_MB)
     .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
   if (!node) throw new Error(`no online node with >= ${MIN_RAM_MB}MB RAM`);
   console.log(`[agent] picked ${node.label} (${node.id}) @ $${node.pricePerHourUsd}/hr — renting ...`);
@@ -122,7 +122,8 @@ async function main() {
       `gate fee ${formatUsdcExact(Number(lease.billing.gateFeeAtomic))}, ` +
       `credit funds ${lease.billing.fundedSeconds ?? "unlimited"}s (until ${lease.fundedUntil})`,
   );
-  console.log(`[agent] ssh: ${lease.ssh.command}`);
+  if (lease.ssh) console.log(`[agent] ssh: ${lease.ssh.command}`);
+  else if (lease.jupyter) console.log(`[agent] jupyter: ${lease.jupyter.url}`);
 
   // 4. Run the training job inside the rented sandbox. Execution is flat-priced
   //    per call, so this is another 402 the wrapper answers on its own.
