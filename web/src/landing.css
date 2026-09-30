@@ -1005,9 +1005,18 @@ button {
   color: var(--text-muted);
 }
 
-/* App Main Area */
-.app-main-content {
+/* App Main Area.
+   Scoped: styles.css .app-main-content is the live shell (fixed sidebar,
+   margin-left: var(--sidebar-w), width: 0). That rule also matches this
+   mock and shoves the pane sideways until overflow:hidden clips it. */
+.app-dashboard-window .app-main-content {
+  flex: none;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
   padding: 24px 28px;
+  overflow: visible;
   background-color: #ffffff;
 }
 
@@ -2509,7 +2518,7 @@ button {
     margin-bottom: 40px;
   }
 
-  .app-main-content {
+  .app-dashboard-window .app-main-content {
     padding: 22px 20px;
   }
 
@@ -2769,7 +2778,7 @@ button {
     box-shadow: 0 12px 28px rgba(18, 24, 12, 0.14);
   }
 
-  .app-main-content {
+  .app-dashboard-window .app-main-content {
     padding: 20px 18px;
   }
 
@@ -2975,7 +2984,7 @@ button {
     border-radius: 10px;
   }
 
-  .app-main-content {
+  .app-dashboard-window .app-main-content {
     padding: 16px 14px;
   }
 
