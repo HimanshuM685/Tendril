@@ -1094,6 +1094,12 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     });
     return;
   }
+
+  // Settle before the sandbox starts. The signed group is only valid for a
+  // handful of rounds; a notebook that runs past that window comes back
+  // "txn dead" if we settle after exec.
+  if (!(await paid.settle(res))) return;
+
   const budgetMs = job.notebook ? Math.min(config.runTimeoutMs, funded! * 1000) : config.runTimeoutMs;
   const lease = createLease({
     nodeId: node.id,
@@ -1166,12 +1172,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     return;
   }
 
-  if (!(await paid.settle(res))) {
-    await abandonLease(lease.id);
-    return;
-  }
-
-  // Tear down and bill the seconds it took. This is the only debit.
+  // Gate fee already settled. This debit is the seconds, from credit.
   const settled = await closeLease(lease.id, "run-complete");
   const body: RunResponse = {
     jobId,
