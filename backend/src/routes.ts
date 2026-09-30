@@ -364,8 +364,6 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  // `notebooks` is independent of the rent pool. Hosted rows stay in `nodes`
-  // whenever Modal tokens are set, even if a contributor is online.
   res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
 }));
 
@@ -680,20 +678,10 @@ async function rent(req: Request, res: Response) {
   if (!surface) {
     return res.status(400).json({ error: "invalid_surface", detail: "surface must be ssh or jupyter" });
   }
-  if (node.provider === "modal") {
-    if (!modalConfigured()) {
-      return res.status(503).json({ error: "provisioning_failed", detail: "hosted compute is not configured" });
-    }
-    if (surface !== "jupyter") {
-      return res.status(400).json({
-        error: "surface_unsupported",
-        detail: "hosted nodes open JupyterLab; pass surface=jupyter",
-      });
-    }
-  } else if (surface === "jupyter") {
+  if (node.provider === "modal" || surface === "jupyter") {
     return res.status(400).json({
       error: "surface_unsupported",
-      detail: "jupyter surface requires a hosted node",
+      detail: "hosted CPU is not a rentable node; upload a notebook",
     });
   } else if (node.status !== "online" || !isNodeConnected(node.id)) {
     return res.status(409).json({
@@ -1074,11 +1062,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
   }
   const node = job.notebook
     ? pickNotebookHost()
-    : pickBestValueNode((id) => {
-        const candidate = getNode(id);
-        if (candidate?.provider === "modal") return true;
-        return isNodeConnected(id) && !nodeBusy(id);
-      });
+    : pickBestValueNode((id) => isNodeConnected(id) && !nodeBusy(id));
   if (!node) {
     res.status(503).json({
       error: "no_node_available",
@@ -1088,6 +1072,16 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
   }
 
   const rate = atomicPerHour(node.pricePerHourUsd);
+  const funded = job.notebook ? fundedSeconds(credit, rate) : null;
+  if (job.notebook && !funded) {
+    res.status(402).json({
+      error: "insufficient_credit",
+      detail: "credit does not cover one second at the notebook rate. Top up, then upload again.",
+      creditAtomic: String(credit),
+    });
+    return;
+  }
+  const budgetMs = job.notebook ? Math.min(config.runTimeoutMs, funded! * 1000) : config.runTimeoutMs;
   const lease = createLease({
     nodeId: node.id,
     renterAddr: payer,
@@ -1097,7 +1091,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     gateFeeAtomic: config.flatRunAtomic,
     fundingAtomic: credit,
     paymentTxid: paid.facts.txid,
-    allowOverdraft: true,
+    allowOverdraft: !job.notebook,
     provider: node.provider,
   });
 
@@ -1112,7 +1106,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
         gpus: node.gpu ? "all" : "",
       },
-      timeoutMs: config.modalReadyTimeoutMs + config.runTimeoutMs,
+      timeoutMs: config.modalReadyTimeoutMs + budgetMs,
       // One-shot sandboxes are not logged into. Never the wallet address.
       sshPassword: node.provider === "modal" ? null : nanoid(32),
       sshPubKey: null,
@@ -1131,16 +1125,31 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       leaseId: lease.id,
       nodeId: node.id,
       jobId,
-      timeoutMs: config.runTimeoutMs,
+      timeoutMs: budgetMs,
       payload: job.payload,
       notebook: job.notebook,
     });
   } catch (err) {
-    // The job never produced a result, so nothing settles and nothing is billed
-    // — abandon rather than close, or the caller pays for a job they never got.
-    await abandonLease(lease.id);
+    const settled = await closeLease(lease.id, "run-stopped");
     const message = (err as Error).message || "notebook execution failed";
-    res.status(502).json({ error: message, detail: message });
+    const left = settled?.balance ?? (await creditBalance(payer));
+    const exhausted = !!job.notebook && left <= 0;
+    res.status(exhausted ? 402 : 502).json({
+      error: exhausted ? "credit_exhausted" : message,
+      detail: exhausted
+        ? "run stopped when prepaid credit ran out. Charged for the seconds used."
+        : message,
+      ...(settled
+        ? {
+            execution: {
+              nodeId: node.id,
+              seconds: settled.usedSeconds,
+              costAtomic: String(settled.chargedAtomic),
+              balance: String(settled.balance),
+            },
+          }
+        : {}),
+    });
     return;
   }
 
@@ -1180,9 +1189,11 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 
 // ─────────────────────────── helpers ───────────────────────────
 
-/** A free hosted CPU row. Call only when `modalConfigured()` is true. */
+/** Smallest hosted SKU. Not a pool node — only notebook upload uses it. */
 function pickNotebookHost(): ComputeNode | null {
-  return hostedCatalog().find((n) => !nodeBusy(n.id)) ?? null;
+  const node = hostedCatalog().find((n) => n.id === "hosted-cpu-2");
+  if (!node || nodeBusy(node.id)) return null;
+  return node;
 }
 
 function readSurface(req: Request): "ssh" | "jupyter" | null {
