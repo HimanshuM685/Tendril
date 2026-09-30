@@ -43,7 +43,7 @@ function loadWallet(): { address: string; sk: Uint8Array } {
   const raw = process.env.AVM_PRIVATE_KEY ?? "";
   if (!raw) {
     throw new Error(
-      "AVM_PRIVATE_KEY is required (base64 64-byte Algorand secret). Generate with: npm run keygen",
+      "AVM_PRIVATE_KEY is required for paid tools (base64 64-byte Algorand secret). Free tools (tendril_platform, tendril_list_nodes) do not need it.",
     );
   }
   sk = new Uint8Array(Buffer.from(raw, "base64"));

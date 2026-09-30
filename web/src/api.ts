@@ -50,7 +50,9 @@ export async function apiError(res: Response, what: string): Promise<Error> {
   try {
     const text = await res.text();
     try {
-      detail = (JSON.parse(text) as { error?: string }).error ?? text;
+      const body = JSON.parse(text) as { error?: string; detail?: string };
+      const parts = [body.error, body.detail].filter((v) => typeof v === "string" && v.length > 0);
+      detail = [...new Set(parts)].join(": ") || text;
     } catch {
       detail = text;
     }

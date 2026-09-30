@@ -689,6 +689,7 @@ img {
 }
 
 .notebook-drop {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -705,7 +706,13 @@ img {
 }
 
 .notebook-drop input {
-  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .notebook-drop:hover,
@@ -717,6 +724,10 @@ img {
 .notebook-drop.is-disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.notebook-drop.is-disabled input {
+  cursor: not-allowed;
 }
 
 .notebook-drop.is-disabled:hover {
@@ -3733,6 +3744,44 @@ img {
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-secondary, #4b4d45);
+}
+
+.modal.mcp-modal {
+  max-width: 680px;
+}
+
+.mcp-modal .modal-body {
+  max-height: min(70vh, 640px);
+  overflow: auto;
+}
+
+.mcp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+
+.mcp-tab {
+  font-size: 12px;
+  font-weight: 650;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle, #e6e7df);
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text-secondary, #4b4d45);
+}
+
+.mcp-tab.on {
+  background: #171815;
+  color: #fff;
+  border-color: #171815;
+}
+
+.mcp-file {
+  white-space: pre-wrap;
+  margin: 0;
 }
 
 .modal-actions {

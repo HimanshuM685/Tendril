@@ -50,6 +50,21 @@ export async function run(payload: string, leaseToken?: string): Promise<RunResp
   })) as RunResponse;
 }
 
+const NOTEBOOK_MAX_BYTES = 1_500_000;
+
+/** Hosted-CPU notebook. Same POST /x402/run the site uses. No lease. */
+export async function runNotebook(notebook: Record<string, unknown>): Promise<RunResponse> {
+  const body = JSON.stringify({ notebook });
+  if (body.length > NOTEBOOK_MAX_BYTES) {
+    throw new Error("notebook must be under 1.5 MB");
+  }
+  return (await paidJson(`${api()}/x402/run`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+  })) as RunResponse;
+}
+
 export async function rent(nodeId: string, sshPubKey?: string): Promise<X402RentResponse> {
   if (!nodeId) throw new Error("nodeId required");
   return (await paidJson(`${api()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}`, {

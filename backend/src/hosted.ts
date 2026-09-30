@@ -77,9 +77,9 @@ export function hostedById(id: string): ComputeNode | undefined {
   return hostedCatalog().find((n) => n.id === id);
 }
 
-/** Peers win. Hosted rows are only the inventory when nobody is online. */
+/** Peers first. Hosted rows stay listed whenever the caller passes them. */
 export function withHostedFallback<T>(peers: T[], hosted: T[]): T[] {
-  return peers.length > 0 ? peers : hosted;
+  return [...peers, ...hosted];
 }
 
 export function toExplorer(node: ComputeNode): ExplorerNode {

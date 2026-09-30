@@ -1,27 +1,40 @@
 {
-  "name": "@tendril/mcp",
+  "name": "@tendril/mcp-server",
   "version": "0.1.0",
-  "private": true,
+  "description": "Tendril MCP — stdio server so agents can buy compute and manage contributor keys. Pays x402 with AVM_PRIVATE_KEY.",
   "type": "module",
   "bin": {
-    "tendril-mcp": "./src/index.ts"
+    "tendril-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "mcp": "tsx src/index.ts"
+    "mcp": "tsx src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --packages=external --alias:@tendril/shared=../shared/src/index.ts --banner:js='#!/usr/bin/env node'",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0",
-    "@tendril/shared": "*",
     "@x402/avm": "^2.20.0",
     "@x402/core": "^2.20.0",
     "@x402/fetch": "^2.20.0",
     "algosdk": "^3.0.0",
     "dotenv": "^16.4.5",
-    "tsx": "^4.19.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@tendril/shared": "*",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
 }

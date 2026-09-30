@@ -1,6 +1,6 @@
 /**
  * Hosted CPU price stays inside 25–40% over Modal's sandbox rate, and hosted
- * rows show only when the peer list is empty.
+ * rows stay listed after any peers.
  *
  *   npx tsx backend/src/hosted.test.ts
  */
@@ -33,7 +33,7 @@ assert.equal(hostedHourlyUsd(4, 16, 0.3), 1.24);
   assert.ok(low / modal >= 1.25);
 }
 
-assert.deepEqual(withHostedFallback(["peer"], ["hosted"]), ["peer"]);
+assert.deepEqual(withHostedFallback(["peer"], ["hosted"]), ["peer", "hosted"]);
 assert.deepEqual(withHostedFallback([], ["hosted-cpu-2"]), ["hosted-cpu-2"]);
 
 console.log("hosted: ok");

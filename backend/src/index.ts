@@ -7,6 +7,7 @@ import { initWs } from "./ws.js";
 import { startWatchdog } from "./leases.js";
 import { allowedOrigin, corsPolicy } from "./x402/cors.js";
 import { checkFacilitator, checkDiscoveryConfig } from "./x402/server.js";
+import { warmNotebookImage } from "./providers/modal.js";
 
 // A billing/payment error must never take down the registry.
 process.on("unhandledRejection", (reason) => {
@@ -66,6 +67,13 @@ async function main(): Promise<void> {
   const httpServer = createServer(app);
   initWs(httpServer, corsOrigin);
   startWatchdog();
+
+  if (config.modalTokenId && config.modalTokenSecret) {
+    void warmNotebookImage().then(
+      () => console.log("[registry] modal notebook image ready"),
+      (err) => console.error("[registry] modal image warm failed:", (err as Error).message),
+    );
+  }
 
   httpServer.listen(config.port, () => {
     console.log(`[registry] listening on http://localhost:${config.port}`);

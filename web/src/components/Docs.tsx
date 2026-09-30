@@ -309,9 +309,30 @@ function Manual() {
             For agents
           </h2>
           <p>
-            Use the <strong>MCP</strong> tab: named tools for topup, run, rent, keys, and withdraw.
-            The MCP pays x402 with <code>AVM_PRIVATE_KEY</code>. Raw HTTP is on the{" "}
-            <strong>HTTP</strong> and <strong>x402</strong> tabs.
+            Use the <strong>MCP</strong> tab for every client file. The server is{" "}
+            <code>npx -y @tendril/mcp-server</code>. It pays x402 with <code>AVM_PRIVATE_KEY</code>{" "}
+            — a contributor API key cannot. Raw HTTP is on the <strong>HTTP</strong> and{" "}
+            <strong>x402</strong> tabs.
+          </p>
+          <CodeBlock
+            lang="json"
+            code={`{
+  "mcpServers": {
+    "tendril": {
+      "command": "npx",
+      "args": ["-y", "@tendril/mcp-server"],
+      "env": {
+        "REGISTRY_URL": "https://tendrilregister.007575.xyz",
+        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"
+      }
+    }
+  }
+}`}
+          />
+          <p className="muted small">
+            Claude Desktop and Cursor use that object. VS Code uses <code>servers</code> plus{" "}
+            <code>&quot;type&quot;: &quot;stdio&quot;</code>. Paths and the Claude Code command are on
+            the MCP tab.
           </p>
           <ul className="docs-list">
             <li>

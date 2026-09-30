@@ -364,8 +364,8 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  // `notebooks` is independent of the rent pool. A contributor being online hides
-  // hosted rows from `nodes`, but a notebook still runs on Modal when tokens are set.
+  // `notebooks` is independent of the rent pool. Hosted rows stay in `nodes`
+  // whenever Modal tokens are set, even if a contributor is online.
   res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
 }));
 
@@ -1008,7 +1008,8 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     });
   } catch (err) {
     // Nothing ran, so nothing settles.
-    res.status(502).json({ error: (err as Error).message });
+    const message = (err as Error).message || "execution failed";
+    res.status(502).json({ error: message, detail: message });
     return;
   }
   if (!(await paid.settle(res))) return;
@@ -1138,7 +1139,8 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     // The job never produced a result, so nothing settles and nothing is billed
     // — abandon rather than close, or the caller pays for a job they never got.
     await abandonLease(lease.id);
-    res.status(502).json({ error: (err as Error).message });
+    const message = (err as Error).message || "notebook execution failed";
+    res.status(502).json({ error: message, detail: message });
     return;
   }
 

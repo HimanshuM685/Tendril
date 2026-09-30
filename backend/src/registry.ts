@@ -74,8 +74,7 @@ function onlinePeers(): ComputeNode[] {
 export function getNode(id: string): ComputeNode | undefined {
   const node = nodes.get(id);
   if (node) return withStatus(node);
-  // Hosted rows exist only while no contributor is online.
-  if (onlinePeers().length > 0 || !modalConfigured()) return undefined;
+  if (!modalConfigured()) return undefined;
   return hostedById(id);
 }
 

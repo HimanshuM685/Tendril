@@ -139,8 +139,8 @@ export const config = {
 
   // ─────────────────────────── Modal hosted CPU ───────────────────────────
   // Read only here. Never forwarded to the web app, a contributor, or a sandbox.
-  modalTokenId: process.env.MODAL_TOKEN_ID ?? "",
-  modalTokenSecret: process.env.MODAL_TOKEN_SECRET ?? "",
+  modalTokenId: (process.env.MODAL_TOKEN_ID ?? "").trim(),
+  modalTokenSecret: (process.env.MODAL_TOKEN_SECRET ?? "").trim(),
   modalAppName: process.env.MODAL_APP_NAME ?? "tendril",
   /** Fraction added on top of Modal's sandbox rate. Clamped to 0.25–0.40. */
   hostedMarkup: Number(process.env.HOSTED_MARKUP ?? 0.3),
