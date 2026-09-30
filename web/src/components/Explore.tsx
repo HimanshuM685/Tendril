@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
-import { type ActiveLease, fetchExplorer, rentNode, releaseLease, runNotebook, toActiveLease } from "../api";
+import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
+import { NotebookSection } from "./NotebookSection";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { isCustodialSession } from "../lib/session";
@@ -65,10 +66,7 @@ export function Explore({
   const [now, setNow] = useState(Date.now());
   const [copied, setCopied] = useState<string | null>(null);
   const [releaseBusy, setReleaseBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadNote, setUploadNote] = useState<string | null>(null);
   const hardwareRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const isCustodial = isCustodialSession(session);
 
@@ -146,77 +144,6 @@ export function Explore({
     } finally {
       setRenting(null);
       setStage(null);
-    }
-  }
-
-  function downloadBlob(name: string, blob: Blob) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name.split("/").pop() || "download";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function onUpload(file: File) {
-    if (!activeAddress) {
-      if (onOpenConnectWallet) onOpenConnectWallet();
-      else setError("Please connect your Algorand wallet first to run a notebook.");
-      return;
-    }
-    if (isCustodial && !session) {
-      setError("Please sign in to run a notebook.");
-      return;
-    }
-    let notebook: Record<string, unknown>;
-    try {
-      const parsed = JSON.parse(await file.text()) as unknown;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("not a notebook");
-      }
-      notebook = parsed as Record<string, unknown>;
-    } catch {
-      setError("That file is not a Jupyter notebook.");
-      return;
-    }
-    setUploading(true);
-    setUploadNote(null);
-    setError(null);
-    setStage(null);
-    try {
-      let res;
-      if (isCustodial && session) {
-        setStage("confirming");
-        res = (await runCustodialAction(session.token, {
-          action: "run",
-          notebook,
-        })) as Awaited<ReturnType<typeof runNotebook>>;
-      } else {
-        res = await runNotebook(session?.token ?? null, activeAddress, signTransactions, notebook, setStage);
-      }
-      if (res.notebook) {
-        downloadBlob(
-          "executed.ipynb",
-          new Blob([JSON.stringify(res.notebook, null, 2)], { type: "application/json" }),
-        );
-      }
-      for (const art of res.artifacts ?? []) {
-        const bytes = Uint8Array.from(atob(art.base64), (c) => c.charCodeAt(0));
-        downloadBlob(art.name, new Blob([bytes], { type: art.mediaType }));
-      }
-      const seconds = res.execution?.seconds;
-      setUploadNote(
-        seconds !== undefined
-          ? `Notebook finished. Billed ${seconds}s.`
-          : "Notebook finished.",
-      );
-      onWalletChanged?.();
-    } catch (e) {
-      if ((e as Error).message !== "cancelled") setError((e as Error).message);
-    } finally {
-      setUploading(false);
-      setStage(null);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -337,6 +264,22 @@ export function Explore({
           <button
             type="button"
             className="ca-btn ca-btn-ghost"
+            onClick={() => document.getElementById("run-notebook")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            <span className="ca-btn-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </span>
+            <span>Run notebook</span>
+          </button>
+
+          <button
+            type="button"
+            className="ca-btn ca-btn-ghost"
             onClick={() => hardwareRef.current?.scrollIntoView({ behavior: "smooth" })}
           >
             <span className="ca-btn-icon">
@@ -383,46 +326,16 @@ export function Explore({
         </div>
       </div>
 
-      <div className="notebook-run">
-        <div className="notebook-run-copy">
-          <div className="notebook-run-title">Run a notebook</div>
-          <p className="notebook-run-sub">
-            {loading && nodes.length === 0
-              ? "Checking which machines can run a notebook."
-              : hostedOnline
-                ? "Upload a .ipynb. Tendril runs the cells and downloads the executed notebook. Billed by the second from credit. No SSH session."
-                : contributorOnline
-                  ? "A contributor machine is online. Use Available on that row to rent it. Notebook upload runs on hosted CPU, which only appears when the pool is empty."
-                  : "Notebook upload needs a hosted CPU row in the pool. None is listed right now."}
-          </p>
-          {uploadNote && <p className="notebook-run-note">{uploadNote}</p>}
-        </div>
-        <button
-          type="button"
-          className="ca-btn ca-btn-primary"
-          disabled={uploading || !hostedOnline}
-          onClick={() => fileRef.current?.click()}
-        >
-          <span className="ca-btn-icon" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </span>
-          <span>{uploading ? "Running notebook…" : "Upload notebook"}</span>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".ipynb,application/json"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void onUpload(file);
-          }}
-        />
-      </div>
+      <NotebookSection
+        session={session}
+        activeAddress={activeAddress}
+        signTransactions={signTransactions}
+        hostedOnline={hostedOnline}
+        checking={loading && nodes.length === 0}
+        contributorOnline={contributorOnline}
+        onOpenConnectWallet={onOpenConnectWallet}
+        onWalletChanged={onWalletChanged}
+      />
 
       {/* Main 2-Column Section */}
       <div className="explore-columns-grid">
@@ -528,7 +441,7 @@ export function Explore({
                 </svg>
                 <p className="empty-title">No active leases or recent sessions</p>
                 <p className="empty-sub">
-                  Rent a machine from the pool, or run a notebook from the row above.
+                  Rent a machine from the pool, or upload a notebook in the section above.
                 </p>
               </div>
             )}
