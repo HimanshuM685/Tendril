@@ -7,11 +7,16 @@ const SENTINEL = "\n__TENDRIL_NB__\n";
  */
 export function notebookToPayload(notebook: Record<string, unknown>): string {
   const encoded = Buffer.from(JSON.stringify(notebook), "utf8").toString("base64");
-  return `import ast, base64, io, json, os, sys, traceback, subprocess
+  return `import ast, base64, io, json, os, sys, traceback, subprocess, types
 os.makedirs("/work", exist_ok=True)
 os.chdir("/work")
 nb = json.loads(base64.b64decode(${JSON.stringify(encoded)}))
-ns = {"__name__": "__main__"}
+# Cells run as a real __main__ module: pickle (ProcessPoolExecutor, multiprocessing)
+# resolves functions by sys.modules["__main__"], and a bare dict would not be found.
+# A fresh module, not this script's own, so cell variables cannot clobber runner state.
+main = types.ModuleType("__main__")
+sys.modules["__main__"] = main
+ns = main.__dict__
 current = []
 _show = None
 try:
