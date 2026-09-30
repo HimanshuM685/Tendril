@@ -124,6 +124,52 @@ export function nodeBusy(nodeId: string): boolean {
   return leasesForNode(nodeId).some((l) => l.status === "starting" || l.status === "active");
 }
 
+/**
+ * The lease currently occupying a node, if any. A starting lease counts: the
+ * container is reserved even before SSH is known.
+ */
+export function heldLease(nodeId: string): Lease | undefined {
+  return leasesForNode(nodeId).find((l) => l.status === "starting" || l.status === "active");
+}
+
+/** Live session opened by this gate-fee payment, if it is still up. */
+export function leaseByPayment(txid: string): Lease | undefined {
+  return [...leases.values()].find(
+    (l) =>
+      l.paymentTxid === txid &&
+      (l.status === "starting" || l.status === "active") &&
+      !l.allowOverdraft,
+  );
+}
+
+/**
+ * Wait until a lease has access details, or until it ends / times out.
+ * Used when a second rent hits a session that is still booting, so the caller
+ * gets the SSH (or Jupyter) details instead of a bare conflict.
+ */
+export function waitForLeaseAccess(id: string, timeoutMs: number): Promise<SandboxAccess | null> {
+  const current = getLease(id);
+  if (!current) return Promise.resolve(null);
+  if (current.access && current.status === "active") return Promise.resolve(current.access);
+
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const lease = getLease(id);
+      if (lease?.access && lease.status === "active") {
+        clearInterval(timer);
+        resolve(lease.access);
+        return;
+      }
+      const dead = !lease || lease.status === "ended" || lease.status === "failed";
+      if (dead || Date.now() - started >= timeoutMs) {
+        clearInterval(timer);
+        resolve(null);
+      }
+    }, 250);
+  });
+}
+
 /** What a closed lease actually used, and what it cost. */
 export interface LeaseSettlement {
   usedSeconds: number;

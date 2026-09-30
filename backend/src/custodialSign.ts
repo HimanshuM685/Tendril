@@ -13,6 +13,12 @@ import { creditBalance } from "./x402/credit.js";
 
 const TTL_MS = 2 * 60 * 1000;
 
+async function failPaid(res: globalThis.Response, what: string): Promise<never> {
+  const err = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+  const message = [err.error, err.detail].filter(Boolean).join(": ");
+  throw new Error(message || `${what} failed (${res.status})`);
+}
+
 export type PrepareAction =
   | { action: "topup"; amountAtomic: number }
   | { action: "optin" }
@@ -60,10 +66,7 @@ export async function prepareCustodialSign(
       run = async () => {
         const pay = custodialPayingFetchForUser(user);
         const res = await pay(url, { method: "POST" });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? `top-up failed (${res.status})`);
-        }
+        if (!res.ok) await failPaid(res, "top-up");
         return res.json();
       };
       break;
@@ -107,10 +110,7 @@ export async function prepareCustodialSign(
             ...(surface ? { surface } : {}),
           }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? `rent failed (${res.status})`);
-        }
+        if (!res.ok) await failPaid(res, "rent");
         return res.json();
       };
       break;
@@ -129,10 +129,7 @@ export async function prepareCustodialSign(
           headers: { "content-type": "application/json" },
           body: JSON.stringify(requestBody),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? `run failed (${res.status})`);
-        }
+        if (!res.ok) await failPaid(res, "run");
         return res.json();
       };
       break;
@@ -149,10 +146,7 @@ export async function prepareCustodialSign(
           method: "DELETE",
           headers: { authorization: `Bearer ${token}` },
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? `release failed (${res.status})`);
-        }
+        if (!res.ok) await failPaid(res, "release");
         return res.json();
       };
       break;
@@ -174,10 +168,7 @@ export async function prepareCustodialSign(
           },
           body: JSON.stringify({ label }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? `mint key failed (${res.status})`);
-        }
+        if (!res.ok) await failPaid(res, "mint key");
         return res.json();
       };
       break;

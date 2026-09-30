@@ -367,15 +367,40 @@ export function Explore({
                 <div className="lease-item-info">
                   <div className="lease-item-title">{lease.label}</div>
                   <div className="lease-item-meta">
-                    {lease.access.kind === "jupyter" ? (
-                      <a href={lease.access.url} target="_blank" rel="noreferrer">
+                    <span>{formatUsdc(lease.rateAtomicPerHour)}/hr</span>
+                  </div>
+                  {lease.access.kind === "jupyter" ? (
+                    <div className="lease-ssh">
+                      <a className="btn-tiny" href={lease.access.url} target="_blank" rel="noreferrer">
                         Open notebook
                       </a>
-                    ) : (
-                      <span className="meta-cmd">{lease.access.command}</span>
-                    )}{" "}
-                    &middot; <span>{formatUsdc(lease.rateAtomicPerHour)}/hr</span>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="lease-ssh">
+                      <div className="lease-ssh-line">
+                        <span className="lease-ssh-label">ssh</span>
+                        <code className="lease-ssh-value">{lease.access.command}</code>
+                        <button type="button" className="btn-tiny" onClick={() => copy(lease.access.kind === "ssh" ? lease.access.command : "")}>
+                          {copied === lease.access.command ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <div className="lease-ssh-line">
+                        <span className="lease-ssh-label">user</span>
+                        <code className="lease-ssh-value">{lease.access.username}</code>
+                      </div>
+                      {lease.access.password ? (
+                        <div className="lease-ssh-line">
+                          <span className="lease-ssh-label">password</span>
+                          <code className="lease-ssh-value">{lease.access.password}</code>
+                          <button type="button" className="btn-tiny" onClick={() => copy(lease.access.kind === "ssh" ? lease.access.password ?? "" : "")}>
+                            {copied === lease.access.password ? "Copied" : "Copy"}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="lease-ssh-note">Use the SSH key you supplied when renting.</p>
+                      )}
+                    </div>
+                  )}
                   <div className="lease-expanded-controls">
                     <span className="lease-timer-pill">
                       Time left: {fmtCountdown(leaseRemainingMs)}
@@ -384,15 +409,7 @@ export function Explore({
                       <a className="btn-tiny" href={lease.access.url} target="_blank" rel="noreferrer">
                         Open
                       </a>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn-tiny"
-                        onClick={() => copy(lease.access.kind === "ssh" ? lease.access.command : "")}
-                      >
-                        {copied === (lease.access.kind === "ssh" ? lease.access.command : "") ? "Copied!" : "Copy SSH"}
-                      </button>
-                    )}
+                    ) : null}
                     <button
                       type="button"
                       className="btn-tiny btn-danger-tiny"
