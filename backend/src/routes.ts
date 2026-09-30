@@ -11,6 +11,9 @@ import {
   type SandboxLimits,
   type WalletLoginResponse,
   type WithdrawResponse,
+  type ComputeNode,
+  type Lease,
+  type SandboxAccess,
   type X402RentResponse,
   type X402TopUpResponse,
   type GasRequestInfo,
@@ -73,8 +76,11 @@ import {
   closeLease,
   createLease,
   getLease,
+  heldLease,
+  leaseByPayment,
   liveSessions,
   nodeBusy,
+  waitForLeaseAccess,
 } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
@@ -642,7 +648,23 @@ async function rent(req: Request, res: Response) {
       `Gate fee ${formatUsdc(gateFee)}; time then bills from credit.`;
 
   // 402 first so a Bazaar/agent probe of the catalog URL still gets tags + discovery.
-  const paid = await requirePayment(req, res, "rent", gateFee, description, ROUTES.rent);
+  const paid = await requirePayment(
+    req,
+    res,
+    "rent",
+    gateFee,
+    description,
+    ROUTES.rent,
+    async (seen) => {
+      const existing = leaseByPayment(seen.txid);
+      const access = existing?.access;
+      const leasedNode = existing ? getNode(existing.nodeId) : undefined;
+      if (!existing || !access || !leasedNode || existing.status !== "active") return false;
+      if (nodeId && existing.nodeId !== nodeId) return false;
+      res.json(toRentResponse(existing, leasedNode, access, existing.paymentTxid));
+      return true;
+    },
+  );
   if (!paid) return;
 
   if (!nodeId) {
@@ -672,9 +694,12 @@ async function rent(req: Request, res: Response) {
       detail: "jupyter surface requires a hosted node",
     });
   } else if (node.status !== "online" || !isNodeConnected(node.id)) {
-    return res.status(409).json({ error: "node_unavailable" });
-  } else if (nodeBusy(node.id)) {
-    return res.status(409).json({ error: "node_busy" });
+    return res.status(409).json({
+      error: "node_unavailable",
+      detail: isNodeConnected(node.id)
+        ? "the machine is offline"
+        : "the agent is not connected, so an SSH session cannot be opened",
+    });
   }
 
   const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
@@ -682,8 +707,31 @@ async function rent(req: Request, res: Response) {
     return res.status(400).json({ error: "invalid_ssh_key" });
   }
 
-  // The payer is read off the settled transaction — the only trustworthy identity.
+  // The payer is read off the verified transaction — the only trustworthy identity.
   const renter = paid.facts.payer;
+
+  // A second rent of a machine this payer already holds must hand back the SSH
+  // (or Jupyter) details. Charging another gate fee, or returning a bare 409,
+  // is how a refresh loses the only copy of the connection.
+  const held = heldLease(node.id);
+  if (held) {
+    if (held.payerAddr === renter && !held.allowOverdraft) {
+      const access =
+        held.access ?? (await waitForLeaseAccess(held.id, config.sandboxReadyTimeoutMs));
+      const current = getLease(held.id);
+      if (access && current?.status === "active") {
+        res.json(toRentResponse(current, node, access, current.paymentTxid));
+        return;
+      }
+    }
+    return res.status(409).json({
+      error: "node_busy",
+      detail:
+        held.payerAddr === renter
+          ? "your session on this machine is not ready to connect yet"
+          : "this machine is already leased",
+    });
+  }
 
   // Checked here, after verify but BEFORE settle: an address with no credit
   // cannot fund a single minute, and taking a gate fee for a session that would
@@ -814,7 +862,17 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
   // Nothing is debited here. The session has only just started; what it costs
   // is not known until it ends, and that is the one place it is billed.
 
-  const body: X402RentResponse = {
+  res.json(toRentResponse(lease, node, access, paid?.facts.txid ?? null));
+}
+
+/** Rent JSON, including SSH when the sandbox is a contributor machine. */
+function toRentResponse(
+  lease: Lease,
+  node: ComputeNode,
+  access: SandboxAccess,
+  paymentTxid: string | null,
+): X402RentResponse {
+  return {
     leaseId: lease.id,
     leaseToken: issueLeaseToken(lease.id),
     node: {
@@ -831,15 +889,14 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
       ? new Date(lease.expiresAt).toISOString()
       : "never",
     billing: {
-      rateAtomicPerHour: String(rate),
-      gateFeeAtomic: String(gateFee),
-      creditAtomic: String(fundingAtomic),
-      fundedSeconds: fundedSeconds(fundingAtomic, rate),
+      rateAtomicPerHour: String(lease.rateAtomicPerHour),
+      gateFeeAtomic: String(lease.gateFeeAtomic),
+      creditAtomic: String(lease.fundingAtomic),
+      fundedSeconds: fundedSeconds(lease.fundingAtomic, lease.rateAtomicPerHour),
       asset,
     },
-    payment: paid ? { txid: paid.facts.txid, network: config.x402Network } : null,
+    payment: paymentTxid ? { txid: paymentTxid, network: config.x402Network } : null,
   };
-  res.json(body);
 }
 
 /**
