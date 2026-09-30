@@ -5,10 +5,9 @@ import { Marked } from "marked";
 // here, so this page cannot drift from the files that ship with the repo.
 import apiMd from "../../../docs/api.md?raw";
 import x402Md from "../../../docs/x402-api.md?raw";
-import mcpMd from "../../../docs/mcp.md?raw";
 import { REGISTRY_URL } from "../api";
 
-export type MdDocId = "api" | "x402" | "mcp";
+type DocId = "api" | "x402";
 
 /** One sidebar-worthy heading. `depth` mirrors the markdown level. */
 type Heading = { id: string; text: string; depth: number };
@@ -17,24 +16,18 @@ type Section = Heading & { subs: Heading[] };
 /** An `# h1` divider ("Endpoints", "Free / read") and the sections under it. */
 type Group = { label: string | null; sections: Section[] };
 
-const DOCS: { id: MdDocId; label: string; blurb: string; source: string }[] = [
+const DOCS: { id: DocId; label: string; blurb: string; source: string }[] = [
   {
     id: "api",
-    label: "HTTP",
+    label: "API REFERENCE",
     blurb: "The plain HTTP endpoints — discovery, sign-in, wallet, leases. Every one has a curl.",
     source: apiMd,
   },
   {
     id: "x402",
     label: "X402 (PAID)",
-    blurb: "The endpoints that move money, and how to pay one from a terminal.",
+    blurb: "The three endpoints that move money, and how to pay one from a terminal.",
     source: x402Md,
-  },
-  {
-    id: "mcp",
-    label: "MCP",
-    blurb: "Stdio MCP tools for agents: compute, credit, contributor keys. Pays x402 for you.",
-    source: mcpMd,
   },
 ];
 
@@ -107,18 +100,15 @@ function groupToc(toc: Heading[]): Group[] {
   return groups.filter((g) => g.sections.length > 0);
 }
 
-function docsPath(docId: MdDocId, hash = ""): string {
-  return `/docs?doc=${docId}${hash}`;
-}
-
-export function ApiDocs({ docId }: { docId: MdDocId }) {
+export function ApiDocs() {
   const { hash } = useLocation();
   const navigate = useNavigate();
+  const [active, setActive] = useState<DocId>("api");
   const [copied, setCopied] = useState(false);
   const [here, setHere] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  const doc = DOCS.find((d) => d.id === docId) ?? DOCS[0];
+  const doc = DOCS.find((d) => d.id === active)!;
   // Parsing ~30KB of markdown is not free; only redo it when the tab changes.
   const { html, toc } = useMemo(() => render(doc.source), [doc.source]);
   const groups = useMemo(() => groupToc(toc), [toc]);
@@ -134,7 +124,7 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
     return groups[0]?.sections[0]?.id ?? "";
   }, [groups, here]);
 
-  // Deep links (/docs?doc=api#get-explorer) and sidebar clicks both land here. The
+  // Deep links (/api#get-explorer) and sidebar clicks both land here. The
   // content is injected by hand, so React Router cannot scroll to it for us.
   useEffect(() => {
     if (!hash) return;
@@ -152,11 +142,11 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
       const href = a?.getAttribute("href");
       if (!href?.startsWith("#")) return;
       e.preventDefault();
-      navigate(docsPath(docId, href), { replace: true });
+      navigate(`/api${href}`, { replace: true });
     };
     root.addEventListener("click", onClick);
     return () => root.removeEventListener("click", onClick);
-  }, [navigate, html, docId]);
+  }, [navigate, html]);
 
   // Track the heading you are actually reading, so the sidebar shows where you
   // are instead of the same wall of links whatever the scroll position.
@@ -195,9 +185,19 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
   }
 
   return (
-    <>
-      <p className="muted">{doc.blurb}</p>
+    <section className="page">
+      <div className="section-head">
+        <p className="kicker">// INTEGRATE</p>
+        <h2 className="display section-title">API</h2>
+      </div>
+      <div className="rule"></div>
 
+      <p className="muted">
+        Tendril is an API first and a website second. Everything this app does, a script can do —
+        the browser is just another x402 client with no privileged access.
+      </p>
+
+      {/* The examples all use $API, so hand the reader the exact value. */}
       <div className="topup" role="group" aria-label="API base URL">
         <span className="muted small">Base URL</span>
         <code className="ssh-code">{REGISTRY_URL}</code>
@@ -205,6 +205,21 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
           {copied ? "Copied!" : "Copy export"}
         </button>
       </div>
+
+      <div className="topup" role="tablist" aria-label="Documents">
+        {DOCS.map((d) => (
+          <button
+            key={d.id}
+            role="tab"
+            aria-selected={active === d.id}
+            className={`btn ghost${active === d.id ? " active" : ""}`}
+            onClick={() => setActive(d.id)}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">{doc.blurb}</p>
 
       <div className="doc-layout">
         <nav className="doc-toc" aria-label="On this page">
@@ -216,16 +231,17 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
                 <div key={s.id}>
                   <a
                     href={`#${s.id}`}
-                    className={`toc-link${s.id === here ? " current" : ""}${
-                      s.id === openSection ? " open" : ""
-                    }`}
+                    className={`toc-link${s.id === here ? " current" : ""}${s.id === openSection ? " open" : ""
+                      }`}
                     onClick={(e) => {
                       e.preventDefault();
-                      navigate(docsPath(docId, `#${s.id}`), { replace: true });
+                      navigate(`/api#${s.id}`, { replace: true });
                     }}
                   >
                     {s.text}
                   </a>
+                  {/* Only the section you are in shows its detail headings —
+                      otherwise every "Request body" in the file is on screen. */}
                   {s.id === openSection &&
                     s.subs.map((h) => (
                       <a
@@ -234,7 +250,7 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
                         className={`toc-link toc-sub${h.id === here ? " current" : ""}`}
                         onClick={(e) => {
                           e.preventDefault();
-                          navigate(docsPath(docId, `#${h.id}`), { replace: true });
+                          navigate(`/api#${h.id}`, { replace: true });
                         }}
                       >
                         {h.text}
@@ -252,6 +268,6 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
-    </>
+    </section>
   );
 }
