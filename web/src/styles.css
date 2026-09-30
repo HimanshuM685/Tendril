@@ -648,6 +648,54 @@ img {
   transform: translateY(-1px);
 }
 
+.ca-btn:disabled,
+.ca-btn:disabled:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Notebook upload — its own row, not a lease-header link. */
+.notebook-run {
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+}
+
+.notebook-run-copy {
+  min-width: 0;
+}
+
+.notebook-run-title {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.notebook-run-sub {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  margin-top: 4px;
+  max-width: 68ch;
+}
+
+.notebook-run-note {
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+  margin-top: 6px;
+}
+
 /* 2-Column Grid (Active Leases & Hardware Pool) */
 .explore-columns-grid {
   display: grid;
@@ -1529,6 +1577,16 @@ img {
   .ca-btn {
     flex: 1;
     justify-content: center;
+  }
+
+  .notebook-run {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notebook-run .ca-btn {
+    flex: none;
+    width: 100%;
   }
 
   .explore-header-row {

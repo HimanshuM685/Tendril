@@ -268,6 +268,8 @@ export function Explore({
   // Active lease timer
   const leaseRemainingMs = lease ? Math.max(0, lease.expiresAt - now) : 0;
   const recentCharges = wallet?.charges ?? [];
+  const hostedOnline = nodes.some((n) => n.provider === "modal");
+  const contributorOnline = nodes.some((n) => n.provider !== "modal");
 
   return (
     <div className="explore-dashboard">
@@ -381,6 +383,47 @@ export function Explore({
         </div>
       </div>
 
+      <div className="notebook-run">
+        <div className="notebook-run-copy">
+          <div className="notebook-run-title">Run a notebook</div>
+          <p className="notebook-run-sub">
+            {loading && nodes.length === 0
+              ? "Checking which machines can run a notebook."
+              : hostedOnline
+                ? "Upload a .ipynb. Tendril runs the cells and downloads the executed notebook. Billed by the second from credit. No SSH session."
+                : contributorOnline
+                  ? "A contributor machine is online. Use Available on that row to rent it. Notebook upload runs on hosted CPU, which only appears when the pool is empty."
+                  : "Notebook upload needs a hosted CPU row in the pool. None is listed right now."}
+          </p>
+          {uploadNote && <p className="notebook-run-note">{uploadNote}</p>}
+        </div>
+        <button
+          type="button"
+          className="ca-btn ca-btn-primary"
+          disabled={uploading || !hostedOnline}
+          onClick={() => fileRef.current?.click()}
+        >
+          <span className="ca-btn-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </span>
+          <span>{uploading ? "Running notebook…" : "Upload notebook"}</span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".ipynb,application/json"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void onUpload(file);
+          }}
+        />
+      </div>
+
       {/* Main 2-Column Section */}
       <div className="explore-columns-grid">
         {/* Left Column: Active & Recent Leases */}
@@ -399,24 +442,6 @@ export function Explore({
             >
               View all leases &rarr;
             </button>
-            <button
-              type="button"
-              className="card-head-link"
-              disabled={uploading}
-              onClick={() => fileRef.current?.click()}
-            >
-              {uploading ? "Running…" : "Upload"}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".ipynb,application/json"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void onUpload(file);
-              }}
-            />
           </div>
 
           <div className="leases-list">
@@ -503,13 +528,9 @@ export function Explore({
                 </svg>
                 <p className="empty-title">No active leases or recent sessions</p>
                 <p className="empty-sub">
-                  Upload a notebook to run it, or open a hosted machine in the browser.
+                  Rent a machine from the pool, or run a notebook from the row above.
                 </p>
-                {uploadNote && <p className="empty-sub">{uploadNote}</p>}
               </div>
-            )}
-            {uploadNote && (lease || recentCharges.length > 0) && (
-              <p className="muted small" style={{ padding: "8px 0" }}>{uploadNote}</p>
             )}
           </div>
         </div>
@@ -557,6 +578,7 @@ export function Explore({
                       </div>
                       <div className="hw-meta">
                         {n.cpuCores} Cores &middot; {(n.ramMb / 1024).toFixed(0)}GB RAM &middot; ${n.pricePerHourUsd}/hr
+                        {n.provider === "modal" ? " · JupyterLab in the browser" : ""}
                       </div>
                     </div>
                     <div className="hw-action">
@@ -572,7 +594,7 @@ export function Explore({
                           {renting === n.id
                             ? stage || "Starting…"
                             : n.provider === "modal"
-                              ? "Open"
+                              ? "Open lab"
                               : "Available"}
                         </button>
                       ) : (
