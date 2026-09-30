@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
-import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
+import { type ActiveLease, fetchExplorer, rentNode, releaseLease, runNotebook, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
@@ -65,7 +65,10 @@ export function Explore({
   const [now, setNow] = useState(Date.now());
   const [copied, setCopied] = useState<string | null>(null);
   const [releaseBusy, setReleaseBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
   const hardwareRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isCustodial = isCustodialSession(session);
 
@@ -100,7 +103,7 @@ export function Explore({
     };
   }, []);
 
-  async function rent(nodeId: string, rateUsd: number) {
+  async function rent(nodeId: string, rateUsd: number, surface?: "ssh" | "jupyter") {
     if (!activeAddress) {
       if (onOpenConnectWallet) {
         onOpenConnectWallet();
@@ -123,6 +126,7 @@ export function Explore({
         res = (await runCustodialAction(session.token, {
           action: "rent",
           nodeId,
+          ...(surface ? { surface } : {}),
         })) as X402RentResponse;
       } else {
         res = await rentNode(
@@ -131,6 +135,7 @@ export function Explore({
           signTransactions,
           nodeId,
           setStage,
+          surface,
         );
       }
       const targetNode = nodes.find((n) => n.id === nodeId);
@@ -141,6 +146,77 @@ export function Explore({
     } finally {
       setRenting(null);
       setStage(null);
+    }
+  }
+
+  function downloadBlob(name: string, blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name.split("/").pop() || "download";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function onUpload(file: File) {
+    if (!activeAddress) {
+      if (onOpenConnectWallet) onOpenConnectWallet();
+      else setError("Please connect your Algorand wallet first to run a notebook.");
+      return;
+    }
+    if (isCustodial && !session) {
+      setError("Please sign in to run a notebook.");
+      return;
+    }
+    let notebook: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("not a notebook");
+      }
+      notebook = parsed as Record<string, unknown>;
+    } catch {
+      setError("That file is not a Jupyter notebook.");
+      return;
+    }
+    setUploading(true);
+    setUploadNote(null);
+    setError(null);
+    setStage(null);
+    try {
+      let res;
+      if (isCustodial && session) {
+        setStage("confirming");
+        res = (await runCustodialAction(session.token, {
+          action: "run",
+          notebook,
+        })) as Awaited<ReturnType<typeof runNotebook>>;
+      } else {
+        res = await runNotebook(session?.token ?? null, activeAddress, signTransactions, notebook, setStage);
+      }
+      if (res.notebook) {
+        downloadBlob(
+          "executed.ipynb",
+          new Blob([JSON.stringify(res.notebook, null, 2)], { type: "application/json" }),
+        );
+      }
+      for (const art of res.artifacts ?? []) {
+        const bytes = Uint8Array.from(atob(art.base64), (c) => c.charCodeAt(0));
+        downloadBlob(art.name, new Blob([bytes], { type: art.mediaType }));
+      }
+      const seconds = res.execution?.seconds;
+      setUploadNote(
+        seconds !== undefined
+          ? `Notebook finished. Billed ${seconds}s.`
+          : "Notebook finished.",
+      );
+      onWalletChanged?.();
+    } catch (e) {
+      if ((e as Error).message !== "cancelled") setError((e as Error).message);
+    } finally {
+      setUploading(false);
+      setStage(null);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -323,6 +399,24 @@ export function Explore({
             >
               View all leases &rarr;
             </button>
+            <button
+              type="button"
+              className="card-head-link"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "Running…" : "Upload"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".ipynb,application/json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onUpload(file);
+              }}
+            />
           </div>
 
           <div className="leases-list">
@@ -335,20 +429,32 @@ export function Explore({
                 <div className="lease-item-info">
                   <div className="lease-item-title">{lease.label}</div>
                   <div className="lease-item-meta">
-                    <span className="meta-cmd">{lease.access.command}</span> &middot;{" "}
-                    <span>{formatUsdc(lease.rateAtomicPerHour)}/hr</span>
+                    {lease.access.kind === "jupyter" ? (
+                      <a href={lease.access.url} target="_blank" rel="noreferrer">
+                        Open notebook
+                      </a>
+                    ) : (
+                      <span className="meta-cmd">{lease.access.command}</span>
+                    )}{" "}
+                    &middot; <span>{formatUsdc(lease.rateAtomicPerHour)}/hr</span>
                   </div>
                   <div className="lease-expanded-controls">
                     <span className="lease-timer-pill">
                       Time left: {fmtCountdown(leaseRemainingMs)}
                     </span>
-                    <button
-                      type="button"
-                      className="btn-tiny"
-                      onClick={() => copy(lease.access.command)}
-                    >
-                      {copied === lease.access.command ? "Copied!" : "Copy SSH"}
-                    </button>
+                    {lease.access.kind === "jupyter" ? (
+                      <a className="btn-tiny" href={lease.access.url} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-tiny"
+                        onClick={() => copy(lease.access.kind === "ssh" ? lease.access.command : "")}
+                      >
+                        {copied === (lease.access.kind === "ssh" ? lease.access.command : "") ? "Copied!" : "Copy SSH"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn-tiny btn-danger-tiny"
@@ -397,9 +503,13 @@ export function Explore({
                 </svg>
                 <p className="empty-title">No active leases or recent sessions</p>
                 <p className="empty-sub">
-                  Rent an available machine from the hardware pool to launch an ephemeral sandbox.
+                  Upload a notebook to run it, or open a hosted machine in the browser.
                 </p>
+                {uploadNote && <p className="empty-sub">{uploadNote}</p>}
               </div>
+            )}
+            {uploadNote && (lease || recentCharges.length > 0) && (
+              <p className="muted small" style={{ padding: "8px 0" }}>{uploadNote}</p>
             )}
           </div>
         </div>
@@ -455,9 +565,15 @@ export function Explore({
                           type="button"
                           className="hw-pill-btn pill-available"
                           disabled={renting === n.id}
-                          onClick={() => rent(n.id, n.pricePerHourUsd)}
+                          onClick={() =>
+                            rent(n.id, n.pricePerHourUsd, n.provider === "modal" ? "jupyter" : undefined)
+                          }
                         >
-                          {renting === n.id ? (stage || "Starting…") : "Available"}
+                          {renting === n.id
+                            ? stage || "Starting…"
+                            : n.provider === "modal"
+                              ? "Open"
+                              : "Available"}
                         </button>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>

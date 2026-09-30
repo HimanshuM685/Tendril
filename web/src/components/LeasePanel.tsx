@@ -124,7 +124,8 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
     }
   }
 
-  const { command, password, authMethod } = lease.access;
+  const jupyter = lease.access.kind === "jupyter" ? lease.access : null;
+  const ssh = lease.access.kind === "ssh" ? lease.access : null;
 
   return (
     <div className="lease-panel">
@@ -193,23 +194,37 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
       )}
       {error && <div className="error">{error}</div>}
       {!ended ? (
+        jupyter ? (
+          <div className="ssh-access">
+            <p className="muted small">JupyterLab is running on this lease. The link is a per-lease token, not your wallet.</p>
+            <div className="ssh-row">
+              <a className="btn" href={jupyter.url} target="_blank" rel="noreferrer">
+                Open notebook
+              </a>
+            </div>
+            <p className="muted small">
+              Billed by the second from your credit when you release. The countdown is when your
+              credit runs out at this rate — top up and it moves out.
+            </p>
+          </div>
+        ) : ssh ? (
         <div className="ssh-access">
           <p className="muted small">
-            {authMethod === "publickey"
+            {ssh.authMethod === "publickey"
               ? "Connect over SSH — your key is already authorized:"
               : "Connect over SSH — your wallet address is the password:"}
           </p>
           <div className="ssh-row">
-            <code className="ssh-code">{command}</code>
-            <button className="btn ghost" onClick={() => copy("cmd", command)}>
+            <code className="ssh-code">{ssh.command}</code>
+            <button className="btn ghost" onClick={() => copy("cmd", ssh.command)}>
               {copied === "cmd" ? "Copied!" : "Copy"}
             </button>
           </div>
-          {password && (
+          {ssh.password && (
             <div className="ssh-row">
               <span className="muted small">password</span>
-              <code className="ssh-code">{password}</code>
-              <button className="btn ghost" onClick={() => copy("pw", password)}>
+              <code className="ssh-code">{ssh.password}</code>
+              <button className="btn ghost" onClick={() => copy("pw", ssh.password ?? "")}>
                 {copied === "pw" ? "Copied!" : "Copy"}
               </button>
             </div>
@@ -219,6 +234,7 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
             credit runs out at this rate — top up and it moves out.
           </p>
         </div>
+        ) : null
       ) : (
         <div className="ssh-access">
           <p className="muted">

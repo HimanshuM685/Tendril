@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { ComputeNode, ExplorerNode } from "@tendril/shared";
 import { isOnline } from "@tendril/shared";
 import { config } from "./config.js";
+import { hostedById, hostedCatalog, modalConfigured, toExplorer, withHostedFallback } from "./hosted.js";
 import { hasOptedIn } from "./payout.js";
 
 /**
@@ -51,6 +52,7 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
     cpuCores: input.cpuCores,
     ramMb: input.ramMb,
     gpu: input.gpu,
+    provider: "contributor",
     pricePerHourUsd: input.pricePerHourUsd,
     lastHeartbeat: now,
     createdAt: existing?.createdAt ?? now,
@@ -65,9 +67,16 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   return node;
 }
 
+function onlinePeers(): ComputeNode[] {
+  return [...nodes.values()].map(withStatus).filter((n) => n.status === "online");
+}
+
 export function getNode(id: string): ComputeNode | undefined {
   const node = nodes.get(id);
-  return node ? withStatus(node) : undefined;
+  if (node) return withStatus(node);
+  // Hosted rows exist only while no contributor is online.
+  if (onlinePeers().length > 0 || !modalConfigured()) return undefined;
+  return hostedById(id);
 }
 
 export function touchHeartbeat(id: string): void {
@@ -102,7 +111,14 @@ export function listNodesByOwner(ownerAddr: string): ComputeNode[] {
  * lease/ws cycle it would otherwise create.
  */
 export function pickBestValueNode(isFree: (nodeId: string) => boolean): ComputeNode | null {
-  const candidates = [...nodes.values()].map(withStatus).filter((n) => n.status === "online" && isFree(n.id));
+  const peers = onlinePeers().filter((n) => isFree(n.id));
+  // A busy peer still counts as inventory: do not fall through to Modal.
+  const candidates =
+    peers.length > 0
+      ? peers
+      : onlinePeers().length === 0 && modalConfigured()
+        ? hostedCatalog().filter((n) => isFree(n.id))
+        : [];
   if (candidates.length === 0) return null;
   const score = (n: ComputeNode) =>
     n.pricePerHourUsd <= 0
@@ -114,22 +130,9 @@ export function pickBestValueNode(isFree: (nodeId: string) => boolean): ComputeN
 }
 
 export function listOnlineNodes(): ExplorerNode[] {
-  return [...nodes.values()]
-    .map(withStatus)
-    .filter((n) => n.status === "online")
+  const peers = onlinePeers()
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map(
-      ({ id, ownerAddr, payToAddr, payoutBlocked, label, cpuCores, ramMb, gpu, pricePerHourUsd, status }) => ({
-        id,
-        ownerAddr,
-        payToAddr,
-        payoutBlocked,
-        label,
-        cpuCores,
-        ramMb,
-        gpu,
-        pricePerHourUsd,
-        status,
-      }),
-    );
+    .map(toExplorer);
+  const hosted = modalConfigured() ? hostedCatalog().map(toExplorer) : [];
+  return withHostedFallback(peers, hosted);
 }

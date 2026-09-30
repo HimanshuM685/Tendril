@@ -7,7 +7,10 @@
 
 export type NodeStatus = "online" | "offline";
 
-/** A compute node advertised by a contributor. */
+/** Who actually runs the sandbox. Contributor machines stay on the socket path. */
+export type ComputeProvider = "contributor" | "modal";
+
+/** A compute node advertised by a contributor, or a hosted CPU row. */
 export interface ComputeNode {
   id: string;
   /** Algorand address of the node owner (used for auth + display). */
@@ -25,6 +28,8 @@ export interface ComputeNode {
   ramMb: number;
   /** GPU model string, or null if none. */
   gpu: string | null;
+  /** `"modal"` is a hosted CPU row. Everything a contributor registers is `"contributor"`. */
+  provider: ComputeProvider;
   /** Advertised price per hour, in USD (industry-standard hourly billing). */
   pricePerHourUsd: number;
   status: NodeStatus;
@@ -43,6 +48,7 @@ export type ExplorerNode = Pick<
   | "cpuCores"
   | "ramMb"
   | "gpu"
+  | "provider"
   | "pricePerHourUsd"
   | "status"
   | "payoutBlocked"
@@ -50,8 +56,8 @@ export type ExplorerNode = Pick<
 
 export type LeaseStatus = "starting" | "active" | "ended" | "failed";
 
-/** How a renter reaches a running sandbox. Currently SSH only. */
-export interface SandboxAccess {
+/** SSH into a contributor sandbox. */
+export interface SshAccess {
   kind: "ssh";
   /** Host to SSH to (e.g. a bore endpoint, or 127.0.0.1 in local mode). */
   host: string;
@@ -70,6 +76,20 @@ export interface SandboxAccess {
 }
 
 /**
+ * JupyterLab on a hosted sandbox. `token` is a per-lease secret for the lab,
+ * never the renter's wallet address and never the billing lease JWT.
+ */
+export interface JupyterAccess {
+  kind: "jupyter";
+  /** Tunnel URL including `?token=`. */
+  url: string;
+  token: string;
+}
+
+/** How a renter reaches a running sandbox. */
+export type SandboxAccess = SshAccess | JupyterAccess;
+
+/**
  * An open-ended metered session on a node.
  *
  * Renting costs a small on-chain gate fee and nothing else up front. The clock
@@ -83,6 +103,8 @@ export interface SandboxAccess {
 export interface Lease {
   id: string;
   nodeId: string;
+  /** Which provider started the sandbox. Modal leases never create a payout row. */
+  provider: ComputeProvider;
   /** Algorand address of the renter (the sandbox user). */
   renterAddr: string;
   /**
@@ -419,14 +441,29 @@ export interface RegisterNodeRequest {
   pricePerHourUsd: number;
 }
 
+/** A file the notebook wrote under its work directory. */
+export interface RunArtifact {
+  name: string;
+  mediaType: string;
+  /** Standard base64, not a data URL. */
+  base64: string;
+}
+
 export interface RunRequest {
-  payload: string;
+  /** Python source. Omit when `notebook` is set. */
+  payload?: string;
+  /** Jupyter notebook (nbformat JSON). Omit when `payload` is set. */
+  notebook?: Record<string, unknown>;
 }
 
 export interface RunResponse {
   jobId: string;
   ok: boolean;
   result: string;
+  /** Executed notebook, present when the request carried `notebook`. */
+  notebook?: Record<string, unknown>;
+  /** Files the notebook created, excluding the notebook itself. */
+  artifacts?: RunArtifact[];
   /**
    * Present only on a **leaseless** run (`POST /x402/run` with no lease token),
    * where the backend picked a machine, ran the code and billed the time itself.
@@ -648,7 +685,10 @@ export interface X402RentResponse {
     gpu: string | null;
     pricePerHourUsd: number;
   };
-  ssh: SandboxAccess;
+  /** SSH details. Null when `surface=jupyter`. */
+  ssh: SshAccess | null;
+  /** JupyterLab tunnel. Present only for `surface=jupyter`. */
+  jupyter?: JupyterAccess;
   /** ISO 8601 — when the meter started. */
   startedAt: string;
   /**
