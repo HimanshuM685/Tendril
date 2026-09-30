@@ -20,6 +20,8 @@ interface Props {
   notebooks: boolean;
   /** Priority lane. Modal image includes numpy, pandas, matplotlib, requests. */
   priority: boolean;
+  /** Customer USD/hour for the priority sandbox (2 vCPU + 4 GiB). */
+  priorityUsdPerHour: number | null;
   /** Contributor lane. Uses a live peer and that node's own Python image. */
   peers: boolean;
   checking: boolean;
@@ -180,6 +182,7 @@ export function NotebookSection({
   signTransactions,
   notebooks,
   priority,
+  priorityUsdPerHour,
   peers,
   checking,
   onOpenConnectWallet,
@@ -384,7 +387,10 @@ export function NotebookSection({
               onClick={() => setLane("priority")}
             >
               <span>Priority training</span>
-              <small>Modal. numpy, pandas, matplotlib, requests.</small>
+              <small>
+                {priorityUsdPerHour != null ? `$${priorityUsdPerHour}/hr · ` : ""}
+                2 vCPU · 4 GiB. No GPU.
+              </small>
             </button>
           </div>
 

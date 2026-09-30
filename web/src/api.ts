@@ -76,11 +76,26 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
-export async function fetchExplorer(): Promise<{ nodes: ExplorerNode[]; notebooks: boolean; priority: boolean }> {
+export async function fetchExplorer(): Promise<{
+  nodes: ExplorerNode[];
+  notebooks: boolean;
+  priority: boolean;
+  priorityUsdPerHour: number | null;
+}> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
-  const body = (await res.json()) as { nodes?: ExplorerNode[]; notebooks?: boolean; priority?: boolean };
-  return { nodes: body.nodes ?? [], notebooks: !!body.notebooks, priority: !!body.priority };
+  const body = (await res.json()) as {
+    nodes?: ExplorerNode[];
+    notebooks?: boolean;
+    priority?: boolean;
+    priorityUsdPerHour?: number | null;
+  };
+  return {
+    nodes: body.nodes ?? [],
+    notebooks: !!body.notebooks,
+    priority: !!body.priority,
+    priorityUsdPerHour: typeof body.priorityUsdPerHour === "number" ? body.priorityUsdPerHour : null,
+  };
 }
 
 /** Where to send top-ups + the USD→ALGO rate used to show prices in ALGO. */

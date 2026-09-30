@@ -3,11 +3,24 @@ import { fundedSeconds } from "@tendril/shared";
 import { config } from "./config.js";
 
 /**
- * Modal Sandbox rate card (not Function rates). 1 physical core = 2 vCPU.
- * https://modal.com/pricing — Sandboxes section.
+ * Modal sandbox rate card. 1 physical core = 2 vCPU. Minimum 0.125 core.
+ * Priority notebooks run 1 core + 4 GiB and no GPU, so only those two lines bill.
  */
-export const MODAL_CPU_USD_PER_CORE_SEC = 0.00003942;
-export const MODAL_MEM_USD_PER_GIB_SEC = 0.00000667;
+export const MODAL_CPU_USD_PER_CORE_HOUR = 0.0473;
+export const MODAL_MEM_USD_PER_GIB_HOUR = 0.008;
+export const MODAL_GPU_USD_PER_HOUR: Readonly<Record<string, number>> = {
+  B300: 7.1,
+  B200: 6.25,
+  "H200 SXM": 4.54,
+  "H100 SXM5": 3.95,
+  "RTX PRO 6000": 3.03,
+  "A100 80GB": 2.5,
+  "A100 40GB": 2.1,
+  L40S: 1.95,
+  A10: 1.1,
+  L4: 0.8,
+  T4: 0.59,
+};
 
 export interface HostedSku {
   id: string;
@@ -35,8 +48,9 @@ export function clampMarkup(raw: number): number {
 }
 
 /** Modal's own USD/hour for a sandbox of this size, before Tendril's markup. */
-export function modalUsdPerHour(physicalCores: number, gib: number): number {
-  return (physicalCores * MODAL_CPU_USD_PER_CORE_SEC + gib * MODAL_MEM_USD_PER_GIB_SEC) * 3600;
+export function modalUsdPerHour(physicalCores: number, gib: number, gpuUsdPerHour = 0): number {
+  const cores = Math.max(0.125, physicalCores);
+  return cores * MODAL_CPU_USD_PER_CORE_HOUR + gib * MODAL_MEM_USD_PER_GIB_HOUR + gpuUsdPerHour;
 }
 
 /**
@@ -52,6 +66,11 @@ export function hostedHourlyUsd(physicalCores: number, gib: number, markup: numb
   if (price < min) price = min;
   if (price > max) price = max;
   return price;
+}
+
+/** What a priority notebook is billed at: 2 vCPU (1 core) + 4 GiB, no GPU. */
+export function priorityHourlyUsd(): number {
+  return hostedHourlyUsd(1, 4, config.hostedMarkup);
 }
 
 export function hostedCatalog(now = Date.now()): ComputeNode[] {

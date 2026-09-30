@@ -20,9 +20,10 @@ for (const sku of HOSTED_SKUS) {
   assert.ok(ratio >= 1.25 && ratio <= 1.4, `${sku.id} ratio ${ratio} left the 25–40% band`);
 }
 
-assert.equal(hostedHourlyUsd(1, 4, 0.3), 0.31);
-assert.equal(hostedHourlyUsd(2, 8, 0.3), 0.62);
-assert.equal(hostedHourlyUsd(4, 16, 0.3), 1.24);
+assert.equal(Math.round(modalUsdPerHour(1, 4) * 10000) / 10000, 0.0793);
+assert.equal(hostedHourlyUsd(1, 4, 0.3), 0.11);
+assert.equal(hostedHourlyUsd(2, 8, 0.3), 0.21);
+assert.equal(hostedHourlyUsd(4, 16, 0.3), 0.42);
 
 // A markup outside the band is clamped, and cent rounding cannot escape it.
 {

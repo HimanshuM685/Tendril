@@ -85,7 +85,7 @@ import {
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
-import { hostedCatalog, modalConfigured, sandboxLifetimeMs } from "./hosted.js";
+import { hostedCatalog, modalConfigured, priorityHourlyUsd, sandboxLifetimeMs } from "./hosted.js";
 import { providerFor } from "./providers/index.js";
 import {
   confirmCustodialSign,
@@ -366,7 +366,12 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 router.get("/explorer", guard((_req, res) => {
   const nodes = listOnlineNodes();
   const priority = modalConfigured();
-  res.json({ nodes, notebooks: priority || nodes.length > 0, priority });
+  res.json({
+    nodes,
+    notebooks: priority || nodes.length > 0,
+    priority,
+    priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
+  });
 }));
 
 // Public platform metrics — growth series + leaderboards.

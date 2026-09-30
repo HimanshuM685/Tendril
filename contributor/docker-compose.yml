@@ -1,0 +1,17 @@
+# Tendril contributor agent — share THIS machine's compute.
+#
+#   cp .env.example .env      # set TENDRIL_API_KEY (minted in the web app)
+#   docker compose up --build
+#
+# Build context is the monorepo root (the image needs @tendril/shared).
+
+services:
+  contributor:
+    build:
+      context: ..
+      dockerfile: contributor/Dockerfile
+    image: tendril-contributor
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
