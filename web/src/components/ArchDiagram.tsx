@@ -103,9 +103,8 @@ export function ArchDiagram() {
 
           {/* 1. SSH Direct Tunnel: Consumer ↔ Sandbox (Lease Flow) */}
           <g
-            className={`arch-flow-group ${isDimmed("lease") ? "dimmed" : ""} ${
-              isHighlighted("lease") ? "highlighted" : ""
-            }`}
+            className={`arch-flow-group ${isDimmed("lease") ? "dimmed" : ""} ${isHighlighted("lease") ? "highlighted" : ""
+              }`}
           >
             <path
               d="M 280 90 L 680 90"
@@ -123,9 +122,8 @@ export function ArchDiagram() {
 
           {/* 2. Consumer → Registry: Sign In / Top Up / Rent / Run */}
           <g
-            className={`arch-flow-group ${
-              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
-            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+            className={`arch-flow-group ${isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+              } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
           >
             <path
               d="M 160 145 L 160 250"
@@ -146,9 +144,8 @@ export function ArchDiagram() {
 
           {/* 3. Registry ↔ Contributor Daemon: WebSocket */}
           <g
-            className={`arch-flow-group ${
-              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
-            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+            className={`arch-flow-group ${isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+              } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
           >
             <path
               d="M 330 315 L 680 315"
@@ -173,9 +170,8 @@ export function ArchDiagram() {
 
           {/* 4. Contributor Daemon → Sandbox: Docker Run / Destroy */}
           <g
-            className={`arch-flow-group ${
-              isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
-            } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
+            className={`arch-flow-group ${isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
+              } ${isHighlighted("lease") || isHighlighted("run") ? "highlighted" : ""}`}
           >
             <path
               d="M 800 250 L 800 145"
@@ -196,9 +192,8 @@ export function ArchDiagram() {
 
           {/* 5. Registry ↔ Neon: Off-chain Balance Ledger */}
           <g
-            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${
-              isHighlighted("settlement") ? "highlighted" : ""
-            }`}
+            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${isHighlighted("settlement") ? "highlighted" : ""
+              }`}
           >
             <path
               d="M 160 380 L 160 480"
@@ -215,9 +210,8 @@ export function ArchDiagram() {
 
           {/* 6. Registry ↔ Algorand: x402 Settle & Payouts */}
           <g
-            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${
-              isHighlighted("settlement") ? "highlighted" : ""
-            }`}
+            className={`arch-flow-group ${isDimmed("settlement") ? "dimmed" : ""} ${isHighlighted("settlement") ? "highlighted" : ""
+              }`}
           >
             <path
               d="M 280 380 L 410 480"
@@ -306,7 +300,7 @@ export function ArchDiagram() {
       </div>
 
       <div className="arch-caption-bar">
-        <span className="acb-tag">// ARCHITECTURE FLOW</span>
+        <span className="acb-tag">ARCHITECTURE FLOW</span>
         <span className="acb-desc">
           The registry balances micro-metered runtime off-chain in Neon, settles USDC on Algorand with zero network gas for consumers, and orchestrates disposable Docker sandboxes over secure bore tunnels.
         </span>
