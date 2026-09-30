@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { atomicPerHour } from "@tendril/shared";
 import { config } from "./config.js";
-import { expiredLeaseAction } from "./leases.js";
+import { expiredLeaseAction, earnsPayout } from "./leases.js";
 
 const rate = atomicPerHour(1); // 1 USDC/hour — 1 second costs 278 atomic
 const NOW = 1_800_000_000_000;
@@ -59,5 +59,8 @@ const lease = (graceUntil: number | null) => ({
 {
   assert.equal(expiredLeaseAction(lease(NOW + 60_000), 5_000_000, NOW).action, "extend");
 }
+
+assert.equal(earnsPayout("contributor"), true);
+assert.equal(earnsPayout("modal"), false);
 
 console.log("leases: ok");

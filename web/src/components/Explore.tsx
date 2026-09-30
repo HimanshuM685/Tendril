@@ -4,6 +4,7 @@ import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/sha
 import { formatUsdc } from "@tendril/shared";
 import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
+import { NotebookSection } from "./NotebookSection";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { isCustodialSession } from "../lib/session";
@@ -58,6 +59,7 @@ export function Explore({
   const navigate = useNavigate();
   const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
+  const [notebooks, setNotebooks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
@@ -81,9 +83,10 @@ export function Explore({
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then((n) => {
+        .then(({ nodes: next, notebooks: canRun }) => {
           if (!alive) return;
-          setNodes(n);
+          setNodes(next);
+          setNotebooks(canRun);
           setError(null);
         })
         .catch((err) => {
@@ -100,7 +103,7 @@ export function Explore({
     };
   }, []);
 
-  async function rent(nodeId: string, rateUsd: number) {
+  async function rent(nodeId: string, rateUsd: number, surface?: "ssh" | "jupyter") {
     if (!activeAddress) {
       if (onOpenConnectWallet) {
         onOpenConnectWallet();
@@ -123,6 +126,7 @@ export function Explore({
         res = (await runCustodialAction(session.token, {
           action: "rent",
           nodeId,
+          ...(surface ? { surface } : {}),
         })) as X402RentResponse;
       } else {
         res = await rentNode(
@@ -131,6 +135,7 @@ export function Explore({
           signTransactions,
           nodeId,
           setStage,
+          surface,
         );
       }
       const targetNode = nodes.find((n) => n.id === nodeId);
@@ -259,6 +264,22 @@ export function Explore({
           <button
             type="button"
             className="ca-btn ca-btn-ghost"
+            onClick={() => document.getElementById("run-notebook")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            <span className="ca-btn-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </span>
+            <span>Run notebook</span>
+          </button>
+
+          <button
+            type="button"
+            className="ca-btn ca-btn-ghost"
             onClick={() => hardwareRef.current?.scrollIntoView({ behavior: "smooth" })}
           >
             <span className="ca-btn-icon">
@@ -305,6 +326,16 @@ export function Explore({
         </div>
       </div>
 
+      <NotebookSection
+        session={session}
+        activeAddress={activeAddress}
+        signTransactions={signTransactions}
+        notebooks={notebooks}
+        checking={loading && nodes.length === 0}
+        onOpenConnectWallet={onOpenConnectWallet}
+        onWalletChanged={onWalletChanged}
+      />
+
       {/* Main 2-Column Section */}
       <div className="explore-columns-grid">
         {/* Left Column: Active & Recent Leases */}
@@ -335,20 +366,49 @@ export function Explore({
                 <div className="lease-item-info">
                   <div className="lease-item-title">{lease.label}</div>
                   <div className="lease-item-meta">
-                    <span className="meta-cmd">{lease.access.command}</span> &middot;{" "}
                     <span>{formatUsdc(lease.rateAtomicPerHour)}/hr</span>
                   </div>
+                  {lease.access.kind === "jupyter" ? (
+                    <div className="lease-ssh">
+                      <a className="btn-tiny" href={lease.access.url} target="_blank" rel="noreferrer">
+                        Open notebook
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="lease-ssh">
+                      <div className="lease-ssh-line">
+                        <span className="lease-ssh-label">ssh</span>
+                        <code className="lease-ssh-value">{lease.access.command}</code>
+                        <button type="button" className="btn-tiny" onClick={() => copy(lease.access.kind === "ssh" ? lease.access.command : "")}>
+                          {copied === lease.access.command ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <div className="lease-ssh-line">
+                        <span className="lease-ssh-label">user</span>
+                        <code className="lease-ssh-value">{lease.access.username}</code>
+                      </div>
+                      {lease.access.password ? (
+                        <div className="lease-ssh-line">
+                          <span className="lease-ssh-label">password</span>
+                          <code className="lease-ssh-value">{lease.access.password}</code>
+                          <button type="button" className="btn-tiny" onClick={() => copy(lease.access.kind === "ssh" ? lease.access.password ?? "" : "")}>
+                            {copied === lease.access.password ? "Copied" : "Copy"}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="lease-ssh-note">Use the SSH key you supplied when renting.</p>
+                      )}
+                    </div>
+                  )}
                   <div className="lease-expanded-controls">
                     <span className="lease-timer-pill">
                       Time left: {fmtCountdown(leaseRemainingMs)}
                     </span>
-                    <button
-                      type="button"
-                      className="btn-tiny"
-                      onClick={() => copy(lease.access.command)}
-                    >
-                      {copied === lease.access.command ? "Copied!" : "Copy SSH"}
-                    </button>
+                    {lease.access.kind === "jupyter" ? (
+                      <a className="btn-tiny" href={lease.access.url} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                    ) : null}
                     <button
                       type="button"
                       className="btn-tiny btn-danger-tiny"
@@ -397,7 +457,7 @@ export function Explore({
                 </svg>
                 <p className="empty-title">No active leases or recent sessions</p>
                 <p className="empty-sub">
-                  Rent an available machine from the hardware pool to launch an ephemeral sandbox.
+                  Rent a machine from the pool, or upload a notebook in the section above.
                 </p>
               </div>
             )}
@@ -447,6 +507,7 @@ export function Explore({
                       </div>
                       <div className="hw-meta">
                         {n.cpuCores} Cores &middot; {(n.ramMb / 1024).toFixed(0)}GB RAM &middot; ${n.pricePerHourUsd}/hr
+                        {n.provider === "modal" ? " · JupyterLab in the browser" : ""}
                       </div>
                     </div>
                     <div className="hw-action">
@@ -455,9 +516,15 @@ export function Explore({
                           type="button"
                           className="hw-pill-btn pill-available"
                           disabled={renting === n.id}
-                          onClick={() => rent(n.id, n.pricePerHourUsd)}
+                          onClick={() =>
+                            rent(n.id, n.pricePerHourUsd, n.provider === "modal" ? "jupyter" : undefined)
+                          }
                         >
-                          {renting === n.id ? (stage || "Starting…") : "Available"}
+                          {renting === n.id
+                            ? stage || "Starting…"
+                            : n.provider === "modal"
+                              ? "Open lab"
+                              : "Available"}
                         </button>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>

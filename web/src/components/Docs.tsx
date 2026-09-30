@@ -1080,24 +1080,27 @@ TENDRIL_API_KEY="<your-api-key>" PRICE_PER_HOUR_USD=0.20 npm run contributor`}</
               {/* MCP Tooling */}
               <h2 id="mcp-setup" className="docs-h2">Model Context Protocol (MCP)</h2>
               <p>
-                Tendril implements a native Model Context Protocol server. This allows AI assistants like Claude Desktop,
-                Cursor, and autonomous LLM agents to survey live nodes, execute remote Python scripts, and inspect active leases
-                without human intervention.
+                Stdio server. No clone. <code>npx -y @tendril/mcp-server</code> talks to{" "}
+                <code>{REGISTRY_URL}</code>. Paid tools sign with <code>AVM_PRIVATE_KEY</code> (base64
+                64-byte secret, wallet opted into USDC). A contributor API key cannot pay. Restart the
+                client after saving.
               </p>
 
-              <h2 id="claude-config" className="docs-h2">Claude Desktop Configuration</h2>
+              <h2 id="claude-config" className="docs-h2">Claude Desktop, Cursor, Claude Code, VS Code</h2>
               <p>
-                Add Tendril to your <code>claude_desktop_config.json</code>:
+                Claude Desktop: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>{" "}
+                (Windows: <code>%APPDATA%\Claude\claude_desktop_config.json</code>). Cursor:{" "}
+                <code>~/.cursor/mcp.json</code>. Same JSON. Cline and Roo use that object too.
               </p>
 
               <div className="docs-code-block">
                 <div className="dcb-header">
-                  <span>JSON (claude_desktop_config.json)</span>
+                  <span>claude_desktop_config.json / mcp.json</span>
                   <button
                     className="dcb-copy"
                     onClick={() =>
                       copyText(
-                        `{\n  "mcpServers": {\n    "tendril": {\n      "command": "node",\n      "args": ["C:/vs code/PiedPiper/Tendril/mcp-server/dist/index.js"],\n      "env": {\n        "TENDRIL_API_URL": "http://localhost:4000"\n      }\n    }\n  }\n}`,
+                        `{\n  "mcpServers": {\n    "tendril": {\n      "command": "npx",\n      "args": ["-y", "@tendril/mcp-server"],\n      "env": {\n        "REGISTRY_URL": "${REGISTRY_URL}",\n        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"\n      }\n    }\n  }\n}`,
                         "mcp-cfg"
                       )
                     }
@@ -1108,10 +1111,69 @@ TENDRIL_API_KEY="<your-api-key>" PRICE_PER_HOUR_USD=0.20 npm run contributor`}</
                 <pre><code>{`{
   "mcpServers": {
     "tendril": {
-      "command": "node",
-      "args": ["<path-to-tendril>/mcp-server/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@tendril/mcp-server"],
       "env": {
-        "TENDRIL_API_URL": "http://localhost:4000"
+        "REGISTRY_URL": "${REGISTRY_URL}",
+        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"
+      }
+    }
+  }
+}`}</code></pre>
+              </div>
+
+              <p>
+                Claude Code:
+              </p>
+              <div className="docs-code-block">
+                <div className="dcb-header">
+                  <span>claude mcp add</span>
+                  <button
+                    className="dcb-copy"
+                    onClick={() =>
+                      copyText(
+                        `claude mcp add --transport stdio tendril \\\n  --env REGISTRY_URL=${REGISTRY_URL} \\\n  --env AVM_PRIVATE_KEY=<base64 64-byte secret> \\\n  -- npx -y @tendril/mcp-server`,
+                        "mcp-claude"
+                      )
+                    }
+                  >
+                    {copiedId === "mcp-claude" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <pre><code>{`claude mcp add --transport stdio tendril \\
+  --env REGISTRY_URL=${REGISTRY_URL} \\
+  --env AVM_PRIVATE_KEY=<base64 64-byte secret> \\
+  -- npx -y @tendril/mcp-server`}</code></pre>
+              </div>
+
+              <p>
+                VS Code uses <code>servers</code> and requires <code>type</code>. File:{" "}
+                <code>.vscode/mcp.json</code>.
+              </p>
+              <div className="docs-code-block">
+                <div className="dcb-header">
+                  <span>.vscode/mcp.json</span>
+                  <button
+                    className="dcb-copy"
+                    onClick={() =>
+                      copyText(
+                        `{\n  "servers": {\n    "tendril": {\n      "type": "stdio",\n      "command": "npx",\n      "args": ["-y", "@tendril/mcp-server"],\n      "env": {\n        "REGISTRY_URL": "${REGISTRY_URL}",\n        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"\n      }\n    }\n  }\n}`,
+                        "mcp-vscode"
+                      )
+                    }
+                  >
+                    {copiedId === "mcp-vscode" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <pre><code>{`{
+  "servers": {
+    "tendril": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@tendril/mcp-server"],
+      "env": {
+        "REGISTRY_URL": "${REGISTRY_URL}",
+        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"
       }
     }
   }

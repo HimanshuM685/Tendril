@@ -7,11 +7,13 @@ import {
   type CreateApiKeyResponse,
   type LeaseCloseResponse,
   type PlatformInfo,
-  type RunRequest,
   type RunResponse,
   type SandboxLimits,
   type WalletLoginResponse,
   type WithdrawResponse,
+  type ComputeNode,
+  type Lease,
+  type SandboxAccess,
   type X402RentResponse,
   type X402TopUpResponse,
   type GasRequestInfo,
@@ -70,15 +72,21 @@ import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
 import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode } from "./registry.js";
 import {
   abandonLease,
+  activateLease,
   closeLease,
   createLease,
   getLease,
+  heldLease,
+  leaseByPayment,
   liveSessions,
   nodeBusy,
+  waitForLeaseAccess,
 } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
-import { isNodeConnected, runJob, startContainer } from "./ws.js";
+import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
+import { hostedCatalog, modalConfigured, sandboxLifetimeMs } from "./hosted.js";
+import { providerFor } from "./providers/index.js";
 import {
   confirmCustodialSign,
   exportMnemonicForUser,
@@ -356,7 +364,9 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  res.json({ nodes: listOnlineNodes() });
+  // `notebooks` is independent of the rent pool. Hosted rows stay in `nodes`
+  // whenever Modal tokens are set, even if a contributor is online.
+  res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
 }));
 
 // Public platform metrics — growth series + leaderboards.
@@ -640,7 +650,23 @@ async function rent(req: Request, res: Response) {
       `Gate fee ${formatUsdc(gateFee)}; time then bills from credit.`;
 
   // 402 first so a Bazaar/agent probe of the catalog URL still gets tags + discovery.
-  const paid = await requirePayment(req, res, "rent", gateFee, description, ROUTES.rent);
+  const paid = await requirePayment(
+    req,
+    res,
+    "rent",
+    gateFee,
+    description,
+    ROUTES.rent,
+    async (seen) => {
+      const existing = leaseByPayment(seen.txid);
+      const access = existing?.access;
+      const leasedNode = existing ? getNode(existing.nodeId) : undefined;
+      if (!existing || !access || !leasedNode || existing.status !== "active") return false;
+      if (nodeId && existing.nodeId !== nodeId) return false;
+      res.json(toRentResponse(existing, leasedNode, access, existing.paymentTxid));
+      return true;
+    },
+  );
   if (!paid) return;
 
   if (!nodeId) {
@@ -649,8 +675,33 @@ async function rent(req: Request, res: Response) {
       .json({ error: "node_required", detail: "pass ?nodeId= (or a nodeId body field)" });
   }
   if (!node || rate === undefined) return res.status(404).json({ error: "node_not_found" });
-  if (node.status !== "online" || !isNodeConnected(node.id)) {
-    return res.status(409).json({ error: "node_unavailable" });
+
+  const surface = readSurface(req);
+  if (!surface) {
+    return res.status(400).json({ error: "invalid_surface", detail: "surface must be ssh or jupyter" });
+  }
+  if (node.provider === "modal") {
+    if (!modalConfigured()) {
+      return res.status(503).json({ error: "provisioning_failed", detail: "hosted compute is not configured" });
+    }
+    if (surface !== "jupyter") {
+      return res.status(400).json({
+        error: "surface_unsupported",
+        detail: "hosted nodes open JupyterLab; pass surface=jupyter",
+      });
+    }
+  } else if (surface === "jupyter") {
+    return res.status(400).json({
+      error: "surface_unsupported",
+      detail: "jupyter surface requires a hosted node",
+    });
+  } else if (node.status !== "online" || !isNodeConnected(node.id)) {
+    return res.status(409).json({
+      error: "node_unavailable",
+      detail: isNodeConnected(node.id)
+        ? "the machine is offline"
+        : "the agent is not connected, so an SSH session cannot be opened",
+    });
   }
 
   const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
@@ -658,10 +709,31 @@ async function rent(req: Request, res: Response) {
     return res.status(400).json({ error: "invalid_ssh_key" });
   }
 
-  if (nodeBusy(node.id)) return res.status(409).json({ error: "node_busy" });
-
-  // The payer is read off the settled transaction — the only trustworthy identity.
+  // The payer is read off the verified transaction — the only trustworthy identity.
   const renter = paid.facts.payer;
+
+  // A second rent of a machine this payer already holds must hand back the SSH
+  // (or Jupyter) details. Charging another gate fee, or returning a bare 409,
+  // is how a refresh loses the only copy of the connection.
+  const held = heldLease(node.id);
+  if (held) {
+    if (held.payerAddr === renter && !held.allowOverdraft) {
+      const access =
+        held.access ?? (await waitForLeaseAccess(held.id, config.sandboxReadyTimeoutMs));
+      const current = getLease(held.id);
+      if (access && current?.status === "active") {
+        res.json(toRentResponse(current, node, access, current.paymentTxid));
+        return;
+      }
+    }
+    return res.status(409).json({
+      error: "node_busy",
+      detail:
+        held.payerAddr === renter
+          ? "your session on this machine is not ready to connect yet"
+          : "this machine is already leased",
+    });
+  }
 
   // Checked here, after verify but BEFORE settle: an address with no credit
   // cannot fund a single minute, and taking a gate fee for a session that would
@@ -699,6 +771,7 @@ async function rent(req: Request, res: Response) {
     renterAddr: renter,
     payerAddr: renter,
     sshPubKey,
+    surface,
     paid,
   });
 }
@@ -722,6 +795,7 @@ interface ProvisionArgs {
   renterAddr: string;
   payerAddr: string;
   sshPubKey: string | null;
+  surface: "ssh" | "jupyter";
   /** A verified payment, settled only once the sandbox is confirmed up. */
   paid: PaidRequest | null;
 }
@@ -733,7 +807,7 @@ interface ProvisionArgs {
  * container start — the cheaper of the two mistakes.
  */
 async function provision(res: Response, args: ProvisionArgs): Promise<void> {
-  const { node, rate, gateFee, fundingAtomic, renterAddr, payerAddr, sshPubKey, paid } = args;
+  const { node, rate, gateFee, fundingAtomic, renterAddr, payerAddr, sshPubKey, surface, paid } = args;
 
   const lease = createLease({
     nodeId: node.id,
@@ -744,28 +818,36 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
     gateFeeAtomic: gateFee,
     fundingAtomic,
     paymentTxid: paid?.facts.txid ?? null,
+    provider: node.provider,
   });
 
   const limits: SandboxLimits = {
     memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-    cpus: Math.min(node.cpuCores, 4),
+    cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
     gpus: node.gpu ? "all" : "",
   };
 
   let access;
   try {
-    access = await startContainer({
-      nodeId: node.id,
+    access = await providerFor(node.provider).start({
       leaseId: lease.id,
+      node,
+      surface,
       image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits,
-      // A key beats a password, and is the only option without a session:
-      // there is no wallet address to use as one.
-      sshPassword: sshPubKey ? null : renterAddr,
-      sshPubKey,
+      timeoutMs: sandboxLifetimeMs(
+        fundingAtomic,
+        rate,
+        config.graceAtomic,
+        config.modalReadyTimeoutMs,
+      ),
+      // Hosted Jupyter never uses the wallet address as a password.
+      sshPassword: node.provider === "modal" || sshPubKey ? null : renterAddr,
+      sshPubKey: node.provider === "modal" ? null : sshPubKey,
     });
+    if (node.provider === "modal") activateLease(lease.id, access);
   } catch (err) {
-    abandonLease(lease.id);
+    await abandonLease(lease.id);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
     return;
   }
@@ -775,14 +857,24 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
   // the node. Abandon rather than close — a close would refund a payment that
   // never happened.
   if (paid && !(await paid.settle(res))) {
-    abandonLease(lease.id);
+    await abandonLease(lease.id);
     return;
   }
 
   // Nothing is debited here. The session has only just started; what it costs
   // is not known until it ends, and that is the one place it is billed.
 
-  const body: X402RentResponse = {
+  res.json(toRentResponse(lease, node, access, paid?.facts.txid ?? null));
+}
+
+/** Rent JSON, including SSH when the sandbox is a contributor machine. */
+function toRentResponse(
+  lease: Lease,
+  node: ComputeNode,
+  access: SandboxAccess,
+  paymentTxid: string | null,
+): X402RentResponse {
+  return {
     leaseId: lease.id,
     leaseToken: issueLeaseToken(lease.id),
     node: {
@@ -792,21 +884,21 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
       gpu: node.gpu,
       pricePerHourUsd: node.pricePerHourUsd,
     },
-    ssh: access,
+    ssh: access.kind === "ssh" ? access : null,
+    ...(access.kind === "jupyter" ? { jupyter: access } : {}),
     startedAt: new Date(lease.startedAt).toISOString(),
     fundedUntil: Number.isFinite(lease.expiresAt)
       ? new Date(lease.expiresAt).toISOString()
       : "never",
     billing: {
-      rateAtomicPerHour: String(rate),
-      gateFeeAtomic: String(gateFee),
-      creditAtomic: String(fundingAtomic),
-      fundedSeconds: fundedSeconds(fundingAtomic, rate),
+      rateAtomicPerHour: String(lease.rateAtomicPerHour),
+      gateFeeAtomic: String(lease.gateFeeAtomic),
+      creditAtomic: String(lease.fundingAtomic),
+      fundedSeconds: fundedSeconds(lease.fundingAtomic, lease.rateAtomicPerHour),
       asset,
     },
-    payment: paid ? { txid: paid.facts.txid, network: config.x402Network } : null,
+    payment: paymentTxid ? { txid: paymentTxid, network: config.x402Network } : null,
   };
-  res.json(body);
 }
 
 /**
@@ -849,15 +941,22 @@ router.post("/lease/:id/release", guard(releaseLease));
 // paid for.
 const RUN_DESCRIPTION =
   `Run code on a rented Linux machine and get its stdout back. Flat ` +
-  `${formatUsdc(config.flatRunAtomic)} per job. POST \`{"payload": "<python>"}\` and, with no ` +
-  `lease token, Tendril picks the best-value idle machine, executes it in a throwaway sandbox and ` +
-  `bills the seconds it took from your credit. Send a lease token instead to run it inside a ` +
-  `machine you already hold.`;
+  `${formatUsdc(config.flatRunAtomic)} per job. POST \`{"payload": "<python>"}\` or ` +
+  `\`{"notebook": <ipynb>}\` and, with no lease token, Tendril picks the best-value idle machine, ` +
+  `executes it in a throwaway sandbox and bills the seconds it took from your credit. Send a lease ` +
+  `token instead to run it inside a machine you already hold.`;
+
+const NOTEBOOK_MAX_BYTES = 1_500_000;
+
+interface JobInput {
+  payload?: string;
+  notebook?: Record<string, unknown>;
+}
 
 async function run(req: Request, res: Response): Promise<void> {
-  const payload = (req.body as RunRequest)?.payload;
-  if (typeof payload !== "string") {
-    res.status(400).json({ error: "payload (string) required" });
+  const job = readJob(req.body);
+  if (!job) {
+    res.status(400).json({ error: jobError(req.body) });
     return;
   }
   // A lease token in hand means "run it in my machine". No header at all, or a
@@ -865,7 +964,7 @@ async function run(req: Request, res: Response): Promise<void> {
   // identity that matters.
   const auth = req.header("authorization");
   if (req.params.id !== undefined || leaseIdFromAuthHeader(auth) !== null) {
-    return runInLease(req, res, payload);
+    return runInLease(req, res, job);
   }
   // A token that decodes to nothing is refused rather than quietly downgraded:
   // an expired lease token must not silently become a job on some other machine
@@ -874,15 +973,22 @@ async function run(req: Request, res: Response): Promise<void> {
     res.status(401).json({ error: "invalid_token", detail: "not a valid lease or session token" });
     return;
   }
-  return runAnywhere(req, res, payload);
+  return runAnywhere(req, res, job);
 }
 
 /** The classic path: a job inside a sandbox the caller already rented. */
-async function runInLease(req: Request, res: Response, payload: string): Promise<void> {
+async function runInLease(req: Request, res: Response, job: JobInput): Promise<void> {
   const lease = requireLease(req, res);
   if (!lease) return;
   if (lease.status !== "active") {
     res.status(409).json({ error: "lease not active" });
+    return;
+  }
+  if (job.notebook && lease.provider !== "modal") {
+    res.status(400).json({
+      error: "notebook_unsupported",
+      detail: "contributor sandboxes run Python source; notebooks run on hosted CPU",
+    });
     return;
   }
 
@@ -892,15 +998,28 @@ async function runInLease(req: Request, res: Response, payload: string): Promise
   const jobId = nanoid(10);
   let result;
   try {
-    result = await runJob(lease.nodeId, lease.id, jobId, payload, config.runTimeoutMs);
+    result = await providerFor(lease.provider).exec({
+      leaseId: lease.id,
+      nodeId: lease.nodeId,
+      jobId,
+      timeoutMs: config.runTimeoutMs,
+      payload: job.payload,
+      notebook: job.notebook,
+    });
   } catch (err) {
     // Nothing ran, so nothing settles.
-    res.status(502).json({ error: (err as Error).message });
+    const message = (err as Error).message || "execution failed";
+    res.status(502).json({ error: message, detail: message });
     return;
   }
   if (!(await paid.settle(res))) return;
 
-  const body: RunResponse = { jobId, ok: result.ok, result: result.result };
+  const body: RunResponse = {
+    jobId,
+    ok: result.ok,
+    result: result.result,
+    ...(result.notebook ? { notebook: result.notebook, artifacts: result.artifacts ?? [] } : {}),
+  };
   res.json(body);
 }
 
@@ -921,7 +1040,7 @@ async function runInLease(req: Request, res: Response, payload: string): Promise
  *     protect a balance, so a run can end owing more than was there. That debt
  *     then blocks renting until it is cleared.
  */
-async function runAnywhere(req: Request, res: Response, payload: string): Promise<void> {
+async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<void> {
   // The 402 comes first, before any check that could fail for reasons the caller
   // cannot see: an agent that has never called this endpoint must always be able
   // to ask what it costs, even at a moment when every machine happens to be busy.
@@ -944,9 +1063,27 @@ async function runAnywhere(req: Request, res: Response, payload: string): Promis
     return;
   }
 
-  const node = pickBestValueNode((id) => isNodeConnected(id) && !nodeBusy(id));
+  // Notebooks never share a contributor sandbox. They run on hosted CPU even
+  // while a peer is online and winning the rent pool. Bail before settle.
+  if (job.notebook && !modalConfigured()) {
+    res.status(503).json({
+      error: "provisioning_failed",
+      detail: "hosted compute is not configured",
+    });
+    return;
+  }
+  const node = job.notebook
+    ? pickNotebookHost()
+    : pickBestValueNode((id) => {
+        const candidate = getNode(id);
+        if (candidate?.provider === "modal") return true;
+        return isNodeConnected(id) && !nodeBusy(id);
+      });
   if (!node) {
-    res.status(503).json({ error: "no_node_available", detail: "every machine is busy or offline" });
+    res.status(503).json({
+      error: "no_node_available",
+      detail: job.notebook ? "hosted CPU is busy" : "every machine is busy or offline",
+    });
     return;
   }
 
@@ -961,26 +1098,28 @@ async function runAnywhere(req: Request, res: Response, payload: string): Promis
     fundingAtomic: credit,
     paymentTxid: paid.facts.txid,
     allowOverdraft: true,
+    provider: node.provider,
   });
 
   try {
-    await startContainer({
-      nodeId: node.id,
+    const access = await providerFor(node.provider).start({
       leaseId: lease.id,
+      node,
+      surface: "exec",
       image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits: {
         memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-        cpus: Math.min(node.cpuCores, 4),
+        cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
         gpus: node.gpu ? "all" : "",
       },
-      // Nobody is going to SSH into this one, but it is still reachable over the
-      // tunnel — so give it a password nobody has rather than letting the
-      // sandbox fall back to its default.
-      sshPassword: nanoid(32),
+      timeoutMs: config.modalReadyTimeoutMs + config.runTimeoutMs,
+      // One-shot sandboxes are not logged into. Never the wallet address.
+      sshPassword: node.provider === "modal" ? null : nanoid(32),
       sshPubKey: null,
     });
+    if (node.provider === "modal") activateLease(lease.id, access);
   } catch (err) {
-    abandonLease(lease.id);
+    await abandonLease(lease.id);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
     return;
   }
@@ -988,17 +1127,25 @@ async function runAnywhere(req: Request, res: Response, payload: string): Promis
   const jobId = nanoid(10);
   let result;
   try {
-    result = await runJob(node.id, lease.id, jobId, payload, config.runTimeoutMs);
+    result = await providerFor(node.provider).exec({
+      leaseId: lease.id,
+      nodeId: node.id,
+      jobId,
+      timeoutMs: config.runTimeoutMs,
+      payload: job.payload,
+      notebook: job.notebook,
+    });
   } catch (err) {
     // The job never produced a result, so nothing settles and nothing is billed
     // — abandon rather than close, or the caller pays for a job they never got.
-    abandonLease(lease.id);
-    res.status(502).json({ error: (err as Error).message });
+    await abandonLease(lease.id);
+    const message = (err as Error).message || "notebook execution failed";
+    res.status(502).json({ error: message, detail: message });
     return;
   }
 
   if (!(await paid.settle(res))) {
-    abandonLease(lease.id);
+    await abandonLease(lease.id);
     return;
   }
 
@@ -1008,6 +1155,7 @@ async function runAnywhere(req: Request, res: Response, payload: string): Promis
     jobId,
     ok: result.ok,
     result: result.result,
+    ...(result.notebook ? { notebook: result.notebook, artifacts: result.artifacts ?? [] } : {}),
     execution: {
       nodeId: node.id,
       seconds: settled?.usedSeconds ?? 0,
@@ -1031,6 +1179,45 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 }));
 
 // ─────────────────────────── helpers ───────────────────────────
+
+/** A free hosted CPU row. Call only when `modalConfigured()` is true. */
+function pickNotebookHost(): ComputeNode | null {
+  return hostedCatalog().find((n) => !nodeBusy(n.id)) ?? null;
+}
+
+function readSurface(req: Request): "ssh" | "jupyter" | null {
+  const q = req.query.surface;
+  const body = (req.body as { surface?: unknown } | undefined)?.surface;
+  const raw = typeof q === "string" ? q : typeof body === "string" ? body : "ssh";
+  return raw === "ssh" || raw === "jupyter" ? raw : null;
+}
+
+function readJob(body: unknown): JobInput | null {
+  const b = body as { payload?: unknown; notebook?: unknown } | null;
+  const hasPayload = typeof b?.payload === "string";
+  const notebook = b?.notebook;
+  const hasNotebook = notebook !== undefined && notebook !== null;
+  if (hasPayload === hasNotebook) return null;
+  if (hasNotebook) {
+    if (typeof notebook !== "object" || Array.isArray(notebook)) return null;
+    if (JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return null;
+    return { notebook: notebook as Record<string, unknown> };
+  }
+  return { payload: b?.payload as string };
+}
+
+function jobError(body: unknown): string {
+  const b = body as { payload?: unknown; notebook?: unknown } | null;
+  const hasPayload = typeof b?.payload === "string";
+  const notebook = b?.notebook;
+  const hasNotebook = notebook !== undefined && notebook !== null;
+  if (hasPayload && hasNotebook) return "pass payload or notebook, not both";
+  if (hasNotebook && (typeof notebook !== "object" || Array.isArray(notebook))) {
+    return "notebook must be a JSON object";
+  }
+  if (hasNotebook && JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return "notebook_too_large";
+  return "payload (string) or notebook (object) required";
+}
 
 /** The session address (from `Authorization: Bearer <session>`), or 401. */
 function requireSession(req: Request, res: Response): string | null {

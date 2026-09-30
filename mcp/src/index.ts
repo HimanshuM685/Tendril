@@ -1,7 +1,7 @@
-#!/usr/bin/env npx tsx
 /**
  * Tendril MCP — stdio. Agents call named tools; this process pays x402.
  * Do not log to stdout (that is the MCP transport).
+ * Published bin is dist/cli.js (shebang added at build).
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -81,6 +81,23 @@ server.tool(
   async ({ payload, leaseToken }) => {
     try {
       return text(await tools.run(payload, leaseToken));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "tendril_run_notebook",
+  "Run a Jupyter notebook on hosted CPU. POST /x402/run {notebook}. notebook is nbformat JSON (cells array). Returns the executed notebook plus artifacts. Gate fee on-chain; seconds bill from credit. Needs AVM_PRIVATE_KEY.",
+  {
+    notebook: z
+      .record(z.unknown())
+      .describe("nbformat JSON object, under 1.5 MB"),
+  },
+  async ({ notebook }) => {
+    try {
+      return text(await tools.runNotebook(notebook));
     } catch (err) {
       return fail(err);
     }

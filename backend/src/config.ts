@@ -137,6 +137,20 @@ export const config = {
   // The platform absorbs it: the close bills at most the remaining balance.
   graceAtomic: Number(process.env.GRACE_ATOMIC ?? 1_000_000), // 1.00 USDC
 
+  // ─────────────────────────── Modal hosted CPU ───────────────────────────
+  // Read only here. Never forwarded to the web app, a contributor, or a sandbox.
+  modalTokenId: (process.env.MODAL_TOKEN_ID ?? "").trim(),
+  modalTokenSecret: (process.env.MODAL_TOKEN_SECRET ?? "").trim(),
+  modalAppName: process.env.MODAL_APP_NAME ?? "tendril",
+  /** Fraction added on top of Modal's sandbox rate. Clamped to 0.25–0.40. */
+  hostedMarkup: Number(process.env.HOSTED_MARKUP ?? 0.3),
+  /**
+   * How long `Sandbox.create` plus the Jupyter tunnel may take before we 503.
+   * The first build installs JupyterLab; later creates reuse Modal's image cache.
+   * Nothing is settled if this elapses.
+   */
+  modalReadyTimeoutMs: Number(process.env.MODAL_SANDBOX_READY_TIMEOUT_MS ?? 300_000),
+
   // ─────────────────────── Google OAuth custodial login ───────────────────────
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",

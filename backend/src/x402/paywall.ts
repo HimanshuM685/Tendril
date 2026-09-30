@@ -30,6 +30,7 @@ import {
   sendReceipt,
   type PaymentFacts,
   type PaymentRoute,
+  type PaymentRow,
 } from "./server.js";
 import type { RouteDiscovery } from "./discovery.js";
 
@@ -60,6 +61,12 @@ export async function requirePayment(
   priceAtomic: number,
   description: string,
   discovery?: RouteDiscovery,
+  /**
+   * A settled payment normally 409s. Rent uses this to hand back the SSH
+   * session that payment already bought, instead of a conflict with no access.
+   * Return true if the response was sent.
+   */
+  onSettledReplay?: (seen: PaymentRow) => Promise<boolean> | boolean,
 ): Promise<PaidRequest | null> {
   let payload;
   try {
@@ -88,7 +95,12 @@ export async function requirePayment(
   // or a second job execution on somebody else's money.
   const seen = await findPayment(facts.intentHash);
   if (seen?.status === "settled") {
-    res.status(409).json({ error: "payment_already_used", txid: seen.txid });
+    if (onSettledReplay && (await onSettledReplay(seen))) return null;
+    res.status(409).json({
+      error: "payment_already_used",
+      detail: "this payment already opened a session and cannot be reused",
+      txid: seen.txid,
+    });
     return null;
   }
 

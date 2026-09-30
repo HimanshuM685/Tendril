@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
@@ -6,7 +6,6 @@ import { WalletBar } from "./components/WalletBar";
 import { Marketplace } from "./components/Marketplace";
 import { LandingPage } from "./components/LandingPage";
 import { Docs } from "./components/Docs";
-// import { About } from "./components/About";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
@@ -14,8 +13,6 @@ import { Sidebar } from "./components/Sidebar";
 import { TopUpModal } from "./components/TopUpModal";
 import { McpModal } from "./components/McpModal";
 import { ConnectWalletModal } from "./components/ConnectWalletModal";
-// ~90KB of markdown compiles into this page; keep it out of the landing bundle.
-const ApiDocs = lazy(() => import("./components/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
@@ -86,14 +83,24 @@ export function App() {
   const isDocs = path.startsWith("/docs") || path === "/api";
 
   useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [path]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     const titles: Record<string, string> = {
-      "/explore": "Explore",
+"/explore": "Explore",
       "/contribute": "Contribute",
       "/dashboard": "Dashboard",
       "/metrics": "Metrics",
       "/api": "API",
       "/docs": "Docs",
-      // "/about": "About",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
@@ -326,17 +333,7 @@ export function App() {
               }
             />
             <Route path="/metrics" element={<Metrics />} />
-            <Route
-              path="/api"
-              element={
-                <Suspense fallback={<p className="muted dash-note">Loading API reference…</p>}>
-                  <ApiDocs />
-                </Suspense>
-              }
-            />
-            <Route path="/docs" element={<Docs />} />
-            {/* <Route path="/about" element={<About />} /> */}
-            <Route path="*" element={<Navigate to="/explore" replace />} />
+<Route path="*" element={<Navigate to="/explore" replace />} />
           </Routes>
         </main>
       </div>

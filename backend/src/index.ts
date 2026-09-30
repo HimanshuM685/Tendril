@@ -7,6 +7,7 @@ import { initWs } from "./ws.js";
 import { startWatchdog } from "./leases.js";
 import { allowedOrigin, corsPolicy } from "./x402/cors.js";
 import { checkFacilitator, checkDiscoveryConfig } from "./x402/server.js";
+import { warmNotebookImage } from "./providers/modal.js";
 
 // A billing/payment error must never take down the registry.
 process.on("unhandledRejection", (reason) => {
@@ -20,7 +21,7 @@ const corsOrigin = allowedOrigin();
 
 const app = express();
 app.use(corsPolicy());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 // One line per request, with the duration. Paid requests are slow by nature —
 // verify, provision, settle — so when a client reports "failed to fetch" the
@@ -67,12 +68,22 @@ async function main(): Promise<void> {
   initWs(httpServer, corsOrigin);
   startWatchdog();
 
+  if (config.modalTokenId && config.modalTokenSecret) {
+    void warmNotebookImage().then(
+      () => console.log("[registry] modal notebook image ready"),
+      (err) => console.error("[registry] modal image warm failed:", (err as Error).message),
+    );
+  }
+
   httpServer.listen(config.port, () => {
     console.log(`[registry] listening on http://localhost:${config.port}`);
     console.log(`[registry] Neon Postgres connected (credit ledger only); watchdog every ${config.meterIntervalMs}ms`);
     console.log(`[registry] x402 → ${config.platformPayTo || "(PLATFORM_PAYTO not set!)"} in asset ${config.assetId} (${config.assetSymbol}) on ${config.x402Network}`);
     console.log(`[registry] facilitator ${config.facilitatorUrl}`);
     console.log(`[registry] payouts ${config.platformPrivateKey ? "enabled" : "DISABLED (set PLATFORM_PRIVATE_KEY)"}, platform fee ${config.platformFeePct}%`);
+    console.log(
+      `[registry] modal hosted ${config.modalTokenId && config.modalTokenSecret ? "enabled" : "off (set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET)"}`,
+    );
   });
 }
 
