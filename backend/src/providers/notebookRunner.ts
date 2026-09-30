@@ -76,29 +76,19 @@ for cell in nb.get("cells") or []:
         body = "\\n".join(py).strip()
         if body:
             tree = ast.parse(body)
-            if tree.body and isinstance(tree.body[-1], ast.Expr):
-                last = tree.body.pop()
+            last = tree.body.pop() if tree.body and isinstance(tree.body[-1], ast.Expr) else None
+            buf = io.StringIO()
+            old = sys.stdout
+            sys.stdout = buf
+            try:
                 if tree.body:
                     exec(compile(tree, "<cell>", "exec"), ns)
-                buf = io.StringIO()
-                old = sys.stdout
-                sys.stdout = buf
-                try:
-                    value = eval(compile(ast.Expression(last.value), "<cell>", "eval"), ns)
-                finally:
-                    sys.stdout = old
-                emit(buf.getvalue())
-                if value is not None:
-                    current.append({"output_type":"execute_result","execution_count":count,"metadata":{},"data":{"text/plain":repr(value)}})
-            else:
-                buf = io.StringIO()
-                old = sys.stdout
-                sys.stdout = buf
-                try:
-                    exec(compile(body, "<cell>", "exec"), ns)
-                finally:
-                    sys.stdout = old
-                emit(buf.getvalue())
+                value = eval(compile(ast.Expression(last.value), "<cell>", "eval"), ns) if last is not None else None
+            finally:
+                sys.stdout = old
+            emit(buf.getvalue())
+            if value is not None:
+                current.append({"output_type":"execute_result","execution_count":count,"metadata":{},"data":{"text/plain":repr(value)}})
     except Exception as exc:
         ok = False
         err = traceback.format_exc()
