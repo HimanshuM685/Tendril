@@ -1853,8 +1853,8 @@ img {
 /* Column 1: Left Navigation Sidebar */
 .docs-sidebar-nav {
   position: sticky;
-  top: 126px;
-  max-height: calc(100vh - 146px);
+  top: 84px;
+  max-height: calc(100vh - 104px);
   overflow-y: auto;
   padding-right: 18px;
   border-right: 1px solid var(--border-subtle);
@@ -2048,6 +2048,7 @@ img {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-primary);
+  scroll-margin-top: 84px;
   margin: 44px 0 16px;
   padding-top: 20px;
   border-top: 1px solid var(--border-subtle);
@@ -2663,6 +2664,7 @@ img {
   margin: 40px 0 16px;
   padding-top: 18px;
   border-top: 1px solid var(--border-subtle);
+  scroll-margin-top: 84px;
 }
 
 .docs-markdown-body h2 {
@@ -2670,6 +2672,7 @@ img {
   font-weight: 700;
   color: var(--text-primary);
   margin: 32px 0 12px;
+  scroll-margin-top: 84px;
 }
 
 .docs-markdown-body h3 {
@@ -2677,6 +2680,7 @@ img {
   font-weight: 700;
   color: var(--text-primary);
   margin: 22px 0 8px;
+  scroll-margin-top: 84px;
 }
 
 .docs-markdown-body p {
@@ -2756,8 +2760,8 @@ img {
 /* Column 3: Right TOC Rail */
 .docs-toc-rail {
   position: sticky;
-  top: 126px;
-  max-height: calc(100vh - 146px);
+  top: 84px;
+  max-height: calc(100vh - 104px);
   overflow-y: auto;
   padding-left: 14px;
   border-left: 1px solid var(--border-subtle);

@@ -17,22 +17,25 @@ type Section = Heading & { subs: Heading[] };
 /** An `# h1` divider ("Endpoints", "Free / read") and the sections under it. */
 type Group = { label: string | null; sections: Section[] };
 
-const DOCS: { id: MdDocId; label: string; blurb: string; source: string }[] = [
+const DOCS: { id: MdDocId; label: string; title: string; blurb: string; source: string }[] = [
   {
     id: "api",
     label: "HTTP",
+    title: "HTTP API",
     blurb: "The plain HTTP endpoints — discovery, sign-in, wallet, leases. Every one has a curl.",
     source: apiMd,
   },
   {
     id: "x402",
-    label: "X402 (PAID)",
+    label: "x402 (paid)",
+    title: "x402 payments",
     blurb: "The endpoints that move money, and how to pay one from a terminal.",
     source: x402Md,
   },
   {
     id: "mcp",
     label: "MCP",
+    title: "MCP tools",
     blurb: "Stdio MCP tools for agents: compute, credit, contributor keys. Pays x402 for you.",
     source: mcpMd,
   },
@@ -196,29 +199,37 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
 
   return (
     <>
-      <p className="muted">{doc.blurb}</p>
+      <div className="docs-main-content">
+        <article className="docs-article">
+          <p className="docs-eyebrow">API reference</p>
+          <h1 className="docs-title">{doc.title}</h1>
+          <p className="docs-lead">{doc.blurb}</p>
 
-      <div className="topup" role="group" aria-label="API base URL">
-        <span className="muted small">Base URL</span>
-        <code className="ssh-code">{REGISTRY_URL}</code>
-        <button className="btn ghost" onClick={copyBase}>
-          {copied ? "Copied!" : "Copy export"}
-        </button>
+          <div className="docs-base-url-box" role="group" aria-label="API base URL">
+            <div className="dbu-left">
+              <span className="dbu-label">Base URL</span>
+              <code className="dbu-code">{REGISTRY_URL}</code>
+            </div>
+            <button type="button" className="dbu-copy-btn" onClick={copyBase}>
+              {copied ? "Copied!" : "Copy export"}
+            </button>
+          </div>
+
+          <div ref={bodyRef} className="docs-markdown-body" dangerouslySetInnerHTML={{ __html: html }} />
+        </article>
       </div>
 
-      <div className="doc-layout">
-        <nav className="doc-toc" aria-label="On this page">
-          <span className="toc-head">On this page</span>
+      <aside className="docs-toc-rail" aria-label="On this page">
+        <div className="docs-toc-header">On this page</div>
+        <div className="docs-toc-links">
           {groups.map((g, i) => (
-            <div className="toc-group" key={g.label ?? `g${i}`}>
-              {g.label && <span className="toc-group-label">{g.label}</span>}
+            <div key={g.label ?? `g${i}`}>
+              {g.label && <div className="docs-nav-group-title">{g.label}</div>}
               {g.sections.map((s) => (
                 <div key={s.id}>
                   <a
                     href={`#${s.id}`}
-                    className={`toc-link${s.id === here ? " current" : ""}${
-                      s.id === openSection ? " open" : ""
-                    }`}
+                    className={`docs-toc-item${s.id === here ? " active" : ""}`}
                     onClick={(e) => {
                       e.preventDefault();
                       navigate(docsPath(docId, `#${s.id}`), { replace: true });
@@ -231,7 +242,7 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
                       <a
                         key={h.id}
                         href={`#${h.id}`}
-                        className={`toc-link toc-sub${h.id === here ? " current" : ""}`}
+                        className={`docs-nav-link-subitem${h.id === here ? " active" : ""}`}
                         onClick={(e) => {
                           e.preventDefault();
                           navigate(docsPath(docId, `#${h.id}`), { replace: true });
@@ -244,14 +255,8 @@ export function ApiDocs({ docId }: { docId: MdDocId }) {
               ))}
             </div>
           ))}
-        </nav>
-
-        <div
-          ref={bodyRef}
-          className="prose panel doc-body"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      </div>
+        </div>
+      </aside>
     </>
   );
 }
