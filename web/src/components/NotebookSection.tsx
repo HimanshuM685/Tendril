@@ -14,9 +14,9 @@ interface Props {
   session: Session | null;
   activeAddress: string | null;
   signTransactions: SignTransactions;
-  hostedOnline: boolean;
+  /** Backend can run a notebook on hosted CPU. Independent of the rent pool. */
+  notebooks: boolean;
   checking: boolean;
-  contributorOnline: boolean;
   onOpenConnectWallet?: () => void;
   onWalletChanged?: () => void;
 }
@@ -160,24 +160,20 @@ function downloadBlob(name: string, blob: Blob) {
   URL.revokeObjectURL(url);
 }
 
-function availabilityCopy(checking: boolean, hostedOnline: boolean, contributorOnline: boolean): string {
+function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
-  if (hostedOnline) {
+  if (notebooks) {
     return "Upload a .ipynb. Cells run on hosted CPU, then outputs, plots, and files appear here. Billed by the second from credit.";
   }
-  if (contributorOnline) {
-    return "A contributor machine is online. Rent it from the pool below. Notebook upload runs on hosted CPU, which is listed when that pool is up.";
-  }
-  return "Notebook upload needs a hosted CPU in the pool. None is listed right now.";
+  return "Notebooks need hosted CPU. Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET on the backend and restart.";
 }
 
 export function NotebookSection({
   session,
   activeAddress,
   signTransactions,
-  hostedOnline,
+  notebooks,
   checking,
-  contributorOnline,
   onOpenConnectWallet,
   onWalletChanged,
 }: Props) {
@@ -191,7 +187,7 @@ export function NotebookSection({
   const [view, setView] = useState<NotebookView | null>(null);
 
   const isCustodial = isCustodialSession(session);
-  const canPick = hostedOnline && !uploading;
+  const canPick = notebooks && !uploading;
 
   function takeFile(file: File | undefined) {
     if (!file || !canPick) return;
@@ -281,7 +277,7 @@ export function NotebookSection({
       <div className="explore-card-head">
         <div>
           <h2 className="card-head-title">Run a notebook</h2>
-          <p className="card-head-sub">{availabilityCopy(checking, hostedOnline, contributorOnline)}</p>
+          <p className="card-head-sub">{availabilityCopy(checking, notebooks)}</p>
         </div>
       </div>
 
@@ -319,10 +315,14 @@ export function NotebookSection({
               </svg>
             </span>
             <span className="notebook-drop-title">
-              {canPick ? "Drop a .ipynb here" : "Upload unavailable"}
+              {canPick ? "Drop a .ipynb here" : checking ? "Checking…" : "Upload unavailable"}
             </span>
             <span className="notebook-drop-sub">
-              {canPick ? "or click to choose a file · 1.5 MB max" : "Hosted CPU has to be online"}
+              {canPick
+                ? "or click to choose a file · 1.5 MB max"
+                : checking
+                  ? "Checking hosted CPU"
+                  : "Modal tokens are not set"}
             </span>
           </label>
 
@@ -349,7 +349,7 @@ export function NotebookSection({
           <button
             type="button"
             className="ca-btn ca-btn-primary notebook-run-btn"
-            disabled={!pending || uploading || !hostedOnline}
+            disabled={!pending || uploading || !notebooks}
             onClick={() => void run()}
           >
             {runLabel}

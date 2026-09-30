@@ -59,6 +59,7 @@ export function Explore({
   const navigate = useNavigate();
   const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
+  const [notebooks, setNotebooks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
@@ -82,9 +83,10 @@ export function Explore({
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then((n) => {
+        .then(({ nodes: next, notebooks: canRun }) => {
           if (!alive) return;
-          setNodes(n);
+          setNodes(next);
+          setNotebooks(canRun);
           setError(null);
         })
         .catch((err) => {
@@ -195,8 +197,6 @@ export function Explore({
   // Active lease timer
   const leaseRemainingMs = lease ? Math.max(0, lease.expiresAt - now) : 0;
   const recentCharges = wallet?.charges ?? [];
-  const hostedOnline = nodes.some((n) => n.provider === "modal");
-  const contributorOnline = nodes.some((n) => n.provider !== "modal");
 
   return (
     <div className="explore-dashboard">
@@ -330,9 +330,8 @@ export function Explore({
         session={session}
         activeAddress={activeAddress}
         signTransactions={signTransactions}
-        hostedOnline={hostedOnline}
+        notebooks={notebooks}
         checking={loading && nodes.length === 0}
-        contributorOnline={contributorOnline}
         onOpenConnectWallet={onOpenConnectWallet}
         onWalletChanged={onWalletChanged}
       />

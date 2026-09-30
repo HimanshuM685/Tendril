@@ -74,10 +74,11 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
-export async function fetchExplorer(): Promise<ExplorerNode[]> {
+export async function fetchExplorer(): Promise<{ nodes: ExplorerNode[]; notebooks: boolean }> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
-  return (await res.json()).nodes as ExplorerNode[];
+  const body = (await res.json()) as { nodes?: ExplorerNode[]; notebooks?: boolean };
+  return { nodes: body.nodes ?? [], notebooks: !!body.notebooks };
 }
 
 /** Where to send top-ups + the USD→ALGO rate used to show prices in ALGO. */
