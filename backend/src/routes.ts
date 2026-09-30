@@ -85,7 +85,7 @@ import {
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
-import { modalConfigured, sandboxLifetimeMs } from "./hosted.js";
+import { hostedCatalog, modalConfigured, sandboxLifetimeMs } from "./hosted.js";
 import { providerFor } from "./providers/index.js";
 import {
   confirmCustodialSign,
@@ -364,7 +364,9 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  res.json({ nodes: listOnlineNodes() });
+  // `notebooks` is independent of the rent pool. A contributor being online hides
+  // hosted rows from `nodes`, but a notebook still runs on Modal when tokens are set.
+  res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
 }));
 
 // Public platform metrics — growth series + leaderboards.
@@ -1060,19 +1062,26 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     return;
   }
 
-  const node = pickBestValueNode((id) => {
-    const candidate = getNode(id);
-    if (candidate?.provider === "modal") return true;
-    return isNodeConnected(id) && !nodeBusy(id);
-  });
-  if (!node) {
-    res.status(503).json({ error: "no_node_available", detail: "every machine is busy or offline" });
+  // Notebooks never share a contributor sandbox. They run on hosted CPU even
+  // while a peer is online and winning the rent pool. Bail before settle.
+  if (job.notebook && !modalConfigured()) {
+    res.status(503).json({
+      error: "provisioning_failed",
+      detail: "hosted compute is not configured",
+    });
     return;
   }
-  if (job.notebook && node.provider !== "modal") {
-    res.status(400).json({
-      error: "notebook_unsupported",
-      detail: "contributor sandboxes run Python source; notebooks run on hosted CPU",
+  const node = job.notebook
+    ? pickNotebookHost()
+    : pickBestValueNode((id) => {
+        const candidate = getNode(id);
+        if (candidate?.provider === "modal") return true;
+        return isNodeConnected(id) && !nodeBusy(id);
+      });
+  if (!node) {
+    res.status(503).json({
+      error: "no_node_available",
+      detail: job.notebook ? "hosted CPU is busy" : "every machine is busy or offline",
     });
     return;
   }
@@ -1168,6 +1177,11 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 }));
 
 // ─────────────────────────── helpers ───────────────────────────
+
+/** A free hosted CPU row. Call only when `modalConfigured()` is true. */
+function pickNotebookHost(): ComputeNode | null {
+  return hostedCatalog().find((n) => !nodeBusy(n.id)) ?? null;
+}
 
 function readSurface(req: Request): "ssh" | "jupyter" | null {
   const q = req.query.surface;
