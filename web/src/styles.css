@@ -138,8 +138,9 @@ img {
   flex-direction: column;
   padding: 24px 16px 20px;
   flex-shrink: 0;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
   height: 100vh;
   overflow-y: auto;
   z-index: 90;
@@ -455,11 +456,13 @@ img {
 
 .app-main-content {
   /* width 0 + flex 1: column takes leftover space beside the sidebar.
-     A 100% width here paints past the window and clips the last stat card. */
+     A 100% width here paints past the window and clips the last stat card.
+     margin-left matches the fixed sidebar, which is out of flow. */
   flex: 1 1 0%;
   width: 0;
   min-width: 0;
   max-width: 100%;
+  margin-left: var(--sidebar-w);
   padding: 36px 44px 64px;
   background-color: var(--bg-primary);
   overflow-x: hidden;
@@ -1776,6 +1779,7 @@ img {
   }
 
   .app-main-content {
+    margin-left: 0;
     padding: 24px 20px 48px;
   }
 
