@@ -163,7 +163,7 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Cells run on hosted CPU, then outputs, plots, and files appear here. Billed by the second from credit.";
+    return "Upload a .ipynb. It runs on hosted CPU, not the node pool. Billed by the second from credit. The run stops when that credit runs out.";
   }
   return "Notebooks need hosted CPU. Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET on the backend and restart.";
 }

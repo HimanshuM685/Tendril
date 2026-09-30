@@ -507,7 +507,6 @@ export function Explore({
                       </div>
                       <div className="hw-meta">
                         {n.cpuCores} Cores &middot; {(n.ramMb / 1024).toFixed(0)}GB RAM &middot; ${n.pricePerHourUsd}/hr
-                        {n.provider === "modal" ? " · JupyterLab in the browser" : ""}
                       </div>
                     </div>
                     <div className="hw-action">
@@ -516,15 +515,9 @@ export function Explore({
                           type="button"
                           className="hw-pill-btn pill-available"
                           disabled={renting === n.id}
-                          onClick={() =>
-                            rent(n.id, n.pricePerHourUsd, n.provider === "modal" ? "jupyter" : undefined)
-                          }
+                          onClick={() => rent(n.id, n.pricePerHourUsd)}
                         >
-                          {renting === n.id
-                            ? stage || "Starting…"
-                            : n.provider === "modal"
-                              ? "Open lab"
-                              : "Available"}
+                          {renting === n.id ? stage || "Starting…" : "Available"}
                         </button>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>
