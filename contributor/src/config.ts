@@ -57,4 +57,10 @@ export const config = {
   // SSH to loopback (handy when consumer + agent run on the same machine).
   tunnelMode: (process.env.TUNNEL_MODE ?? "bore") as "bore" | "local",
   heartbeatIntervalMs: Number(process.env.HEARTBEAT_INTERVAL_MS ?? 10_000),
+  /** Guest kernel for Firecracker. Not the host kernel. Empty keeps Docker. */
+  guestKernel: process.env.GUEST_KERNEL ?? "",
+  jailerBin: process.env.JAILER_BIN ?? "jailer",
+  firecrackerBin: process.env.FIRECRACKER_BIN ?? "firecracker",
+  /** Per-lease rootfs and jail trees. Empty uses the system temp dir. */
+  stateDir: process.env.TENDRIL_STATE_DIR ?? "",
 };

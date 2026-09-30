@@ -13,7 +13,8 @@ import {
 } from "@tendril/shared";
 import { config } from "./config.js";
 import { detectSpecs } from "./specs.js";
-import { runInSandbox, startSandbox, stopSandbox } from "./docker.js";
+import { selectDriver } from "./runtime/select.js";
+import type { RuntimeDriver } from "./runtime/types.js";
 
 if (!config.apiKey) {
   console.error(
@@ -25,10 +26,16 @@ if (!config.apiKey) {
 /** Lease ids of sandboxes this agent is currently hosting. */
 const activeLeases = new Set<string>();
 let nodeId: string | undefined;
+let driver: RuntimeDriver;
+let kvm = false;
 
 async function main() {
   const specs = await detectSpecs();
+  const selected = await selectDriver();
+  driver = selected.driver;
+  kvm = selected.kvm;
   console.log(`[agent] registry: ${config.registryUrl}`);
+  console.log(`[agent] runtime: ${driver.kind} kvm=${kvm}`);
   console.log(`[agent] specs: ${specs.cpuCores} CPU, ${specs.ramMb}MB RAM, GPU=${specs.gpu ?? "none"}`);
   console.log(`[agent] price: $${config.pricePerHourUsd}/hr`);
 
@@ -43,6 +50,8 @@ async function main() {
         ramMb: specs.ramMb,
         gpu: specs.gpu,
         pricePerHourUsd: config.pricePerHourUsd,
+        runtime: driver.kind,
+        kvm,
       },
     };
     socket.emit(WS.hello, hello);
@@ -56,7 +65,7 @@ async function main() {
     config.sandbox.boreSecret = ack.bore.secret;
     console.log(`[agent] registered as node ${nodeId}; earnings go to ${ack.ownerAddr}`);
     setInterval(() => {
-      const hb: HeartbeatMsg = { nodeId: nodeId! };
+      const hb: HeartbeatMsg = { nodeId: nodeId!, runtime: driver.kind, kvm };
       socket.emit(WS.heartbeat, hb);
     }, config.heartbeatIntervalMs);
   });
@@ -79,13 +88,13 @@ async function main() {
 async function handleStart(socket: Socket, msg: StartContainerMsg) {
   try {
     activeLeases.add(msg.leaseId);
-    const { host, port } = await startSandbox(
-      msg.leaseId,
-      msg.image,
-      msg.limits,
-      msg.sshPassword,
-      msg.sshPubKey,
-    );
+    const { host, port } = await driver.start({
+      leaseId: msg.leaseId,
+      image: msg.image,
+      limits: msg.limits,
+      sshPassword: msg.sshPassword,
+      sshPubKey: msg.sshPubKey,
+    });
     const ready: ContainerReadyMsg = { leaseId: msg.leaseId, host, port };
     socket.emit(WS.containerReady, ready);
     console.log(`[agent] lease ${msg.leaseId} ready — ssh root@${host} -p ${port}`);
@@ -99,12 +108,12 @@ async function handleStart(socket: Socket, msg: StartContainerMsg) {
 
 async function handleDestroy(leaseId: string) {
   activeLeases.delete(leaseId);
-  await stopSandbox(leaseId);
+  await driver.stop(leaseId);
   console.log(`[agent] lease ${leaseId} torn down`);
 }
 
 async function handleRun(socket: Socket, msg: RunJobMsg) {
-  const { ok, output } = await runInSandbox(msg.leaseId, msg.payload);
+  const { ok, output } = await driver.exec(msg.leaseId, msg.payload);
   const result: JobResultMsg = { jobId: msg.jobId, ok, result: output };
   socket.emit(WS.jobResult, result);
 }

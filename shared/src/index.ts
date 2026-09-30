@@ -10,6 +10,20 @@ export type NodeStatus = "online" | "offline";
 /** Who actually runs the sandbox. Contributor machines stay on the socket path. */
 export type ComputeProvider = "contributor" | "modal";
 
+/**
+ * How a contributor isolates a lease. gVisor is a published value only — this
+ * tree ships Docker (legacy) and Firecracker drivers, not a gVisor one.
+ */
+export type SandboxRuntime = "docker" | "gvisor" | "microvm";
+
+/** Default Explore pool: a public microVM. No KVM means it is not public. */
+export function listedOnDefaultExplore(node: {
+  runtime?: SandboxRuntime | null;
+  kvm?: boolean | null;
+}): boolean {
+  return node.runtime === "microvm" && node.kvm === true;
+}
+
 /** A compute node advertised by a contributor, or a hosted CPU row. */
 export interface ComputeNode {
   id: string;
@@ -30,6 +44,10 @@ export interface ComputeNode {
   gpu: string | null;
   /** `"modal"` is a hosted CPU row. Everything a contributor registers is `"contributor"`. */
   provider: ComputeProvider;
+  /** Isolation the agent last advertised. Hosted rows are not microVMs. */
+  runtime: SandboxRuntime;
+  /** True only when the agent can see `/dev/kvm`. */
+  kvm: boolean;
   /** Advertised price per hour, in USD (industry-standard hourly billing). */
   pricePerHourUsd: number;
   status: NodeStatus;
@@ -49,6 +67,8 @@ export type ExplorerNode = Pick<
   | "ramMb"
   | "gpu"
   | "provider"
+  | "runtime"
+  | "kvm"
   | "pricePerHourUsd"
   | "status"
   | "payoutBlocked"
@@ -363,6 +383,10 @@ export interface HelloAckMsg {
 /** agent -> registry: periodic liveness ping. */
 export interface HeartbeatMsg {
   nodeId: string;
+  /** Isolation this agent will actually start. Omit on older agents. */
+  runtime?: SandboxRuntime;
+  /** Whether `/dev/kvm` exists on the contributor host. */
+  kvm?: boolean;
 }
 
 /** registry -> agent: spin up a sandbox for a paid lease. */
@@ -439,6 +463,9 @@ export interface RegisterNodeRequest {
   ramMb: number;
   gpu: string | null;
   pricePerHourUsd: number;
+  /** Set by the agent from the driver it selected. Defaults to docker. */
+  runtime?: SandboxRuntime;
+  kvm?: boolean;
 }
 
 /** A file the notebook wrote under its work directory. */

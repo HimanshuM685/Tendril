@@ -65,8 +65,12 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
       console.log(`[ws] node online: ${node.id} (${node.label}) owner=${node.ownerAddr}`);
     });
 
-    socket.on(WS.heartbeat, (_msg: HeartbeatMsg) => {
-      if (boundNodeId) touchHeartbeat(boundNodeId);
+    socket.on(WS.heartbeat, (msg: HeartbeatMsg) => {
+      if (!boundNodeId) return;
+      touchHeartbeat(boundNodeId, {
+        ...(msg.runtime ? { runtime: msg.runtime } : {}),
+        ...(msg.kvm !== undefined ? { kvm: msg.kvm } : {}),
+      });
     });
 
     socket.on(WS.containerReady, (msg: ContainerReadyMsg) => {

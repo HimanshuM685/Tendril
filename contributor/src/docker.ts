@@ -83,7 +83,7 @@ function sandboxTag(): string | null {
  * used, which may differ from `image` when we substitute a content-tagged build
  * of the bundled sandbox.
  */
-async function ensureImage(image: string): Promise<string> {
+export async function ensureImage(image: string): Promise<string> {
   // An explicitly configured SANDBOX_IMAGE is the operator's to manage: we only
   // check it exists and never rebuild it from our context.
   const bundled = image === config.sandbox.image && existsSync(join(SANDBOX_CTX, "Dockerfile"));

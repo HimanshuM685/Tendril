@@ -66,6 +66,9 @@ export function hostedCatalog(now = Date.now()): ComputeNode[] {
     ramMb: sku.ramMb,
     gpu: null,
     provider: "modal" as const,
+    // Not a microVM. The default Explore filter hides these until "All".
+    runtime: "docker" as const,
+    kvm: false,
     pricePerHourUsd: hostedHourlyUsd(sku.physicalCores, sku.ramMb / 1024, markup),
     status: "online" as const,
     lastHeartbeat: now,
@@ -93,6 +96,8 @@ export function toExplorer(node: ComputeNode): ExplorerNode {
     ramMb,
     gpu,
     provider,
+    runtime,
+    kvm,
     pricePerHourUsd,
     status,
   } = node;
@@ -106,6 +111,8 @@ export function toExplorer(node: ComputeNode): ExplorerNode {
     ramMb,
     gpu,
     provider,
+    runtime,
+    kvm,
     pricePerHourUsd,
     status,
   };
