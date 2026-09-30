@@ -1,3 +1,4 @@
+import { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-client";
 import { x402Client } from "@x402/core/client";
 import { ExactAvmScheme } from "@x402/avm/exact/client";
 import { normalizeAlgorandNetwork } from "@x402/avm";
@@ -20,7 +21,11 @@ export function custodialPayingFetch(
     Promise.resolve(signTransactions(account, txns, indexes));
   const scheme = new ExactAvmScheme(
     { address: account.address, signTransactions: sign },
-    { algodUrl: config.algodUrl },
+    {
+      algorandClient: AlgorandClient.fromConfig({
+        algodConfig: { server: config.algodUrl, token: "" },
+      }).setDefaultValidityWindow(1000),
+    },
   );
   const client = new x402Client()
     .register(net.caip2, scheme)

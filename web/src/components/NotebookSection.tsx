@@ -277,12 +277,10 @@ export function NotebookSection({
 
   const runLabel = uploading
     ? stage === "signing"
-      ? "Waiting for wallet…"
-      : stage === "settling"
-        ? "Settling payment…"
-        : stage === "confirming"
-          ? "Confirming…"
-          : "Running cells…"
+      ? "Approve in wallet…"
+      : stage === "settling" || stage === "confirming"
+        ? "Running notebook…"
+        : "Running cells…"
     : lane === "priority"
       ? "Run priority"
       : "Run on contributor";
