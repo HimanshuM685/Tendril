@@ -364,7 +364,9 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
+  const nodes = listOnlineNodes();
+  const priority = modalConfigured();
+  res.json({ nodes, notebooks: priority || nodes.length > 0, priority });
 }));
 
 // Public platform metrics — growth series + leaderboards.
@@ -939,6 +941,8 @@ const NOTEBOOK_MAX_BYTES = 1_500_000;
 interface JobInput {
   payload?: string;
   notebook?: Record<string, unknown>;
+  /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
+  lane?: "contributor" | "priority";
 }
 
 async function run(req: Request, res: Response): Promise<void> {
@@ -1051,22 +1055,26 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     return;
   }
 
-  // Notebooks never share a contributor sandbox. They run on hosted CPU even
-  // while a peer is online and winning the rent pool. Bail before settle.
-  if (job.notebook && !modalConfigured()) {
+  const lane = job.notebook
+    ? job.lane ?? (modalConfigured() ? "priority" : "contributor")
+    : undefined;
+  if (job.notebook && lane === "priority" && !modalConfigured()) {
     res.status(503).json({
       error: "provisioning_failed",
-      detail: "hosted compute is not configured",
+      detail: "priority training needs MODAL_TOKEN_ID and MODAL_TOKEN_SECRET",
     });
     return;
   }
-  const node = job.notebook
-    ? pickNotebookHost()
-    : pickBestValueNode((id) => isNodeConnected(id) && !nodeBusy(id));
+  const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
+  const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer) : pickNotebookHost();
   if (!node) {
     res.status(503).json({
       error: "no_node_available",
-      detail: job.notebook ? "hosted CPU is busy" : "every machine is busy or offline",
+      detail: job.notebook
+        ? lane === "contributor"
+          ? "no contributor node is free"
+          : "hosted CPU is busy"
+        : "every machine is busy or offline",
     });
     return;
   }
@@ -1111,7 +1119,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       sshPassword: node.provider === "modal" ? null : nanoid(32),
       sshPubKey: null,
     });
-    if (node.provider === "modal") activateLease(lease.id, access);
+    activateLease(lease.id, access);
   } catch (err) {
     await abandonLease(lease.id);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
@@ -1168,7 +1176,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     execution: {
       nodeId: node.id,
       seconds: settled?.usedSeconds ?? 0,
-      costAtomic: String(settled?.usedAtomic ?? 0),
+      costAtomic: String(settled?.chargedAtomic ?? 0),
       balance: String(settled?.balance ?? (await creditBalance(payer))),
     },
   };
@@ -1212,7 +1220,9 @@ function readJob(body: unknown): JobInput | null {
   if (hasNotebook) {
     if (typeof notebook !== "object" || Array.isArray(notebook)) return null;
     if (JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return null;
-    return { notebook: notebook as Record<string, unknown> };
+    const laneRaw = (b as { lane?: unknown }).lane;
+    const lane = laneRaw === "contributor" || laneRaw === "priority" ? laneRaw : undefined;
+    return { notebook: notebook as Record<string, unknown>, lane };
   }
   return { payload: b?.payload as string };
 }

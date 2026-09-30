@@ -11,7 +11,7 @@ export type CustodialAction =
   | { action: "topup"; amountAtomic: number }
   | { action: "optin" }
   | { action: "rent"; nodeId: string; sshPubKey?: string | null; surface?: "ssh" | "jupyter" }
-  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number }
+  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number; lane?: "contributor" | "priority" }
   | { action: "release"; leaseId: string; leaseToken: string }
   | { action: "mintkey"; label?: string };
 

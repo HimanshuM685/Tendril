@@ -1,4 +1,5 @@
 import { destroyContainer, runJob, startContainer } from "../ws.js";
+import { notebookToPayload, parseNotebookRun } from "./notebookRunner.js";
 import type { ComputeProvider, ExecArgs, ExecResult, StartArgs } from "./types.js";
 
 /** Contributor machines: the existing socket + Docker path. SSH only. */
@@ -20,7 +21,15 @@ export async function start(args: StartArgs) {
 
 export async function exec(args: ExecArgs): Promise<ExecResult> {
   if (args.notebook) {
-    throw new Error("notebook_unsupported");
+    const msg = await runJob(
+      args.nodeId,
+      args.leaseId,
+      args.jobId,
+      notebookToPayload(args.notebook),
+      args.timeoutMs,
+    );
+    const parsed = parseNotebookRun(msg.result);
+    return { ok: parsed.ok && msg.ok, result: parsed.log || msg.result, notebook: parsed.notebook };
   }
   if (typeof args.payload !== "string") {
     throw new Error("payload (string) required");
