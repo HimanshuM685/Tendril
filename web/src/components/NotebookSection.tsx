@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { RunArtifact, RunResponse } from "@tendril/shared";
+import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
-import { runNotebook } from "../api";
+import { pollRunJob, runNotebook } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
@@ -196,6 +196,8 @@ export function NotebookSection({
   const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<NotebookView | null>(null);
+  const [job, setJob] = useState<{ jobId: string; jobToken: string } | null>(null);
+  const [jobStatus, setJobStatus] = useState<LeaseStatus | null>(null);
   const [lane, setLane] = useState<TrainLane>("contributor");
   useEffect(() => {
     if (lane === "priority" && !priority && peers) setLane("contributor");
@@ -236,16 +238,18 @@ export function NotebookSection({
     setUploading(true);
     setError(null);
     setView(null);
+    setJob(null);
+    setJobStatus(null);
     setStage(null);
     try {
-      let res: RunResponse;
+      let res: RunJobResponse;
       if (isCustodial && session) {
         setStage("confirming");
         res = (await runCustodialAction(session.token, {
           action: "run",
           notebook: pending.notebook,
           lane,
-        })) as RunResponse;
+        })) as RunJobResponse;
       } else {
         res = await runNotebook(
           session?.token ?? null,
@@ -256,31 +260,83 @@ export function NotebookSection({
           setStage,
         );
       }
-      setView({
-        fileName: pending.name,
-        ok: res.ok,
-        log: stripAnsi(res.result ?? "").trim(),
-        seconds: res.execution?.seconds,
-        costAtomic: res.execution?.costAtomic,
-        cells: cellsFrom(res.notebook),
-        artifacts: res.artifacts ?? [],
-        notebook: res.notebook,
-      });
-      onWalletChanged?.();
+      // Payment is settled; the job itself can still take minutes (cold Modal
+      // image, sandbox boot). The poll effect below picks it up from here.
+      setStage(null);
+      setJobStatus(res.status);
+      setJob({ jobId: res.jobId, jobToken: res.jobToken! });
     } catch (e) {
       if ((e as Error).message !== "cancelled") setError((e as Error).message);
-    } finally {
       setUploading(false);
       setStage(null);
     }
   }
 
+  // Once the job is running server-side, poll for its result instead of
+  // holding one request open for however long provisioning + execution take.
+  // Same cadence/visibility-pause as LeasePanel's lease poll.
+  useEffect(() => {
+    if (!job) return;
+    let alive = true;
+    const finish = (r: RunJobResponse) => {
+      if (!alive) return;
+      setJobStatus(r.status);
+      if (r.status !== "ended" && r.status !== "failed") return;
+      if (r.run?.ok) {
+        setView({
+          fileName: pending?.name ?? "",
+          ok: r.run.ok,
+          log: stripAnsi(r.run.result ?? "").trim(),
+          seconds: r.run.execution?.seconds,
+          costAtomic: r.run.execution?.costAtomic,
+          cells: cellsFrom(r.run.notebook),
+          artifacts: r.run.artifacts ?? [],
+          notebook: r.run.notebook,
+        });
+        onWalletChanged?.();
+      } else {
+        setError(r.error ?? r.run?.result ?? "Notebook run failed.");
+      }
+      setUploading(false);
+      setJob(null);
+    };
+    const poll = () =>
+      pollRunJob(job.jobId, job.jobToken)
+        .then(finish)
+        .catch((e) => {
+          if (!alive) return;
+          setError((e as Error).message);
+          setUploading(false);
+          setJob(null);
+        });
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      if (timer) return;
+      poll();
+      timer = setInterval(poll, 4000);
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      alive = false;
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [job]);
+
   const runLabel = uploading
     ? stage === "signing"
       ? "Approve in wallet…"
-      : stage === "settling" || stage === "confirming"
-        ? "Running notebook…"
-        : "Running cells…"
+      : !job
+        ? "Settling payment…"
+        : jobStatus === "active"
+          ? "Running on our server…"
+          : "Provisioning…"
     : lane === "priority"
       ? "Run priority"
       : "Run on contributor";
