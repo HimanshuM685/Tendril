@@ -261,6 +261,28 @@ export function App() {
 
         {/* Main Content View */}
         <main className="app-main-content">
+          <div className="desktop-account">
+            <WalletBar
+              session={session}
+              signedIn={!!session}
+              canSignIn={!!activeAddress && !isCustodialAuth}
+              signingIn={signingIn}
+              onSignIn={signIn}
+              onSignOut={() => setSession(null)}
+              onCustodialSession={(res) =>
+                setSession({
+                  token: res.token,
+                  address: res.address,
+                  authType: res.authType,
+                  email: res.email,
+                  name: res.name,
+                })
+              }
+              onAccountRefresh={onWalletChanged}
+              balanceAtomic={wallet?.balanceAtomic ?? null}
+              signTransactions={signTransactions as never}
+            />
+          </div>
           {error && (
             <div className="error" style={{ marginBottom: "20px" }}>
               <span>{error}</span>
