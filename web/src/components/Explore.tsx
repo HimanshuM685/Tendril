@@ -60,6 +60,8 @@ export function Explore({
   const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
   const [notebooks, setNotebooks] = useState(false);
+  const [priority, setPriority] = useState(false);
+  const [priorityUsdPerHour, setPriorityUsdPerHour] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
@@ -83,10 +85,12 @@ export function Explore({
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then(({ nodes: next, notebooks: canRun }) => {
+        .then(({ nodes: next, notebooks: canRun, priority, priorityUsdPerHour }) => {
           if (!alive) return;
           setNodes(next);
           setNotebooks(canRun);
+          setPriority(priority);
+          setPriorityUsdPerHour(priorityUsdPerHour);
           setError(null);
         })
         .catch((err) => {
@@ -331,6 +335,9 @@ export function Explore({
         activeAddress={activeAddress}
         signTransactions={signTransactions}
         notebooks={notebooks}
+        priority={priority}
+        priorityUsdPerHour={priorityUsdPerHour}
+        peers={nodes.length > 0}
         checking={loading && nodes.length === 0}
         onOpenConnectWallet={onOpenConnectWallet}
         onWalletChanged={onWalletChanged}

@@ -482,6 +482,24 @@ export interface RunResponse {
   };
 }
 
+/**
+ * `POST /x402/run` (notebook path) and `GET /x402/run/:jobId` — async job
+ * status/result. Provisioning + execution can take minutes (a cold Modal image
+ * build, a sandbox boot), too long for one HTTP request to hold open, so the
+ * POST settles payment and returns a job immediately; the caller polls this
+ * shape until `status` reaches a terminal state.
+ */
+export interface RunJobResponse {
+  jobId: string;
+  /** Present only on the initial POST response. */
+  jobToken?: string;
+  status: LeaseStatus;
+  /** Present once a result was recorded, whether the run succeeded or not. */
+  run?: RunResponse;
+  /** Present when the job failed outright (provisioning) or the run itself did (`run.ok === false`). */
+  error?: string;
+}
+
 // ───────────────────────── Wallet auth DTOs ─────────────────────────
 // Signing in proves address control so an existing credit balance can be read
 // and spent. It is NOT how money gets in — that is x402 only (see below).

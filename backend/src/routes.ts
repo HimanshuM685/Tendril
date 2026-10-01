@@ -7,6 +7,7 @@ import {
   type CreateApiKeyResponse,
   type LeaseCloseResponse,
   type PlatformInfo,
+  type RunJobResponse,
   type RunResponse,
   type SandboxLimits,
   type WalletLoginResponse,
@@ -75,17 +76,21 @@ import {
   activateLease,
   closeLease,
   createLease,
+  failLease,
   getLease,
+  getRunResult,
   heldLease,
   leaseByPayment,
   liveSessions,
   nodeBusy,
+  setRunResult,
   waitForLeaseAccess,
+  type RunJobResult,
 } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
-import { hostedCatalog, modalConfigured, sandboxLifetimeMs } from "./hosted.js";
+import { hostedCatalog, modalConfigured, priorityHourlyUsd, sandboxLifetimeMs } from "./hosted.js";
 import { providerFor } from "./providers/index.js";
 import {
   confirmCustodialSign,
@@ -364,7 +369,14 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  res.json({ nodes: listOnlineNodes(), notebooks: modalConfigured() });
+  const nodes = listOnlineNodes();
+  const priority = modalConfigured();
+  res.json({
+    nodes,
+    notebooks: priority || nodes.length > 0,
+    priority,
+    priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
+  });
 }));
 
 // Public platform metrics — growth series + leaderboards.
@@ -939,6 +951,8 @@ const NOTEBOOK_MAX_BYTES = 1_500_000;
 interface JobInput {
   payload?: string;
   notebook?: Record<string, unknown>;
+  /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
+  lane?: "contributor" | "priority";
 }
 
 async function run(req: Request, res: Response): Promise<void> {
@@ -1051,22 +1065,26 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     return;
   }
 
-  // Notebooks never share a contributor sandbox. They run on hosted CPU even
-  // while a peer is online and winning the rent pool. Bail before settle.
-  if (job.notebook && !modalConfigured()) {
+  const lane = job.notebook
+    ? job.lane ?? (modalConfigured() ? "priority" : "contributor")
+    : undefined;
+  if (job.notebook && lane === "priority" && !modalConfigured()) {
     res.status(503).json({
       error: "provisioning_failed",
-      detail: "hosted compute is not configured",
+      detail: "priority training needs MODAL_TOKEN_ID and MODAL_TOKEN_SECRET",
     });
     return;
   }
-  const node = job.notebook
-    ? pickNotebookHost()
-    : pickBestValueNode((id) => isNodeConnected(id) && !nodeBusy(id));
+  const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
+  const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer) : pickNotebookHost();
   if (!node) {
     res.status(503).json({
       error: "no_node_available",
-      detail: job.notebook ? "hosted CPU is busy" : "every machine is busy or offline",
+      detail: job.notebook
+        ? lane === "contributor"
+          ? "no contributor node is free"
+          : "hosted CPU is busy"
+        : "every machine is busy or offline",
     });
     return;
   }
@@ -1081,6 +1099,12 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     });
     return;
   }
+
+  // Settle before the sandbox starts. The signed group is only valid for a
+  // handful of rounds; a notebook that runs past that window comes back
+  // "txn dead" if we settle after exec.
+  if (!(await paid.settle(res))) return;
+
   const budgetMs = job.notebook ? Math.min(config.runTimeoutMs, funded! * 1000) : config.runTimeoutMs;
   const lease = createLease({
     nodeId: node.id,
@@ -1094,6 +1118,23 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     allowOverdraft: !job.notebook,
     provider: node.provider,
   });
+
+  // A notebook's provisioning + execution can run for minutes (a cold Modal
+  // image build, a sandbox boot) — too long to hold one HTTP request open; a
+  // browser or proxy kills an idle multi-minute request and the caller sees a
+  // raw "Failed to fetch". So the payment is already settled above; respond
+  // with the job now and run the rest in the background. The caller polls
+  // `GET /x402/run/:id` for status and, eventually, the result.
+  if (job.notebook) {
+    const body: RunJobResponse = { jobId: lease.id, jobToken: issueLeaseToken(lease.id), status: lease.status };
+    res.json(body);
+    void runNotebookJob(lease.id, node, job, payer, budgetMs).catch((err) => {
+      console.error(`[run] job ${lease.id} crashed uncaught:`, (err as Error).message);
+      void failLease(lease.id);
+      setRunResult(lease.id, { ok: false, result: "", error: (err as Error).message });
+    });
+    return;
+  }
 
   try {
     const access = await providerFor(node.provider).start({
@@ -1111,7 +1152,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       sshPassword: node.provider === "modal" ? null : nanoid(32),
       sshPubKey: null,
     });
-    if (node.provider === "modal") activateLease(lease.id, access);
+    activateLease(lease.id, access);
   } catch (err) {
     await abandonLease(lease.id);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
@@ -1153,12 +1194,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     return;
   }
 
-  if (!(await paid.settle(res))) {
-    await abandonLease(lease.id);
-    return;
-  }
-
-  // Tear down and bill the seconds it took. This is the only debit.
+  // Gate fee already settled. This debit is the seconds, from credit.
   const settled = await closeLease(lease.id, "run-complete");
   const body: RunResponse = {
     jobId,
@@ -1168,11 +1204,96 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     execution: {
       nodeId: node.id,
       seconds: settled?.usedSeconds ?? 0,
-      costAtomic: String(settled?.usedAtomic ?? 0),
+      costAtomic: String(settled?.chargedAtomic ?? 0),
       balance: String(settled?.balance ?? (await creditBalance(payer))),
     },
   };
   res.json(body);
+}
+
+/**
+ * Background half of a notebook run, split out of `runAnywhere` at the point
+ * the gate fee settles. Never writes to an HTTP response — outcomes land in
+ * `runResults` (via `setRunResult`) for `GET /x402/run/:id` to report.
+ */
+async function runNotebookJob(
+  leaseId: string,
+  node: ComputeNode,
+  job: JobInput,
+  payer: string,
+  budgetMs: number,
+): Promise<void> {
+  try {
+    const access = await providerFor(node.provider).start({
+      leaseId,
+      node,
+      surface: "exec",
+      image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+      limits: {
+        memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
+        cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+        gpus: node.gpu ? "all" : "",
+      },
+      timeoutMs: config.modalReadyTimeoutMs + budgetMs,
+      sshPassword: node.provider === "modal" ? null : nanoid(32),
+      sshPubKey: null,
+    });
+    activateLease(leaseId, access);
+  } catch (err) {
+    await failLease(leaseId);
+    setRunResult(leaseId, { ok: false, result: "", error: (err as Error).message });
+    return;
+  }
+
+  const jobId = nanoid(10);
+  let result;
+  try {
+    result = await providerFor(node.provider).exec({
+      leaseId,
+      nodeId: node.id,
+      jobId,
+      timeoutMs: budgetMs,
+      payload: job.payload,
+      notebook: job.notebook,
+    });
+  } catch (err) {
+    const settled = await closeLease(leaseId, "run-stopped");
+    const message = (err as Error).message || "notebook execution failed";
+    const left = settled?.balance ?? (await creditBalance(payer));
+    const exhausted = left <= 0;
+    const body: RunJobResult = {
+      ok: false,
+      result: message,
+      error: exhausted
+        ? "run stopped when prepaid credit ran out. Charged for the seconds used."
+        : message,
+      ...(settled
+        ? {
+            execution: {
+              nodeId: node.id,
+              seconds: settled.usedSeconds,
+              costAtomic: String(settled.chargedAtomic),
+              balance: String(settled.balance),
+            },
+          }
+        : {}),
+    };
+    setRunResult(leaseId, body);
+    return;
+  }
+
+  const settled = await closeLease(leaseId, "run-complete");
+  setRunResult(leaseId, {
+    ok: result.ok,
+    result: result.result,
+    ...(result.notebook ? { notebook: result.notebook, artifacts: result.artifacts ?? [] } : {}),
+    execution: {
+      nodeId: node.id,
+      seconds: settled?.usedSeconds ?? 0,
+      costAtomic: String(settled?.chargedAtomic ?? 0),
+      balance: String(settled?.balance ?? (await creditBalance(payer))),
+    },
+  });
 }
 
 // Canonical. Lease token optional — with it you run in your own machine, without
@@ -1180,6 +1301,21 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
 router.post("/x402/run", guard(run));
 // Legacy alias — lease-only, and `:id` must still match the token, as it always did.
 router.post("/lease/:id/run", guard(run));
+
+// Poll a notebook job started above. Same bearer-token check as `GET
+// /lease/:id` — a job *is* a lease under the hood — so `:id` must match that
+// route's param name for `requireLease` to validate it.
+router.get("/x402/run/:id", guard((req: Request, res: Response) => {
+  const lease = requireLease(req, res);
+  if (!lease) return;
+  const stored = getRunResult(lease.id);
+  const body: RunJobResponse = {
+    jobId: lease.id,
+    status: lease.status,
+    ...(stored ? { run: toRunResponse(lease.id, stored), error: stored.error } : {}),
+  };
+  res.json(body);
+}));
 
 router.get("/lease/:id", guard((req: Request, res: Response) => {
   const lease = requireLease(req, res);
@@ -1212,7 +1348,9 @@ function readJob(body: unknown): JobInput | null {
   if (hasNotebook) {
     if (typeof notebook !== "object" || Array.isArray(notebook)) return null;
     if (JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return null;
-    return { notebook: notebook as Record<string, unknown> };
+    const laneRaw = (b as { lane?: unknown }).lane;
+    const lane = laneRaw === "contributor" || laneRaw === "priority" ? laneRaw : undefined;
+    return { notebook: notebook as Record<string, unknown>, lane };
   }
   return { payload: b?.payload as string };
 }
@@ -1263,6 +1401,17 @@ function requireCustodialSession(
  * is the only source, which is no weaker — the token was always the thing being
  * checked, and the path segment only ever had to match it.
  */
+/** `RunJobResult` (internal, keyed by lease id) → `RunResponse` (wire shape). */
+function toRunResponse(jobId: string, r: RunJobResult): RunResponse {
+  return {
+    jobId,
+    ok: r.ok,
+    result: r.result,
+    ...(r.notebook ? { notebook: r.notebook, artifacts: r.artifacts ?? [] } : {}),
+    ...(r.execution ? { execution: r.execution } : {}),
+  };
+}
+
 function requireLease(req: Request, res: Response) {
   const tokenLeaseId = leaseIdFromAuthHeader(req.header("authorization"));
   if (!tokenLeaseId || (req.params.id !== undefined && tokenLeaseId !== req.params.id)) {

@@ -685,7 +685,7 @@
     "semantic_hash": "5188c63a336b9c679d82c198ec0ab15b"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/package.json": {
-    "mtime": 1790779449.4215498,
+    "mtime": 1790793200.149014,
     "ast_hash": "6fb9ea5ac89e35ff9198cf5de88c196c",
     "semantic_hash": "6fb9ea5ac89e35ff9198cf5de88c196c"
   },
@@ -705,14 +705,14 @@
     "semantic_hash": "db2f072a9be5148a97db8db048c70e14"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/config.ts": {
-    "mtime": 1790791722.8759997,
-    "ast_hash": "5582e4e157c2e520c097341fd25b6820",
-    "semantic_hash": "5582e4e157c2e520c097341fd25b6820"
+    "mtime": 1790805373.3558705,
+    "ast_hash": "5da3dce130eefbe44f15f8934318caf4",
+    "semantic_hash": "5da3dce130eefbe44f15f8934318caf4"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/custodialSign.ts": {
-    "mtime": 1790779449.4228117,
-    "ast_hash": "55189a449a55137ffa6e71523d07c0d4",
-    "semantic_hash": "55189a449a55137ffa6e71523d07c0d4"
+    "mtime": 1790796079.1037931,
+    "ast_hash": "6e8993de09ca010328eeb19199427feb",
+    "semantic_hash": "6e8993de09ca010328eeb19199427feb"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/custodialWallet.ts": {
     "mtime": 1788074272.3041606,
@@ -720,9 +720,9 @@
     "semantic_hash": "51307831f5e3fbab13a1fb38e9cb4e88"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/custodialX402.ts": {
-    "mtime": 1788074272.3043008,
-    "ast_hash": "eb56bed5e1985175c41ab1c4f2de23ad",
-    "semantic_hash": "eb56bed5e1985175c41ab1c4f2de23ad"
+    "mtime": 1790805377.6170354,
+    "ast_hash": "99cf0bf3fbb5f3986f2cca0dfe3f2627",
+    "semantic_hash": "99cf0bf3fbb5f3986f2cca0dfe3f2627"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/db.test.ts": {
     "mtime": 1785792339.6670656,
@@ -730,9 +730,9 @@
     "semantic_hash": "b6d63a01e57902605ce0dd081762e63a"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/db.ts": {
-    "mtime": 1790679515.8145876,
-    "ast_hash": "b0e90f9abf9a08fe3d9eb64feda76a95",
-    "semantic_hash": "b0e90f9abf9a08fe3d9eb64feda76a95"
+    "mtime": 1790796743.3197339,
+    "ast_hash": "bc1aed91b74cab45789c6eb2b70500d7",
+    "semantic_hash": "bc1aed91b74cab45789c6eb2b70500d7"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/emailAuth.ts": {
     "mtime": 1788074272.3046935,
@@ -755,19 +755,19 @@
     "semantic_hash": "a79679fe817715485eb0be223da9ad31"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/index.ts": {
-    "mtime": 1790791775.367846,
+    "mtime": 1790793200.1504111,
     "ast_hash": "f7c71f80b9a74ea932253330d86a09fd",
     "semantic_hash": "f7c71f80b9a74ea932253330d86a09fd"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/leases.test.ts": {
-    "mtime": 1790779449.4246283,
+    "mtime": 1790793200.1507404,
     "ast_hash": "8e3ae2888432936388a1d2619957179c",
     "semantic_hash": "8e3ae2888432936388a1d2619957179c"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/leases.ts": {
-    "mtime": 1790779449.4251378,
-    "ast_hash": "7d42e7f8595f21229cd0f49cca775e77",
-    "semantic_hash": "7d42e7f8595f21229cd0f49cca775e77"
+    "mtime": 1790806388.1468196,
+    "ast_hash": "079d59a978edb40b55f0bf4ec4892797",
+    "semantic_hash": "079d59a978edb40b55f0bf4ec4892797"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/metrics.test.ts": {
     "mtime": 1785793424.4272423,
@@ -785,14 +785,14 @@
     "semantic_hash": "76e7117e6a71e2c256fc34513061640d"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/registry.ts": {
-    "mtime": 1790781826.8989823,
-    "ast_hash": "ccd751194107765d13ba78cf95a9b889",
-    "semantic_hash": "ccd751194107765d13ba78cf95a9b889"
+    "mtime": 1790794813.341425,
+    "ast_hash": "7fb87a767feb7f486c3191502486a810",
+    "semantic_hash": "7fb87a767feb7f486c3191502486a810"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/routes.ts": {
-    "mtime": 1790791733.935389,
-    "ast_hash": "cc392ea778b25875ee8c786f5c857db0",
-    "semantic_hash": "cc392ea778b25875ee8c786f5c857db0"
+    "mtime": 1790806434.7254682,
+    "ast_hash": "d415fdc365846a1fe3ff688c0338b43f",
+    "semantic_hash": "d415fdc365846a1fe3ff688c0338b43f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/wallet.ts": {
     "mtime": 1785581904.6717007,
@@ -815,9 +815,9 @@
     "semantic_hash": "f19dcca280954fba375958603671540f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/x402/credit.ts": {
-    "mtime": 1788119666.7142057,
-    "ast_hash": "46fca228e7c6cb6df245c3a69e697a3d",
-    "semantic_hash": "46fca228e7c6cb6df245c3a69e697a3d"
+    "mtime": 1790796765.4695952,
+    "ast_hash": "4492937bd4644238b7aff2686cae674f",
+    "semantic_hash": "4492937bd4644238b7aff2686cae674f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/x402/discovery.test.ts": {
     "mtime": 1785706512.139704,
@@ -835,7 +835,7 @@
     "semantic_hash": "bfb803ca66e5be6488abd363896d8442"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/x402/paywall.ts": {
-    "mtime": 1790779449.428406,
+    "mtime": 1790793200.1533034,
     "ast_hash": "6915c766c1c154acc9eaa8d8346b1be6",
     "semantic_hash": "6915c766c1c154acc9eaa8d8346b1be6"
   },
@@ -895,7 +895,7 @@
     "semantic_hash": "4b1bfa0c0e60088bd49a6ac8b9fdd266"
   },
   "/Users/fusion/Code/GitRepos/Tendril/example-buyer/src/index.ts": {
-    "mtime": 1790779449.4289157,
+    "mtime": 1790793200.1540868,
     "ast_hash": "ba1cc08bf009095d47a7ba636ddedfbd",
     "semantic_hash": "ba1cc08bf009095d47a7ba636ddedfbd"
   },
@@ -905,7 +905,7 @@
     "semantic_hash": "f5467f1b156cc5067082df89e5f153b0"
   },
   "/Users/fusion/Code/GitRepos/Tendril/package.json": {
-    "mtime": 1790791688.1238909,
+    "mtime": 1790793200.164671,
     "ast_hash": "412983ad23b6a50e19ae79c2f0816fba",
     "semantic_hash": "412983ad23b6a50e19ae79c2f0816fba"
   },
@@ -920,9 +920,9 @@
     "semantic_hash": "3d9c73a4de3e12bcb9065912ce84758e"
   },
   "/Users/fusion/Code/GitRepos/Tendril/shared/src/index.ts": {
-    "mtime": 1790779449.4427452,
-    "ast_hash": "1b49c44f05d6e84495caf8fe9ffc4056",
-    "semantic_hash": "1b49c44f05d6e84495caf8fe9ffc4056"
+    "mtime": 1790806376.6191516,
+    "ast_hash": "88a1287a42e50d92c7da5d0428e21a51",
+    "semantic_hash": "88a1287a42e50d92c7da5d0428e21a51"
   },
   "/Users/fusion/Code/GitRepos/Tendril/shared/tsconfig.json": {
     "mtime": 1782119237.0457373,
@@ -940,14 +940,14 @@
     "semantic_hash": "8271d75b8a76d6deb3482b58aa180b03"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/App.tsx": {
-    "mtime": 1790724784.444795,
-    "ast_hash": "e674ffde6edb24265afa1b123ed66741",
-    "semantic_hash": "e674ffde6edb24265afa1b123ed66741"
+    "mtime": 1790801428.5763268,
+    "ast_hash": "804b2c2d8610b767566138890bead6e8",
+    "semantic_hash": "804b2c2d8610b767566138890bead6e8"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/api.ts": {
-    "mtime": 1790791722.0599494,
-    "ast_hash": "711a971f0a8d242128ca68a924c14d42",
-    "semantic_hash": "711a971f0a8d242128ca68a924c14d42"
+    "mtime": 1790806469.8053756,
+    "ast_hash": "2199c40c0bf02330104029ba16a37ef5",
+    "semantic_hash": "2199c40c0bf02330104029ba16a37ef5"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/clipboard.ts": {
     "mtime": 1782985979.051119,
@@ -960,14 +960,14 @@
     "semantic_hash": "9c6cf0ea9ed676aec7430b6032b9d6cc"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/ApiDocs.tsx": {
-    "mtime": 1790725635.4761972,
+    "mtime": 1790793276.1582284,
     "ast_hash": "ac55b785d46ea898ac2c4aed9283be03",
     "semantic_hash": "ac55b785d46ea898ac2c4aed9283be03"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/ArchDiagram.tsx": {
-    "mtime": 1790673563.504923,
-    "ast_hash": "5a3f2effe9f1c68a02f01583022b6d88",
-    "semantic_hash": "5a3f2effe9f1c68a02f01583022b6d88"
+    "mtime": 1790794813.3281946,
+    "ast_hash": "a0c6ac021f10450d540c86f66ec2b7e2",
+    "semantic_hash": "a0c6ac021f10450d540c86f66ec2b7e2"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/BalanceChart.tsx": {
     "mtime": 1785581546.8030748,
@@ -985,9 +985,9 @@
     "semantic_hash": "a4b228677e177f1921c968d23ca7eccf"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/Docs.tsx": {
-    "mtime": 1790792130.4901502,
-    "ast_hash": "fefbf90483f509a04f78b6759659517e",
-    "semantic_hash": "fefbf90483f509a04f78b6759659517e"
+    "mtime": 1790794813.32887,
+    "ast_hash": "1c00763234cd20586b81a6706bc74e21",
+    "semantic_hash": "1c00763234cd20586b81a6706bc74e21"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/EmailAuthModal.tsx": {
     "mtime": 1790694019.3655875,
@@ -995,9 +995,9 @@
     "semantic_hash": "b28af881cb32371db884697a3ff3112c"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/Explore.tsx": {
-    "mtime": 1790779449.443751,
-    "ast_hash": "4642d00489ff0c739e8cd46d2dddebe1",
-    "semantic_hash": "4642d00489ff0c739e8cd46d2dddebe1"
+    "mtime": 1790799202.212475,
+    "ast_hash": "6e8e44aebbae16e4e2062580d3d9ae61",
+    "semantic_hash": "6e8e44aebbae16e4e2062580d3d9ae61"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/ExportKeyModal.tsx": {
     "mtime": 1788074272.3103323,
@@ -1020,7 +1020,7 @@
     "semantic_hash": "1099e8b6fb52eba433ba25ac251c3eb0"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/LeasePanel.tsx": {
-    "mtime": 1790779449.4441493,
+    "mtime": 1790793200.1674254,
     "ast_hash": "c385a5406dba41b1c2a3c4f4b74989ac",
     "semantic_hash": "c385a5406dba41b1c2a3c4f4b74989ac"
   },
@@ -1065,9 +1065,9 @@
     "semantic_hash": "14cea0ebce8ee3d0f1451773f926b10f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/lib/custodialClient.ts": {
-    "mtime": 1790779449.4448364,
-    "ast_hash": "68b8673814aa50f5f31c2525ae618992",
-    "semantic_hash": "68b8673814aa50f5f31c2525ae618992"
+    "mtime": 1790796080.0548124,
+    "ast_hash": "eaac5e6a5f75bf395f1eac36bbd3d66d",
+    "semantic_hash": "eaac5e6a5f75bf395f1eac36bbd3d66d"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/lib/network.ts": {
     "mtime": 1785588832.1287956,
@@ -1090,9 +1090,9 @@
     "semantic_hash": "b6402d48b8b0e1cc7ea87f138b3a645e"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/lib/x402Client.ts": {
-    "mtime": 1785698653.3699985,
-    "ast_hash": "49dbc8f3a2362f9d66a2f528de8f8bc2",
-    "semantic_hash": "49dbc8f3a2362f9d66a2f528de8f8bc2"
+    "mtime": 1790805381.0706222,
+    "ast_hash": "4237f255fc20a89c03463a02cd60701c",
+    "semantic_hash": "4237f255fc20a89c03463a02cd60701c"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/main.tsx": {
     "mtime": 1785971934.1749313,
@@ -1190,22 +1190,22 @@
     "semantic_hash": "cb886532588bb1d452ba8c7a0a91a8ab"
   },
   "/Users/fusion/Code/GitRepos/Tendril/mcp/package.json": {
-    "mtime": 1790791704.4428215,
+    "mtime": 1790793200.162205,
     "ast_hash": "cb972ed80612e26573c593196aa09c78",
     "semantic_hash": "cb972ed80612e26573c593196aa09c78"
   },
   "/Users/fusion/Code/GitRepos/Tendril/mcp/src/client.ts": {
-    "mtime": 1790791697.2745984,
+    "mtime": 1790793200.162505,
     "ast_hash": "f2a98cf43e7e3f0c2102e2d4b81a7b88",
     "semantic_hash": "f2a98cf43e7e3f0c2102e2d4b81a7b88"
   },
   "/Users/fusion/Code/GitRepos/Tendril/mcp/src/index.ts": {
-    "mtime": 1790791819.0274794,
+    "mtime": 1790793200.1628516,
     "ast_hash": "d184f8e1a729ecebedfb083d5abedb23",
     "semantic_hash": "d184f8e1a729ecebedfb083d5abedb23"
   },
   "/Users/fusion/Code/GitRepos/Tendril/mcp/src/tools.ts": {
-    "mtime": 1790791691.67665,
+    "mtime": 1790793200.163141,
     "ast_hash": "ff70e395a58ddc1dd5714f42223a3089",
     "semantic_hash": "ff70e395a58ddc1dd5714f42223a3089"
   },
@@ -1215,12 +1215,12 @@
     "semantic_hash": "f5467f1b156cc5067082df89e5f153b0"
   },
   "/Users/fusion/Code/GitRepos/Tendril/docs/mcp.md": {
-    "mtime": 1790792126.4481351,
+    "mtime": 1790793200.1536262,
     "ast_hash": "e634b762ffc6a0ab57d6a4ecfa925a3c",
     "semantic_hash": "e634b762ffc6a0ab57d6a4ecfa925a3c"
   },
   "/Users/fusion/Code/GitRepos/Tendril/mcp/README.md": {
-    "mtime": 1790791707.2357526,
+    "mtime": 1790793200.1619198,
     "ast_hash": "92f8750343b0dfb7953f9b9a053d4ef2",
     "semantic_hash": "92f8750343b0dfb7953f9b9a053d4ef2"
   },
@@ -1235,7 +1235,7 @@
     "semantic_hash": "7f57bc7caf698aed67dcc3cc9d92c28f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/McpModal.tsx": {
-    "mtime": 1790792115.196865,
+    "mtime": 1790793200.167786,
     "ast_hash": "ab410a8d8698f03f80ecdd8b1ec5e8d4",
     "semantic_hash": "ab410a8d8698f03f80ecdd8b1ec5e8d4"
   },
@@ -1340,38 +1340,48 @@
     "semantic_hash": "8c5b082917d36e02c018e671e58f380d"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/hosted.test.ts": {
-    "mtime": 1790781827.3605502,
-    "ast_hash": "c76f5b6799c702e242fc7163cdd61046",
-    "semantic_hash": "c76f5b6799c702e242fc7163cdd61046"
+    "mtime": 1790799216.7375073,
+    "ast_hash": "ac0a26288fc9f910aaf6feefee7aa08f",
+    "semantic_hash": "ac0a26288fc9f910aaf6feefee7aa08f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/hosted.ts": {
-    "mtime": 1790781826.8981726,
-    "ast_hash": "0b1bea5e06431c811bb0752272c653cf",
-    "semantic_hash": "0b1bea5e06431c811bb0752272c653cf"
+    "mtime": 1790799195.8595662,
+    "ast_hash": "bef8eb4b3d50c92e309c31fe8cf60365",
+    "semantic_hash": "bef8eb4b3d50c92e309c31fe8cf60365"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/providers/contributor.ts": {
-    "mtime": 1790779449.4257534,
-    "ast_hash": "63342b04a016177eee5949e570ebd04f",
-    "semantic_hash": "63342b04a016177eee5949e570ebd04f"
+    "mtime": 1790796060.8445804,
+    "ast_hash": "bb641300f58a5cea1bd7457fd290f3d3",
+    "semantic_hash": "bb641300f58a5cea1bd7457fd290f3d3"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/providers/index.ts": {
-    "mtime": 1790779449.4260461,
+    "mtime": 1790793200.1515915,
     "ast_hash": "4c09f43cbd085e89a594ad3dddee443f",
     "semantic_hash": "4c09f43cbd085e89a594ad3dddee443f"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/providers/modal.ts": {
-    "mtime": 1790791798.2848656,
-    "ast_hash": "13dfc8b2df5dd7d233b512b47e273b04",
-    "semantic_hash": "13dfc8b2df5dd7d233b512b47e273b04"
+    "mtime": 1790796005.5249815,
+    "ast_hash": "ad48461f1aba2ba962f7005878ae100a",
+    "semantic_hash": "ad48461f1aba2ba962f7005878ae100a"
   },
   "/Users/fusion/Code/GitRepos/Tendril/backend/src/providers/types.ts": {
-    "mtime": 1790779449.4269347,
+    "mtime": 1790793200.1520805,
     "ast_hash": "e1da1d12ee20312a1bcc0b9822e09981",
     "semantic_hash": "e1da1d12ee20312a1bcc0b9822e09981"
   },
   "/Users/fusion/Code/GitRepos/Tendril/web/src/components/NotebookSection.tsx": {
-    "mtime": 1790779449.4445128,
-    "ast_hash": "8573e92ca4519009b107f6e1f6d23399",
-    "semantic_hash": "8573e92ca4519009b107f6e1f6d23399"
+    "mtime": 1790806549.3912601,
+    "ast_hash": "cc651846718158e87210878ce2bdc4e3",
+    "semantic_hash": "cc651846718158e87210878ce2bdc4e3"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/backend/src/providers/notebookRunner.ts": {
+    "mtime": 1790796166.0096612,
+    "ast_hash": "e79367ab9c1ba014bf6754c6cbfed837",
+    "semantic_hash": "e79367ab9c1ba014bf6754c6cbfed837"
+  },
+  "/Users/fusion/Code/GitRepos/Tendril/contributor/docker-compose.yml": {
+    "mtime": 1790798998.4650207,
+    "ast_hash": "41bc811ed601a0220ccd830c22afd032",
+    "semantic_hash": "41bc811ed601a0220ccd830c22afd032"
   }
 }

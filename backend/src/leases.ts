@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import type { ComputeProvider, Lease, LeaseStatus, SandboxAccess } from "@tendril/shared";
+import type { ComputeProvider, Lease, LeaseStatus, RunArtifact, SandboxAccess } from "@tendril/shared";
 import { fundedSeconds, proratedCost } from "@tendril/shared";
 import { chargeUsage, creditBalance, creditEarnings } from "./x402/credit.js";
 import { destroyForLease } from "./providers/index.js";
@@ -79,6 +79,41 @@ export async function abandonLease(id: string): Promise<void> {
   if (!lease) return;
   leases.delete(id);
   await destroyForLease(lease);
+}
+
+/**
+ * Fail a lease whose gate fee already settled — an async job (notebook run)
+ * whose provisioning blew up. Unlike `abandonLease`, the record is kept: a
+ * caller is polling this id for status and must still find it afterward.
+ */
+export async function failLease(id: string): Promise<void> {
+  const lease = leases.get(id);
+  if (!lease || lease.status === "ended" || lease.status === "failed") return;
+  lease.status = "failed";
+  await destroyForLease(lease);
+}
+
+/** What an async run job (notebook path of `POST /x402/run`) finished with. */
+export interface RunJobResult {
+  ok: boolean;
+  result: string;
+  notebook?: Record<string, unknown>;
+  artifacts?: RunArtifact[];
+  execution?: { nodeId: string; seconds: number; costAtomic: string; balance: string };
+  error?: string;
+}
+
+// Keyed by lease id (the job id). In-memory like leases themselves — see the
+// module doc comment; a job in flight when the backend restarts is lost, same
+// as a lease would be.
+const runResults = new Map<string, RunJobResult>();
+
+export function setRunResult(leaseId: string, result: RunJobResult): void {
+  runResults.set(leaseId, result);
+}
+
+export function getRunResult(leaseId: string): RunJobResult | undefined {
+  return runResults.get(leaseId);
 }
 
 /**

@@ -43,7 +43,7 @@ async function buildImage(): Promise<Image> {
   const modal = modalClient();
   const app = await modal.apps.fromName(config.modalAppName, { createIfMissing: true });
   const image = modal.images.fromRegistry("python:3.12-slim").dockerfileCommands([
-    "RUN pip install --no-cache-dir jupyterlab papermill nbconvert ipykernel && python -m ipykernel install --sys-prefix && mkdir -p /work",
+    "RUN pip install --no-cache-dir jupyterlab papermill nbconvert ipykernel numpy pandas matplotlib requests && python -m ipykernel install --sys-prefix && mkdir -p /work",
   ]);
   return image.build(app);
 }

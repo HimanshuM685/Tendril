@@ -55,7 +55,8 @@ export const config = {
   // fee, so a client needs the asset but no ALGO.
   facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://facilitator.goplausible.xyz",
   // How long a 402 challenge stays payable.
-  x402MaxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 60),
+  // Notebook runs settle after the wallet signs. A 60s window dies mid-Modal start.
+  x402MaxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 3600),
 
   // ────────────────────── Bazaar discovery / branding ──────────────────────
   // Tag every resource carries. The facilitator uses it to attribute activity,

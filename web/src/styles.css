@@ -448,6 +448,7 @@ img {
   /* width 0 + flex 1: column takes leftover space beside the sidebar.
      A 100% width here paints past the window and clips the last stat card.
      margin-left matches the fixed sidebar, which is out of flow. */
+  position: relative;
   flex: 1 1 0%;
   width: 0;
   min-width: 0;
@@ -456,6 +457,13 @@ img {
   padding: 36px 44px 64px;
   background-color: var(--bg-primary);
   overflow-y: auto;
+}
+
+.desktop-account {
+  position: absolute;
+  top: 28px;
+  right: 44px;
+  z-index: 40;
 }
 
 .explore-dashboard {
@@ -763,6 +771,47 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.notebook-lanes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.notebook-lane {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #fbfbf8;
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.notebook-lane span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.notebook-lane small {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.notebook-lane.is-on {
+  border-color: var(--lime-dark);
+  background: var(--lime-tint);
+}
+
+.notebook-lane:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .notebook-run-btn {
@@ -1732,6 +1781,10 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 @media (max-width: 1024px) {
+  .desktop-account {
+    display: none;
+  }
+
   .mobile-header {
     display: flex;
     align-items: center;

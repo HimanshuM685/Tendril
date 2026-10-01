@@ -18,13 +18,13 @@
  * withdraw it to their wallet in one on-chain transfer.
  */
 import type { PoolClient } from "pg";
-import { q, inTransaction } from "../db.js";
+import { q, inTransaction, ledger } from "../db.js";
 import { config } from "../config.js";
 
 /** Current credit balance for an address, in atomic units. 0 if never seen. */
 export async function creditBalance(address: string): Promise<number> {
   const rows = await q<{ amount_atomic: number }>(
-    "SELECT amount_atomic FROM credits WHERE address = $1",
+    `SELECT amount_atomic FROM ${ledger("credits")} WHERE address = $1`,
     [address],
   );
   return rows[0]?.amount_atomic ?? 0;
@@ -42,12 +42,12 @@ export async function creditTopUp(
 ): Promise<number> {
   return inTransaction(async (client) => {
     const ins = await client.query(
-      `INSERT INTO topups (txid, address, amount_micro, asset_id, created_at)
+      `INSERT INTO ${ledger("topups")} (txid, address, amount_micro, asset_id, created_at)
        VALUES ($1,$2,$3,$4,$5) ON CONFLICT (txid) DO NOTHING RETURNING txid`,
       [txid, address, amountAtomic, Number(config.assetId), Date.now()],
     );
     if (ins.rowCount === 0) {
-      const cur = await client.query("SELECT amount_atomic FROM credits WHERE address = $1", [
+      const cur = await client.query(`SELECT amount_atomic FROM ${ledger("credits")} WHERE address = $1`, [
         address,
       ]);
       return Number(cur.rows[0]?.amount_atomic ?? 0);
@@ -88,7 +88,7 @@ export async function chargeUsage(args: {
   const { address, leaseId, payToAddr, usedAtomic, usedSeconds } = args;
   return inTransaction(async (client) => {
     const cur = await client.query(
-      "SELECT amount_atomic FROM credits WHERE address = $1 FOR UPDATE",
+      `SELECT amount_atomic FROM ${ledger("credits")} WHERE address = $1 FOR UPDATE`,
       [address],
     );
     const balance = Number(cur.rows[0]?.amount_atomic ?? 0);
@@ -97,7 +97,7 @@ export async function chargeUsage(args: {
       : Math.max(0, Math.min(usedAtomic, balance));
 
     const ins = await client.query(
-      `INSERT INTO charges (address, lease_id, pay_to, amount_micro, asset_id, seconds, created_at)
+      `INSERT INTO ${ledger("charges")} (address, lease_id, pay_to, amount_micro, asset_id, seconds, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
        ON CONFLICT (lease_id) DO NOTHING
        RETURNING id`,
@@ -119,7 +119,7 @@ export async function chargeUsage(args: {
 /** Withdrawable earnings for a contributor address, in atomic units. */
 export async function earningsBalance(address: string): Promise<number> {
   const rows = await q<{ amount_atomic: number }>(
-    "SELECT amount_atomic FROM earnings WHERE address = $1",
+    `SELECT amount_atomic FROM ${ledger("earnings")} WHERE address = $1`,
     [address],
   );
   return rows[0]?.amount_atomic ?? 0;
@@ -139,12 +139,12 @@ export async function creditEarnings(
 ): Promise<number> {
   return inTransaction(async (client) => {
     const ins = await client.query(
-      `INSERT INTO payouts (to_addr, lease_id, amount_micro, asset_id, txid, created_at)
+      `INSERT INTO ${ledger("payouts")} (to_addr, lease_id, amount_micro, asset_id, txid, created_at)
        VALUES ($1,$2,$3,$4,NULL,$5) ON CONFLICT (lease_id) DO NOTHING RETURNING id`,
       [toAddr, leaseId, amountAtomic, Number(config.assetId), Date.now()],
     );
     if (ins.rowCount === 0) {
-      const cur = await client.query("SELECT amount_atomic FROM earnings WHERE address = $1", [
+      const cur = await client.query(`SELECT amount_atomic FROM ${ledger("earnings")} WHERE address = $1`, [
         toAddr,
       ]);
       return Number(cur.rows[0]?.amount_atomic ?? 0);
@@ -164,7 +164,7 @@ export async function creditEarnings(
 export async function debitAllEarnings(address: string, min: number): Promise<number> {
   return inTransaction(async (client) => {
     const cur = await client.query(
-      "SELECT amount_atomic FROM earnings WHERE address = $1 FOR UPDATE",
+      `SELECT amount_atomic FROM ${ledger("earnings")} WHERE address = $1 FOR UPDATE`,
       [address],
     );
     const balance = Number(cur.rows[0]?.amount_atomic ?? 0);
@@ -183,10 +183,10 @@ export async function refundEarnings(address: string, amountAtomic: number): Pro
 
 async function addCredit(client: PoolClient, address: string, deltaAtomic: number): Promise<number> {
   const res = await client.query(
-    `INSERT INTO credits (address, amount_atomic, updated_at)
+    `INSERT INTO ${ledger("credits")} AS c (address, amount_atomic, updated_at)
      VALUES ($1,$2,$3)
      ON CONFLICT (address) DO UPDATE SET
-       amount_atomic = credits.amount_atomic + $2, updated_at = $3
+       amount_atomic = c.amount_atomic + $2, updated_at = $3
      RETURNING amount_atomic`,
     [address, deltaAtomic, Date.now()],
   );
@@ -200,10 +200,10 @@ async function addEarnings(
   deltaAtomic: number,
 ): Promise<number> {
   const res = await client.query(
-    `INSERT INTO earnings (address, amount_atomic, updated_at)
+    `INSERT INTO ${ledger("earnings")} AS e (address, amount_atomic, updated_at)
      VALUES ($1,$2,$3)
      ON CONFLICT (address) DO UPDATE SET
-       amount_atomic = earnings.amount_atomic + $2, updated_at = $3
+       amount_atomic = e.amount_atomic + $2, updated_at = $3
      RETURNING amount_atomic`,
     [address, deltaAtomic, Date.now()],
   );

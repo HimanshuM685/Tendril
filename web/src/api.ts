@@ -8,6 +8,7 @@ import type {
   LeaseCloseResponse,
   Metrics,
   PlatformInfo,
+  RunJobResponse,
   RunResponse,
   SandboxAccess,
   WalletSummary,
@@ -76,11 +77,26 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
-export async function fetchExplorer(): Promise<{ nodes: ExplorerNode[]; notebooks: boolean }> {
+export async function fetchExplorer(): Promise<{
+  nodes: ExplorerNode[];
+  notebooks: boolean;
+  priority: boolean;
+  priorityUsdPerHour: number | null;
+}> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
-  const body = (await res.json()) as { nodes?: ExplorerNode[]; notebooks?: boolean };
-  return { nodes: body.nodes ?? [], notebooks: !!body.notebooks };
+  const body = (await res.json()) as {
+    nodes?: ExplorerNode[];
+    notebooks?: boolean;
+    priority?: boolean;
+    priorityUsdPerHour?: number | null;
+  };
+  return {
+    nodes: body.nodes ?? [],
+    notebooks: !!body.notebooks,
+    priority: !!body.priority,
+    priorityUsdPerHour: typeof body.priorityUsdPerHour === "number" ? body.priorityUsdPerHour : null,
+  };
 }
 
 /** Where to send top-ups + the USD→ALGO rate used to show prices in ALGO. */
@@ -222,24 +238,35 @@ export async function fetchLease(leaseId: string, leaseToken: string): Promise<L
 }
 
 /**
- * Execute an uploaded notebook with no lease: `POST /x402/run` `{ notebook }`.
- * The executed notebook and any files it wrote come back in the response.
- * Seconds are billed from credit after the run, same as a Python payload.
+ * Start an uploaded notebook with no lease: `POST /x402/run` `{ notebook }`.
+ * Provisioning + execution can take minutes (a cold Modal image build, a
+ * sandbox boot), so this resolves as soon as the gate fee settles, handing
+ * back a job to poll with `pollRunJob` — not the finished run.
  */
 export async function runNotebook(
   token: string | null,
   address: string,
   sign: SignTransactions,
   notebook: Record<string, unknown>,
+  lane: "contributor" | "priority",
   onStage?: (stage: PayStage) => void,
-): Promise<RunResponse> {
+): Promise<RunJobResponse> {
   const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ notebook }),
+    body: JSON.stringify({ notebook, lane }),
+  });
+  if (!res.ok) throw await apiError(res, "run");
+  return res.json();
+}
+
+/** Poll a notebook job started by `runNotebook`: `GET /x402/run/:jobId`. No payment — just a status read. */
+export async function pollRunJob(jobId: string, jobToken: string): Promise<RunJobResponse> {
+  const res = await safeFetch(`${REGISTRY_URL}/x402/run/${jobId}`, {
+    headers: { authorization: `Bearer ${jobToken}` },
   });
   if (!res.ok) throw await apiError(res, "run");
   return res.json();

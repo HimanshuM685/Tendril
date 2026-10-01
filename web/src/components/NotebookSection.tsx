@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
-import type { RunArtifact, RunResponse } from "@tendril/shared";
+import { useEffect, useRef, useState } from "react";
+import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
-import { runNotebook } from "../api";
+import { pollRunJob, runNotebook } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
@@ -10,12 +10,20 @@ import { isCustodialSession } from "../lib/session";
 const NOTEBOOK_MAX_BYTES = 1_500_000;
 const OUTPUT_TEXT_CAP = 12_000;
 
+type TrainLane = "contributor" | "priority";
+
 interface Props {
   session: Session | null;
   activeAddress: string | null;
   signTransactions: SignTransactions;
-  /** Backend can run a notebook on hosted CPU. Independent of the rent pool. */
+  /** A lane can take the notebook: a peer is online, or Modal is configured. */
   notebooks: boolean;
+  /** Priority lane. Modal image includes numpy, pandas, matplotlib, requests. */
+  priority: boolean;
+  /** Customer USD/hour for the priority sandbox (2 vCPU + 4 GiB). */
+  priorityUsdPerHour: number | null;
+  /** Contributor lane. Uses a live peer and that node's own Python image. */
+  peers: boolean;
   checking: boolean;
   onOpenConnectWallet?: () => void;
   onWalletChanged?: () => void;
@@ -163,9 +171,9 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. It runs on hosted CPU, not the node pool. Billed by the second from credit. The run stops when that credit runs out.";
+    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal with numpy, pandas, matplotlib, and requests already installed. Both bill by the second from credit and stop when it runs out.";
   }
-  return "Notebooks need hosted CPU. Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET on the backend and restart.";
+  return "No contributor node is online, and priority training is not configured.";
 }
 
 export function NotebookSection({
@@ -173,6 +181,9 @@ export function NotebookSection({
   activeAddress,
   signTransactions,
   notebooks,
+  priority,
+  priorityUsdPerHour,
+  peers,
   checking,
   onOpenConnectWallet,
   onWalletChanged,
@@ -185,6 +196,13 @@ export function NotebookSection({
   const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<NotebookView | null>(null);
+  const [job, setJob] = useState<{ jobId: string; jobToken: string } | null>(null);
+  const [jobStatus, setJobStatus] = useState<LeaseStatus | null>(null);
+  const [lane, setLane] = useState<TrainLane>("contributor");
+  useEffect(() => {
+    if (lane === "priority" && !priority && peers) setLane("contributor");
+    if (lane === "contributor" && !peers && priority) setLane("priority");
+  }, [lane, peers, priority]);
 
   const isCustodial = isCustodialSession(session);
   const canPick = notebooks && !uploading;
@@ -220,52 +238,108 @@ export function NotebookSection({
     setUploading(true);
     setError(null);
     setView(null);
+    setJob(null);
+    setJobStatus(null);
     setStage(null);
     try {
-      let res: RunResponse;
+      let res: RunJobResponse;
       if (isCustodial && session) {
         setStage("confirming");
         res = (await runCustodialAction(session.token, {
           action: "run",
           notebook: pending.notebook,
-        })) as RunResponse;
+          lane,
+        })) as RunJobResponse;
       } else {
         res = await runNotebook(
           session?.token ?? null,
           activeAddress,
           signTransactions,
           pending.notebook,
+          lane,
           setStage,
         );
       }
-      setView({
-        fileName: pending.name,
-        ok: res.ok,
-        log: stripAnsi(res.result ?? "").trim(),
-        seconds: res.execution?.seconds,
-        costAtomic: res.execution?.costAtomic,
-        cells: cellsFrom(res.notebook),
-        artifacts: res.artifacts ?? [],
-        notebook: res.notebook,
-      });
-      onWalletChanged?.();
+      // Payment is settled; the job itself can still take minutes (cold Modal
+      // image, sandbox boot). The poll effect below picks it up from here.
+      setStage(null);
+      setJobStatus(res.status);
+      setJob({ jobId: res.jobId, jobToken: res.jobToken! });
     } catch (e) {
       if ((e as Error).message !== "cancelled") setError((e as Error).message);
-    } finally {
       setUploading(false);
       setStage(null);
     }
   }
 
+  // Once the job is running server-side, poll for its result instead of
+  // holding one request open for however long provisioning + execution take.
+  // Same cadence/visibility-pause as LeasePanel's lease poll.
+  useEffect(() => {
+    if (!job) return;
+    let alive = true;
+    const finish = (r: RunJobResponse) => {
+      if (!alive) return;
+      setJobStatus(r.status);
+      if (r.status !== "ended" && r.status !== "failed") return;
+      if (r.run?.ok) {
+        setView({
+          fileName: pending?.name ?? "",
+          ok: r.run.ok,
+          log: stripAnsi(r.run.result ?? "").trim(),
+          seconds: r.run.execution?.seconds,
+          costAtomic: r.run.execution?.costAtomic,
+          cells: cellsFrom(r.run.notebook),
+          artifacts: r.run.artifacts ?? [],
+          notebook: r.run.notebook,
+        });
+        onWalletChanged?.();
+      } else {
+        setError(r.error ?? r.run?.result ?? "Notebook run failed.");
+      }
+      setUploading(false);
+      setJob(null);
+    };
+    const poll = () =>
+      pollRunJob(job.jobId, job.jobToken)
+        .then(finish)
+        .catch((e) => {
+          if (!alive) return;
+          setError((e as Error).message);
+          setUploading(false);
+          setJob(null);
+        });
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      if (timer) return;
+      poll();
+      timer = setInterval(poll, 4000);
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      alive = false;
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [job]);
+
   const runLabel = uploading
     ? stage === "signing"
-      ? "Waiting for wallet…"
-      : stage === "settling"
+      ? "Approve in wallet…"
+      : !job
         ? "Settling payment…"
-        : stage === "confirming"
-          ? "Confirming…"
-          : "Running cells…"
-    : "Run notebook";
+        : jobStatus === "active"
+          ? "Running on our server…"
+          : "Provisioning…"
+    : lane === "priority"
+      ? "Run priority"
+      : "Run on contributor";
 
   const costLabel =
     view?.costAtomic !== undefined && Number.isFinite(Number(view.costAtomic))
@@ -321,8 +395,8 @@ export function NotebookSection({
               {canPick
                 ? "or click to choose a file · 1.5 MB max"
                 : checking
-                  ? "Checking hosted CPU"
-                  : "Modal tokens are not set"}
+                  ? "Checking machines"
+                  : "No peer online and priority is off"}
             </span>
           </label>
 
@@ -346,10 +420,38 @@ export function NotebookSection({
             </div>
           )}
 
+          <div className="notebook-lanes" role="radiogroup" aria-label="Where to run the notebook">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "contributor"}
+              className={`notebook-lane${lane === "contributor" ? " is-on" : ""}`}
+              disabled={uploading || !peers}
+              onClick={() => setLane("contributor")}
+            >
+              <span>Contributor training</span>
+              <small>Live peer. That node's rate.</small>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "priority"}
+              className={`notebook-lane${lane === "priority" ? " is-on" : ""}`}
+              disabled={uploading || !priority}
+              onClick={() => setLane("priority")}
+            >
+              <span>Priority training</span>
+              <small>
+                {priorityUsdPerHour != null ? `$${priorityUsdPerHour}/hr · ` : ""}
+                2 vCPU · 4 GiB. No GPU.
+              </small>
+            </button>
+          </div>
+
           <button
             type="button"
             className="ca-btn ca-btn-primary notebook-run-btn"
-            disabled={!pending || uploading || !notebooks}
+            disabled={!pending || uploading || !notebooks || (lane === "priority" ? !priority : !peers)}
             onClick={() => void run()}
           >
             {runLabel}
