@@ -91,12 +91,45 @@ let walletQueue: Promise<unknown> = Promise.resolve();
  */
 const WALLET_PROMPT_TIMEOUT_MS = 180_000;
 
+/**
+ * How long to wait for the wallet's *answer* once a request is open. WalletConnect
+ * wallets (Pera, Defly) reply over a relay socket; when the browser tab is
+ * backgrounded while the user approves on their phone, that reply can be lost and
+ * the promise never settles — the UI would sit on "signing" forever with no error.
+ */
+const WALLET_RESPONSE_TIMEOUT_MS = 120_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            "The wallet didn't send its approval back. If you approved on your phone, return to this " +
+              "tab and try again — if it keeps happening, disconnect and reconnect the wallet.",
+          ),
+        ),
+      ms,
+    );
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function serializeSigner(sign: SignTransactions): SignTransactions {
   return (txns, indexesToSign) => {
     const previous = walletQueue;
     const run = (async () => {
       await waitForSlot(previous);
-      return sign(txns, indexesToSign);
+      return withTimeout(sign(txns, indexesToSign), WALLET_RESPONSE_TIMEOUT_MS);
     })();
     walletQueue = run.catch(() => undefined);
     return run;
