@@ -3897,3 +3897,295 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   padding: 0;
   font-size: inherit;
 }
+
+/* ===========================================================================
+   DASHBOARD REFINEMENTS
+   Scoped so Explore keeps its existing content density and proportions.
+   =========================================================================== */
+
+.dashboard-page {
+  width: 100%;
+  max-width: 1160px;
+}
+
+.dashboard-page .explore-header-row {
+  margin-bottom: 20px;
+}
+
+.dashboard-page .explore-greeting {
+  font-size: clamp(24px, 2.2vw, 28px);
+}
+
+.dashboard-page .explore-subtitle {
+  max-width: 62ch;
+  line-height: 1.55;
+}
+
+.dashboard-page .dash-addr-pill {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  width: fit-content;
+  margin: -8px 0 20px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #f7f8f3;
+  color: var(--text-muted);
+}
+
+.dashboard-page .dash-addr-pill .ext-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.dashboard-page .dashboard-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dashboard-page .explore-stat-card {
+  min-height: 120px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-page .stat-card-label {
+  line-height: 1.35;
+}
+
+.dashboard-page .stat-card-value {
+  margin: 8px 0 0;
+  font-size: clamp(24px, 2.2vw, 30px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-page .stat-card-sub {
+  margin-top: auto;
+  padding-top: 8px;
+  line-height: 1.35;
+}
+
+.dashboard-page .dashboard-actions-bar {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+}
+
+.dashboard-page .ca-buttons {
+  gap: 8px;
+}
+
+.dashboard-page .ca-btn {
+  min-height: 38px;
+  padding: 8px 16px;
+}
+
+.dashboard-active-lease {
+  margin-bottom: 20px;
+}
+
+.dashboard-page .dashboard-content-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  grid-auto-rows: max-content;
+}
+
+.dashboard-page .dashboard-card {
+  height: auto;
+  min-width: 0;
+  padding: 20px;
+}
+
+.dashboard-page .explore-card-head {
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-page .explore-card-head > div {
+  min-width: 0;
+}
+
+.dashboard-page .card-head-title {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.dashboard-page .card-head-sub {
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.dashboard-balance-total {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dashboard-page .balance-chart-content {
+  min-width: 0;
+}
+
+.dashboard-page .balance-chart {
+  margin: 0;
+}
+
+.dashboard-page .balance-chart svg {
+  width: 100%;
+  height: 224px;
+  overflow: visible;
+}
+
+.dashboard-page .balance-chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 24px 16px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #fafbf7;
+  text-align: center;
+}
+
+.dashboard-page .dashboard-history-list {
+  flex: initial;
+}
+
+.dashboard-page .dashboard-history-item {
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 62px;
+  padding: 11px 0;
+}
+
+.dashboard-page .history-item-marker {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  margin: 6px 2px 0 1px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(124, 179, 5, 0.12);
+}
+
+.dashboard-page .history-item-marker-charge {
+  background: var(--lime-dark);
+}
+
+.dashboard-page .history-item-marker-topup {
+  background: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.dashboard-page .dashboard-history-item .lease-item-info {
+  padding-left: 0;
+}
+
+.dashboard-page .dashboard-history-item .lease-item-title {
+  line-height: 1.4;
+}
+
+.dashboard-page .dashboard-history-item .lease-item-meta {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.dashboard-page .dashboard-history-item .lease-item-badge {
+  padding-top: 1px;
+}
+
+.dashboard-page .dashboard-topup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dashboard-page .dashboard-topup-body .topup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(76px, 0.9fr) minmax(76px, 0.9fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.dashboard-page .dashboard-topup-body .topup > .btn,
+.dashboard-page .dashboard-topup-body .topup-amount {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  height: 38px;
+}
+
+.dashboard-page .dashboard-topup-body .topup > .btn {
+  padding: 8px 10px;
+}
+
+.dashboard-page .dashboard-topup-body .topup-amount {
+  padding: 8px 10px;
+}
+
+.dashboard-page .dashboard-topup-body .topup-status {
+  min-height: 18px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dashboard-page .lease-empty-state {
+  min-height: 160px;
+  margin-top: 0;
+  padding: 28px 16px;
+}
+
+.dashboard-page .bc-vlabel,
+.dashboard-page .bc-tlabel {
+  font-size: 10px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-page .dashboard-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-page .dashboard-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page .dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .dash-addr-pill {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .dashboard-page .dashboard-balance-total {
+    font-size: 12px;
+  }
+
+  .dashboard-page .dashboard-topup-body .topup {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-page .dashboard-topup-body .topup > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-page .balance-chart svg {
+    height: 210px;
+  }
+}

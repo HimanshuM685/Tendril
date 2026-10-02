@@ -83,7 +83,7 @@ export function Dashboard({
   const leasesCount = stats?.leaseCount ?? 0;
 
   return (
-    <div className="explore-dashboard">
+    <div className="explore-dashboard dashboard-page">
       {/* Header Row */}
       <div className="explore-header-row">
         <div>
@@ -97,7 +97,7 @@ export function Dashboard({
       </div>
 
       {address && (
-        <div className="dash-addr-pill" style={{ marginBottom: "20px" }}>
+        <div className="dash-addr-pill">
           <span className="muted small">Connected: </span>
           <a className="ext-link" href={explorerAddrUrl(address)} target="_blank" rel="noreferrer">
             {address}
@@ -106,7 +106,7 @@ export function Dashboard({
       )}
 
       {/* Top 4 Stat Cards (No dummy data) */}
-      <div className="explore-stats-grid">
+      <div className="explore-stats-grid dashboard-stats-grid">
         <div className="explore-stat-card">
           <div className="stat-card-label">Credit Balance</div>
           <div className="stat-card-value">{creditBalance}</div>
@@ -133,7 +133,7 @@ export function Dashboard({
       </div>
 
       {/* Actions Bar with Vector SVG Icons */}
-      <div className="compute-actions-bar">
+      <div className="compute-actions-bar dashboard-actions-bar">
         <span className="ca-title">Account Actions</span>
         <div className="ca-buttons">
           {address && (
@@ -166,21 +166,24 @@ export function Dashboard({
 
       {/* Active Lease if running */}
       {lease && (
-        <div style={{ marginBottom: "24px" }}>
+        <div className="dashboard-active-lease">
           <LeasePanel lease={lease} session={session} onRelease={onLeaseEnded} />
         </div>
       )}
 
       {/* 2-Column Section */}
-      <div className="explore-columns-grid">
+      <div className="explore-columns-grid dashboard-content-grid">
         {/* Row 1, Col 1: Historical Balance */}
-        <div className="explore-card">
+        <div className="explore-card dashboard-card dashboard-balance-card">
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">Historical Balance</h3>
               <p className="card-head-sub">Reconstructed deposits &amp; usage</p>
             </div>
-            <strong className="text-green" style={{ fontSize: "16px" }}>
+            <strong
+              className="text-green dashboard-balance-total"
+              title={wallet ? formatUsdcExact(wallet.balanceAtomic) : undefined}
+            >
               {creditBalance} USDC
             </strong>
           </div>
@@ -199,7 +202,7 @@ export function Dashboard({
         </div>
 
         {/* Row 1, Col 2: Spend History */}
-        <div className="explore-card" id="history">
+        <div className="explore-card dashboard-card dashboard-history-card" id="history">
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">Spend History</h3>
@@ -207,11 +210,12 @@ export function Dashboard({
             </div>
           </div>
 
-          <div className="leases-list">
+          <div className="leases-list dashboard-history-list">
             {wallet?.charges && wallet.charges.length > 0 ? (
               wallet.charges.map((c) => (
-                <div className="lease-item" key={c.id}>
-                  <div className="lease-item-info pl-dot">
+                <div className="lease-item dashboard-history-item" key={c.id}>
+                  <span className="history-item-marker history-item-marker-charge" aria-hidden="true" />
+                  <div className="lease-item-info">
                     <div className="lease-item-title">
                       Compute Session &middot; {fmtDuration(c.seconds)}
                     </div>
@@ -236,7 +240,7 @@ export function Dashboard({
         </div>
 
         {/* Row 2, Col 1: Prepaid Top Up */}
-        <div className="explore-card">
+        <div className="explore-card dashboard-card dashboard-topup-card">
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">Prepaid Top Up</h3>
@@ -244,7 +248,7 @@ export function Dashboard({
             </div>
           </div>
           {address ? (
-            <div style={{ marginTop: "12px", flex: 1, display: "flex", flexDirection: "column" }}>
+            <div className="dashboard-topup-body">
               <TopUpControl
                 address={address}
                 session={session}
@@ -266,7 +270,7 @@ export function Dashboard({
         </div>
 
         {/* Row 2, Col 2: Top-up History */}
-        <div className="explore-card">
+        <div className="explore-card dashboard-card dashboard-history-card">
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">Top-up History</h3>
@@ -274,11 +278,12 @@ export function Dashboard({
             </div>
           </div>
 
-          <div className="leases-list">
+          <div className="leases-list dashboard-history-list">
             {wallet?.topups && wallet.topups.length > 0 ? (
               wallet.topups.map((t) => (
-                <div className="lease-item" key={t.txid}>
-                  <div className="lease-item-info pl-dot">
+                <div className="lease-item dashboard-history-item" key={t.txid}>
+                  <span className="history-item-marker history-item-marker-topup" aria-hidden="true" />
+                  <div className="lease-item-info">
                     <div className="lease-item-title">
                       Deposit &middot;{" "}
                       <a

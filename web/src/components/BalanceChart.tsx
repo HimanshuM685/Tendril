@@ -1,5 +1,5 @@
 import type { Charge, TopUp } from "@tendril/shared";
-import { formatUsdc, formatUsdcExact } from "@tendril/shared";
+import { formatUsdc } from "@tendril/shared";
 
 interface Props {
   topups: TopUp[];
@@ -27,9 +27,9 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
 
   if (events.length === 0) {
     return (
-      <div className="panel chart-card">
-        <h3>Balance over time</h3>
-        <p className="muted small">No activity yet — top up to start your history.</p>
+      <div className="balance-chart-empty">
+        <p className="empty-title">No balance activity yet</p>
+        <p className="empty-sub">Top up to start building your balance history.</p>
       </div>
     );
   }
@@ -49,12 +49,17 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
   // same width, so a burst of activity in one hour reads as clearly as a month
   // of idling. Tick labels carry the real timestamps.
   const W = 760;
-  const H = 220;
-  const pad = { l: 10, r: 10, t: 16, b: 26 };
+  const H = 240;
+  const pad = { l: 86, r: 18, t: 18, b: 34 };
   const tMin = pts[0].t;
   const tMax = pts[pts.length - 1].t;
-  const vMax = Math.max(...pts.map((p) => p.v));
-  const vMin = Math.min(...pts.map((p) => p.v), 0);
+  const values = pts.map((p) => p.v);
+  const dataMax = Math.max(...values);
+  const dataMin = Math.min(...values);
+  const dataRange = dataMax - dataMin;
+  const domainPad = dataRange > 0 ? dataRange * 0.12 : Math.max(Math.abs(dataMax) * 0.15, 100_000);
+  const vMax = dataMax + domainPad;
+  const vMin = dataMin >= 0 ? 0 : dataMin - domainPad;
   const span = vMax - vMin || 1;
 
   // Single-event series: hold a flat line across the width so it still reads.
@@ -66,6 +71,7 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
   const line = xy.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
   const area = `${line} L${x(iMax).toFixed(1)},${(H - pad.b).toFixed(1)} L${x(0).toFixed(1)},${(H - pad.b).toFixed(1)} Z`;
   const last = pts[pts.length - 1];
+  const gridValues = [vMax, (vMax + vMin) / 2, vMin];
 
   // Label granularity follows the span the changes cover: hours, days, months.
   const hours = (tMax - tMin) / 3_600_000;
@@ -84,18 +90,18 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
   ));
 
   return (
-    <div className="panel chart-card">
-      <div className="chart-head">
-        <h3>Balance over time</h3>
-        <span className="chart-now" title={formatUsdcExact(currentBalance)}>
-          {formatUsdc(currentBalance)}
-        </span>
-      </div>
+    <div className="balance-chart-content">
       <figure className="balance-chart">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Historical balance">
-          {/* peak / floor reference lines */}
-          <line className="bc-grid" x1={pad.l} y1={y(vMax)} x2={W - pad.r} y2={y(vMax)} />
-          <line className="bc-grid" x1={pad.l} y1={y(vMin)} x2={W - pad.r} y2={y(vMin)} />
+          {/* Three reference lines keep the vertical scale legible at a glance. */}
+          {gridValues.map((value, index) => (
+            <g key={index}>
+              <line className="bc-grid" x1={pad.l} y1={y(value)} x2={W - pad.r} y2={y(value)} />
+              <text className="bc-vlabel" x={pad.l - 10} y={y(value) + 3} textAnchor="end">
+                {formatUsdc(value)}
+              </text>
+            </g>
+          ))}
 
           <path className="bc-area" d={area} />
           <path className="bc-line" d={line} />
@@ -107,11 +113,6 @@ export function BalanceChart({ topups, charges, currentBalance }: Props) {
           {/* highlight the live balance */}
           <circle className="bc-dot bc-dot-now" cx={x(iMax)} cy={y(last.v)} r={4.5} />
 
-          {/* value labels */}
-          <text className="bc-vlabel" x={pad.l} y={y(vMax) - 6}>{formatUsdc(vMax)}</text>
-          {vMin !== vMax && (
-            <text className="bc-vlabel" x={pad.l} y={y(vMin) - 6}>{formatUsdc(vMin)}</text>
-          )}
           {/* time labels at the change positions */}
           {ticks.map((i) => (
             <text
