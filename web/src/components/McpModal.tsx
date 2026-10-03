@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { REGISTRY_URL } from "../api";
+import { docsUrl } from "../lib/docsLinks";
 
 interface Props {
   onClose: () => void;
@@ -136,6 +137,7 @@ export function McpModal({ onClose }: Props) {
           </p>
         </div>
         <div className="modal-actions">
+          <a className="btn ghost" href={docsUrl("/docs/build/mcp")}>MCP documentation</a>
           <button className="btn" onClick={onClose}>
             Got it
           </button>

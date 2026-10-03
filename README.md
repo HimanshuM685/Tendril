@@ -52,6 +52,7 @@ Tendril just makes it prepaid and individual-scale.
 | `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
 | `contributor/` | **The contributor script.** The daemon a contributor runs. Authenticates with an API key minted in the web app (no wallet key on the machine), heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
 | `web/` | **The website.** Vite + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
+| `docs-web/` | **The documentation website.** Independently deployable Vite + React app at [docs.tendrilhq.com](https://docs.tendrilhq.com). Dedicated pages, searchable navigation, per-page anchors, and responsive architecture diagrams; content comes from `docs/`. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
 
@@ -115,8 +116,10 @@ they guessed wrong.
 Wallet popups, end to end: top up = 1, rent = 1, each job execution = 1, release/SSH = 0.
 
 API reference: **[docs/api.md](docs/api.md)** (plain HTTP), **[docs/x402-api.md](docs/x402-api.md)**
-(paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). On the site they share one
-**Docs** page.
+(paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). Browse dedicated pages at
+**[Tendril Docs](https://docs.tendrilhq.com)**. Run `npm run docs` for the local Docs app;
+build it independently with `npm run build -w docs-web`. Separate domain deployment settings
+are in [DEPLOY.md](./DEPLOY.md#3b1-documentation-app-separate-static-spa).
 
 **The payable routes are CORS-free.** They answer any origin, so a browser anywhere can pay one —
 the Tendril web app has no privileged access, and the frontend is just another x402 client.

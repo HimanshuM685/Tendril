@@ -8,6 +8,7 @@
     "backend",
     "contributor",
     "web",
+    "docs-web",
     "admin",
     "example-buyer",
     "mcp"
@@ -16,6 +17,8 @@
     "backend": "npm run dev -w backend",
     "contributor": "npm run dev -w contributor",
     "web": "npm run dev -w web",
+    "docs": "npm run dev -w docs-web",
+    "build:docs": "npm run build -w docs-web",
     "admin": "npm run dev -w admin",
     "client": "npm run start -w example-buyer",
     "mcp": "npm run mcp -w @tendril/mcp-server",

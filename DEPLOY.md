@@ -56,6 +56,7 @@ Run each piece in its own terminal:
 npm run backend       # http://localhost:4000  (needs DATABASE_URL + PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY)
 npm run contributor   # contributor daemon (needs TENDRIL_API_KEY + Docker running)
 npm run web           # http://localhost:5173
+npm run docs          # http://localhost:5175 (standalone documentation)
 npm run admin         # http://localhost:5174  (admin portal; needs ADMIN_EMAILS on backend)
 npm run client        # the autonomous consumer agent (needs its own funded AVM_PRIVATE_KEY)
 ```
@@ -71,8 +72,9 @@ Tips:
 
 ## 3. Production deployment
 
-Three independently deployable pieces: **backend** (central registry service), **web** (static
-site), **contributor** (runs on each contributor's own machine). The autonomous client runs anywhere.
+Independently deployable pieces: **backend** (central registry service), **web** (main static
+site), **docs-web** (documentation static site), **admin**, and **contributor** (runs on each
+contributor's own machine). The autonomous client runs anywhere.
 
 ### 3a. Backend / registry (central API)
 
@@ -146,7 +148,9 @@ Registry env vars:
 
 ### 3b. Web app (static SPA)
 
-It's a Vite build — pure static assets. Set `VITE_REGISTRY_URL` **at build time**.
+The main app at **https://tendrilhq.com** is a Vite build — pure static assets. Set
+`VITE_REGISTRY_URL` **at build time**. Documentation is built and deployed separately from
+`docs-web/`, not rendered by this app.
 
 ```bash
 VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
@@ -160,8 +164,74 @@ VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
 - SPA rewrite: serve `index.html` for all routes (Netlify `_redirects`: `/* /index.html 200`;
   Vercel/CF Pages handle SPAs automatically).
 
+For Vercel projects with **Root Directory = `web`**, use `npm run build` and output directory
+`dist`. Enable **Include source files outside of the Root Directory** for the shared workspace.
+Vercel reads `web/vercel.json`, including the existing `/x402` API proxy and permanent redirects:
+
+- `/docs` and `/docs/` → `https://docs.tendrilhq.com`
+- `/docs/<path>` → `https://docs.tendrilhq.com/docs/<path>`
+- `/api` → `https://docs.tendrilhq.com/docs/api`
+
+Queries pass through those redirects; browsers preserve URL fragments. On other static hosts,
+configure equivalent redirects before the SPA fallback. A client-side redirect also handles
+legacy Docs paths. All documentation links in the main app point to `docs.tendrilhq.com`.
+
 > **Mixed content:** if the site is served over HTTPS, the registry **must** also be HTTPS/WSS,
 > or browsers will block the API + socket calls.
+
+### 3b1. Documentation app (separate static SPA)
+
+Create a **second hosting project** from this repository for **https://docs.tendrilhq.com**.
+Do not attach that domain to the main app's deployment.
+
+```bash
+npm install
+npm run build -w docs-web
+# output: docs-web/dist
+```
+
+Docs is an independent Vite + React app. It imports repository Markdown from `docs/`, including
+the existing API and MCP references. It has no wallet provider, payment client, registry polling,
+or backend requirement. `VITE_REGISTRY_URL` is optional and only changes the base URL displayed
+in examples (default `https://tendrilregister.007575.xyz`).
+
+**Vercel settings for the Docs project:**
+
+| Setting | Value |
+|---|---|
+| Root Directory | `docs-web` |
+| Include source files outside of the Root Directory | **Enabled** — Markdown lives in sibling `docs/` |
+| Framework | Vite |
+| Install command | `npm install` (npm workspaces) |
+| Build command | `npm run build` |
+| Output Directory | `dist` |
+| Custom domain | `docs.tendrilhq.com` |
+
+`docs-web/vercel.json` serves the SPA on deep links. For another static host, publish
+`docs-web/dist` and rewrite unmatched paths to `/index.html` after serving real assets.
+
+The Docs homepage lives at `https://docs.tendrilhq.com/`; `/docs` is a compatibility redirect
+to that homepage. Dedicated section routes retain the `/docs` prefix, for example:
+
+- `https://docs.tendrilhq.com/docs/start/architecture-flow#request-flow`
+- `https://docs.tendrilhq.com/docs/build`
+- `https://docs.tendrilhq.com/docs/api`
+
+Old query links such as `/docs?tab=build` and `/docs?doc=x402`, plus legacy section fragments,
+resolve to the corresponding dedicated pages. Docs **Launch App** links to
+`https://tendrilhq.com/explore`; the Docs brand links to `https://tendrilhq.com`.
+
+Deploy the Docs project and attach its domain before publishing the main app's Docs redirects.
+Domain DNS and TLS are configured in the respective hosting projects.
+
+**Local development and checks:**
+
+```bash
+npm run docs                       # http://localhost:5175/
+npm run typecheck -w docs-web
+npm exec -w docs-web -- playwright install chromium
+npm run test -w docs-web           # starts Docs and main-app dev servers
+```
 
 ### 3b2. Admin app (static SPA)
 

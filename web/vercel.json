@@ -1,4 +1,10 @@
 {
+  "redirects": [
+    { "source": "/docs", "destination": "https://docs.tendrilhq.com", "permanent": true },
+    { "source": "/docs/", "destination": "https://docs.tendrilhq.com", "permanent": true },
+    { "source": "/docs/:path*", "destination": "https://docs.tendrilhq.com/docs/:path*", "permanent": true },
+    { "source": "/api", "destination": "https://docs.tendrilhq.com/docs/api", "permanent": true }
+  ],
   "rewrites": [
     {
       "source": "/x402/:path*",

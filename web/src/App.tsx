@@ -5,7 +5,7 @@ import type { WalletSummary } from "@tendril/shared";
 import { WalletBar } from "./components/WalletBar";
 import { Marketplace } from "./components/Marketplace";
 import { LandingPage } from "./components/LandingPage";
-import { Docs } from "./components/Docs";
+import { DocsRedirect } from "./components/DocsRedirect";
 import { Dashboard } from "./components/Dashboard";
 import { Metrics } from "./components/Metrics";
 import { GoogleCallback } from "./components/GoogleCallback";
@@ -80,7 +80,7 @@ export function App() {
 
   const path = location.pathname;
   const isLanding = path === "/";
-  const isDocs = path.startsWith("/docs") || path === "/api";
+  const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -180,9 +180,9 @@ export function App() {
     );
   }
 
-  // Standalone docs portal matching docs-page-layout.png (docs.tendrilhq.com)
+  // Documentation is independently deployed at docs.tendrilhq.com.
   if (isDocs) {
-    return <Docs />;
+    return <DocsRedirect />;
   }
 
   return (
