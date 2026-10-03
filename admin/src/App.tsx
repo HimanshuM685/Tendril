@@ -2,13 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { loadToken, storeToken } from "./lib/api";
 import { AdminLayout } from "./components/AdminLayout";
-import { Dashboard } from "./pages/Dashboard";
-import { GasRequests } from "./pages/GasRequests";
-import { GoogleCallback } from "./pages/GoogleCallback";
-import { Login } from "./pages/Login";
-import { Treasury } from "./pages/Treasury";
-import { Users } from "./pages/Users";
-import { Settings } from "./pages/Settings";
+import { Dashboard } from "./admin-pages/Dashboard";
+import { GasRequests } from "./admin-pages/GasRequests";
+import { GoogleCallback } from "./admin-pages/GoogleCallback";
+import { Login } from "./admin-pages/Login";
+import { Treasury } from "./admin-pages/Treasury";
+import { Users } from "./admin-pages/Users";
+import { Settings } from "./admin-pages/Settings";
 
 interface AdminAuth {
   token: string | null;

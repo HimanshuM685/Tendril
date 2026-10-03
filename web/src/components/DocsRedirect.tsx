@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { legacyDocsUrl } from "../lib/docsLinks";
 
-/** Client fallback for static hosts that do not apply web/vercel.json redirects. */
+/** Client fallback for hosts that do not apply the Next.js redirect config. */
 export function DocsRedirect() {
   const { pathname, search, hash } = useLocation();
   const href = legacyDocsUrl(pathname, search, hash);

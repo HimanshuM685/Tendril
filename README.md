@@ -51,8 +51,8 @@ Tendril just makes it prepaid and individual-scale.
 |---|---|
 | `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
 | `contributor/` | **The contributor script.** The daemon a contributor runs. Authenticates with an API key minted in the web app (no wallet key on the machine), heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
-| `web/` | **The website.** Vite + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
-| `docs-web/` | **The documentation website.** Independently deployable Vite + React app at [docs.tendrilhq.com](https://docs.tendrilhq.com). Dedicated pages, searchable navigation, per-page anchors, and responsive architecture diagrams; content comes from `docs/`. |
+| `web/` | **The website.** Next.js + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
+| `docs-web/` | **The documentation website.** Independently deployable Next.js + React app at [docs.tendrilhq.com](https://docs.tendrilhq.com). Dedicated pages, searchable navigation, per-page anchors, and responsive architecture diagrams; content comes from `docs/`. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
 
@@ -170,7 +170,7 @@ TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd 
 #   tip: same machine as the consumer? add TUNNEL_MODE=local
 
 # 3a. Web UI                                      # http://localhost:5173
-cp web/.env.example web/.env    # set VITE_REGISTRY_URL (defaults to localhost:4000)
+cp web/.env.example web/.env.local    # set NEXT_PUBLIC_REGISTRY_URL (defaults to localhost:4000)
 npm run web                     # connect (wallet or email) → Sign in → Top up → Rent → ssh
 
 # 3b. …or the autonomous agent (its own funded key — signs in, tops up, rents)
@@ -178,13 +178,13 @@ AVM_PRIVATE_KEY=<buyer-key> npm run client       # …or:  cd example-buyer && n
 ```
 
 Each top-level folder is a self-contained piece you can `cd` into: **`backend/`**, **`contributor/`**,
-**`web/`**, **`example-buyer/`**, with **`shared/`** holding the types they all import.
+**`web/`**, **`docs-web/`**, **`admin/`**, **`example-buyer/`**, with **`shared/`** holding the types they all import.
 
 ## Run with Docker
 
 Each piece is its own Compose service, run independently. The backend usually lives on a server; a
 contributor runs on each machine sharing compute and needs only a **`TENDRIL_API_KEY`** in `.env`
-(`REGISTRY_URL` only when self-hosting). The **web app is not dockerized** (it's a static Vite SPA — see [Web app](#web-app-static-spa) below).
+(`REGISTRY_URL` only when self-hosting). The **web app is not dockerized** (it runs as a Next.js app — see [Web app](#web-app-nextjs) below).
 
 ```bash
 cp .env.example .env                     # then set REGISTRY_URL to your backend
@@ -210,21 +210,21 @@ The first rent then builds the SSH sandbox image on the host (compiles `bore` fo
   and on Docker Desktop (**Mac/Windows**) host networking doesn't share the loopback, so for local
   mode run the **contributor natively** (`npm run contributor`) instead.
 
-### Web app (static SPA)
+### Web app (Next.js)
 
-The web app isn't a container — it's a static build you host anywhere:
+The web app isn't a container — run its Next.js server or deploy to Vercel:
 
 ```bash
-VITE_REGISTRY_URL=http://your-host:4000 npm run build -w web   # → web/dist
+NEXT_PUBLIC_REGISTRY_URL=http://your-host:4000 npm run build -w web   # → web/.next
 ```
 
-Drop `web/dist` on Vercel / Netlify / Cloudflare Pages / nginx (full steps in [DEPLOY.md](./DEPLOY.md)).
+Deploy `web/.next` with `npm run start -w web` on a Node host or use Vercel (full steps in [DEPLOY.md](./DEPLOY.md)).
 
 ## Configuration
 
 All Node services read the repo-root `.env` (and each app's own `.env`, which overrides it);
-inline `FOO=bar npm run …` overrides both. The web app reads `web/.env` (`VITE_*` only, baked
-in at build time). See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
+inline `FOO=bar npm run …` overrides both. Browser apps read public `NEXT_PUBLIC_*` values from
+their `.env.local` files. See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
 and the env tables in [DEPLOY.md](./DEPLOY.md) for every variable.
 
 ### Testnet / mainnet
@@ -233,13 +233,13 @@ One switch picks the chain:
 
 ```bash
 ALGORAND_NETWORK=testnet        # backend, contributor, buyer
-VITE_ALGORAND_NETWORK=testnet   # web — Vite inlines it, so set it at BUILD time
+NEXT_PUBLIC_ALGORAND_NETWORK=testnet   # web — Next.js inlines it, so set it at BUILD time
 ```
 
 Everything chain-specific derives from it — the CAIP-2 id every payment must be on, the algod
 endpoint, the USDC asset id (`10458941` testnet / `31566704` mainnet) and the block explorer — so
 the pieces can't be left half-migrated. Each still has its own override (`ALGOD_URL`,
-`X402_ASSET_ID`, `VITE_EXPLORER_URL`) for a private node or a non-USDC ASA. An unrecognised value
+`X402_ASSET_ID`, `NEXT_PUBLIC_EXPLORER_URL`) for a private node or a non-USDC ASA. An unrecognised value
 throws at boot rather than defaulting: silently running testnet while you believe you configured
 mainnet is worse than not starting.
 
@@ -350,5 +350,5 @@ accounts holding USDC).
   A **session token** (minted after signing a login nonce) is only needed to *spend existing credit*.
   Unauthenticated callers can still hint `?payer=`, but the discount is floored at
   `MIN_PAYABLE_ATOMIC` so nobody can drain a stranger's balance.
-- `web/` uses Vite (not Next.js) deliberately: the wallet stack is client-only, so an SPA
-  avoids SSR/hydration friction.
+ - `web/` uses a Next.js client shell for wallet operations. Wallet-only code remains browser-bound,
+  while Next.js owns deployment, route handling, metadata, and asset delivery.

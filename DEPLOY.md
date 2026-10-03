@@ -47,8 +47,8 @@ cp .env.example .env          # edit values; root .env is picked up by all Node 
 ```
 
 `.env` is read by the backend, contributor, and example-buyer (each app's own `.env` overrides the
-root one; inline `FOO=bar npm run ...` overrides both). The web app reads `web/.env` (Vite,
-`VITE_*` only).
+root one; inline `FOO=bar npm run ...` overrides both). Browser apps read public `NEXT_PUBLIC_*`
+values from their own `.env.local` files.
 
 Run each piece in its own terminal:
 
@@ -72,8 +72,8 @@ Tips:
 
 ## 3. Production deployment
 
-Independently deployable pieces: **backend** (central registry service), **web** (main static
-site), **docs-web** (documentation static site), **admin**, and **contributor** (runs on each
+Independently deployable pieces: **backend** (central registry service), **web** (main Next.js
+site), **docs-web** (documentation Next.js site), **admin**, and **contributor** (runs on each
 contributor's own machine). The autonomous client runs anywhere.
 
 ### 3a. Backend / registry (central API)
@@ -146,40 +146,39 @@ Registry env vars:
 | `METER_INTERVAL_MS` | `10000` | how often the **watchdog** checks active leases for balance exhaustion (no per-tick billing) |
 | `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algod used to confirm top-ups + send withdrawals |
 
-### 3b. Web app (static SPA)
+### 3b. Web app (Next.js)
 
-The main app at **https://tendrilhq.com** is a Vite build — pure static assets. Set
-`VITE_REGISTRY_URL` **at build time**. Documentation is built and deployed separately from
+The main app at **https://tendrilhq.com** is a Next.js app. Set public browser configuration
+(`NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_ALGORAND_NETWORK`, and optional overrides) **at build time**.
+Documentation is built and deployed separately from
 `docs-web/`, not rendered by this app.
 
 ```bash
-VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
-# output: web/dist  → upload to any static host
+NEXT_PUBLIC_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
+# output: web/.next  → deploy with `npm run start -w web` or Vercel
 ```
 
-**Vercel / Netlify / Cloudflare Pages:**
+**Vercel / Node host:**
 - Build command: `npm install && npm run build -w web`
-- Output directory: `web/dist`
-- Env var: `VITE_REGISTRY_URL = https://api.your-tendril-domain.com`
-- SPA rewrite: serve `index.html` for all routes (Netlify `_redirects`: `/* /index.html 200`;
-  Vercel/CF Pages handle SPAs automatically).
+- Framework preset: Next.js
+- Env var: `NEXT_PUBLIC_REGISTRY_URL = https://api.your-tendril-domain.com`
+- Start command on a Node host: `npm run start -w web`
 
-For Vercel projects with **Root Directory = `web`**, use `npm run build` and output directory
-`dist`. Enable **Include source files outside of the Root Directory** for the shared workspace.
-Vercel reads `web/vercel.json`, including the existing `/x402` API proxy and permanent redirects:
+For Vercel projects with **Root Directory = `web`**, use `npm run build` and deploy the Next.js
+output. Enable **Include source files outside of the Root Directory** for the shared workspace.
+`web/next.config.ts` owns the `/x402` API proxy and permanent redirects:
 
 - `/docs` and `/docs/` → `https://docs.tendrilhq.com`
 - `/docs/<path>` → `https://docs.tendrilhq.com/docs/<path>`
 - `/api` → `https://docs.tendrilhq.com/docs/api`
 
-Queries pass through those redirects; browsers preserve URL fragments. On other static hosts,
-configure equivalent redirects before the SPA fallback. A client-side redirect also handles
-legacy Docs paths. All documentation links in the main app point to `docs.tendrilhq.com`.
+Queries pass through those redirects; browsers preserve URL fragments. A client-side redirect also
+handles legacy Docs paths. All documentation links in the main app point to `docs.tendrilhq.com`.
 
 > **Mixed content:** if the site is served over HTTPS, the registry **must** also be HTTPS/WSS,
 > or browsers will block the API + socket calls.
 
-### 3b1. Documentation app (separate static SPA)
+### 3b1. Documentation app (separate Next.js app)
 
 Create a **second hosting project** from this repository for **https://docs.tendrilhq.com**.
 Do not attach that domain to the main app's deployment.
@@ -187,12 +186,12 @@ Do not attach that domain to the main app's deployment.
 ```bash
 npm install
 npm run build -w docs-web
-# output: docs-web/dist
+# output: docs-web/.next
 ```
 
-Docs is an independent Vite + React app. It imports repository Markdown from `docs/`, including
+Docs is an independent Next.js + React app. It imports repository Markdown from `docs/`, including
 the existing API and MCP references. It has no wallet provider, payment client, registry polling,
-or backend requirement. `VITE_REGISTRY_URL` is optional and only changes the base URL displayed
+or backend requirement. `NEXT_PUBLIC_REGISTRY_URL` is optional and only changes the base URL displayed
 in examples (default `https://tendrilregister.007575.xyz`).
 
 **Vercel settings for the Docs project:**
@@ -201,14 +200,14 @@ in examples (default `https://tendrilregister.007575.xyz`).
 |---|---|
 | Root Directory | `docs-web` |
 | Include source files outside of the Root Directory | **Enabled** — Markdown lives in sibling `docs/` |
-| Framework | Vite |
+| Framework | Next.js |
 | Install command | `npm install` (npm workspaces) |
 | Build command | `npm run build` |
-| Output Directory | `dist` |
+| Output Directory | Next.js default (`.next`) |
 | Custom domain | `docs.tendrilhq.com` |
 
-`docs-web/vercel.json` serves the SPA on deep links. For another static host, publish
-`docs-web/dist` and rewrite unmatched paths to `/index.html` after serving real assets.
+Next.js serves deep links and metadata directly. Use a Node/Next host or Vercel; do not apply a
+static SPA rewrite to `index.html`.
 
 The Docs homepage lives at `https://docs.tendrilhq.com/`; `/docs` is a compatibility redirect
 to that homepage. Dedicated section routes retain the `/docs` prefix, for example:
@@ -233,14 +232,14 @@ npm exec -w docs-web -- playwright install chromium
 npm run test -w docs-web           # starts Docs and main-app dev servers
 ```
 
-### 3b2. Admin app (static SPA)
+### 3b2. Admin app (Next.js)
 
-Separate Vite build for `admin.tendrilhq.com` — Google sign-in with an email allowlist (`ADMIN_EMAILS`).
+Separate Next.js app for `admin.tendrilhq.com` — Google sign-in with an email allowlist (`ADMIN_EMAILS`).
 Admins review one-time ALGO gas grants for Google custodial users.
 
 ```bash
-VITE_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w admin
-# output: admin/dist  → upload to admin subdomain static host
+NEXT_PUBLIC_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w admin
+# output: admin/.next  → deploy with `npm run start -w admin` or Vercel
 ```
 
 **Google Cloud Console:** register a second OAuth redirect URI:
@@ -258,10 +257,11 @@ Backend env (in addition to Google OAuth vars):
 
 `PLATFORM_PRIVATE_KEY` must hold enough ALGO for gas grants (plus txn fees) in addition to USDC for withdrawals.
 
-**Vercel / Netlify / Cloudflare Pages:**
+**Vercel / Node host:**
 - Build command: `npm install && npm run build -w admin`
-- Output directory: `admin/dist`
-- Env var: `VITE_REGISTRY_URL = https://api.your-tendril-domain.com`
+- Framework preset: Next.js
+- Env var: `NEXT_PUBLIC_REGISTRY_URL = https://api.your-tendril-domain.com`
+- Start command on a Node host: `npm run start -w admin`
 
 ### 3c. Contributor agent (on each contributor's machine)
 
@@ -318,7 +318,7 @@ matching node, runs its job, and releases — reporting how much balance it drew
 - [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
 - [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.
 - [ ] `X402_NETWORK` matches the facilitator's `/supported` byte for byte; `METER_INTERVAL_MS` reviewed.
-- [ ] `VITE_REGISTRY_URL` + `VITE_ALGOD_URL` baked into the web build.
+- [ ] `NEXT_PUBLIC_REGISTRY_URL` + `NEXT_PUBLIC_ALGOD_URL` baked into the web build.
 - [ ] Contributors pre-build `SANDBOX_IMAGE` (`docker build -t tendril-ssh-sandbox contributor/sandbox-ssh`);
       agents kept alive (pm2/systemd) with Docker running + outbound network for bore.
 - [ ] Consumer accounts hold **ALGO** for top-ups (+ txn fees). No USDC / ASA opt-in needed.

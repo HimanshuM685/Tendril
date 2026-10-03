@@ -4,7 +4,7 @@ import { DOC_PAGES, renderDoc, resolveDocsLocation, type DocHeading } from "../l
 import { APP_ORIGIN, DOCS_ORIGIN, REGISTRY_URL } from "../lib/site";
 import { ArchDiagram } from "./ArchDiagram";
 
-// All content is repository-owned Markdown compiled by Vite, never runtime input.
+// All content is repository-owned Markdown compiled into the Next.js client bundle, never runtime input.
 const pages = DOC_PAGES.map((page) => ({ ...page, ...renderDoc(page) }));
 const groups = [...new Set(pages.map((page) => page.group))];
 const searchIndex = pages.flatMap((page) => [

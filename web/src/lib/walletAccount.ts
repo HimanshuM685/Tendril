@@ -62,7 +62,7 @@ export async function optInUsdcWithWallet(
     sender: address,
     receiver: address,
     assetIndex: assetId,
-    amount: 0n,
+    amount: BigInt(0),
     suggestedParams,
   });
   const [signed] = await sign([txn.toByte()]);

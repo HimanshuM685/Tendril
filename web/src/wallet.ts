@@ -34,7 +34,7 @@ export async function loginWithWallet(
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     sender: address,
     receiver: address,
-    amount: 0n,
+    amount: BigInt(0),
     note: new TextEncoder().encode(nonce),
     suggestedParams,
   });

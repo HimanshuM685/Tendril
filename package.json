@@ -20,10 +20,13 @@
     "docs": "npm run dev -w docs-web",
     "build:docs": "npm run build -w docs-web",
     "admin": "npm run dev -w admin",
+    "build:web": "npm run build -w web",
+    "build:admin": "npm run build -w admin",
+    "build:apps": "npm run build -w web && npm run build -w docs-web && npm run build -w admin",
     "client": "npm run start -w example-buyer",
     "mcp": "npm run mcp -w @tendril/mcp-server",
     "keygen": "npm run keygen -w contributor",
-    "typecheck": "tsc -b shared backend contributor example-buyer mcp",
+    "typecheck": "tsc -b shared backend contributor example-buyer mcp && npm run typecheck -w web && npm run typecheck -w docs-web && npm run typecheck -w admin",
     "build:shared": "tsc -b shared"
   },
   "engines": {
