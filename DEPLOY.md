@@ -166,7 +166,8 @@ NEXT_PUBLIC_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w we
 
 For Vercel projects with **Root Directory = `web`**, use `npm run build` and deploy the Next.js
 output. Enable **Include source files outside of the Root Directory** for the shared workspace.
-`web/next.config.ts` owns the `/x402` API proxy and permanent redirects:
+`web/next.config.ts` owns the `/x402` API proxy and permanent redirects. `web/vercel.json`
+pins Vercel to Next.js output (`.next`) so an old Vite `dist` setting cannot be reused:
 
 - `/docs` and `/docs/` → `https://docs.tendrilhq.com`
 - `/docs/<path>` → `https://docs.tendrilhq.com/docs/<path>`
@@ -207,7 +208,7 @@ in examples (default `https://tendrilregister.007575.xyz`).
 | Custom domain | `docs.tendrilhq.com` |
 
 Next.js serves deep links and metadata directly. Use a Node/Next host or Vercel; do not apply a
-static SPA rewrite to `index.html`.
+static SPA rewrite to `index.html`. `docs-web/vercel.json` pins Vercel output to `.next`.
 
 The Docs homepage lives at `https://docs.tendrilhq.com/`; `/docs` is a compatibility redirect
 to that homepage. Dedicated section routes retain the `/docs` prefix, for example:
@@ -262,6 +263,8 @@ Backend env (in addition to Google OAuth vars):
 - Framework preset: Next.js
 - Env var: `NEXT_PUBLIC_REGISTRY_URL = https://api.your-tendril-domain.com`
 - Start command on a Node host: `npm run start -w admin`
+
+`admin/vercel.json` pins Vercel output to `.next`.
 
 ### 3c. Contributor agent (on each contributor's machine)
 
