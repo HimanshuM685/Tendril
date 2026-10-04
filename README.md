@@ -118,8 +118,8 @@ Wallet popups, end to end: top up = 1, rent = 1, each job execution = 1, release
 API reference: **[docs/api.md](docs/api.md)** (plain HTTP), **[docs/x402-api.md](docs/x402-api.md)**
 (paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). Browse dedicated pages at
 **[Tendril Docs](https://docs.tendrilhq.com)**. Run `npm run docs` for the local Docs app;
-build it independently with `npm run build -w docs-web`. Separate domain deployment settings
-are in [DEPLOY.md](./DEPLOY.md#3b1-documentation-app-separate-static-spa).
+build all browser apps with `npm run build:apps`. Separate domain deployment settings
+are in [DEPLOY.md](./DEPLOY.md#3b1-documentation-app-separate-nextjs-app).
 
 **The payable routes are CORS-free.** They answer any origin, so a browser anywhere can pay one —
 the Tendril web app has no privileged access, and the frontend is just another x402 client.
@@ -154,6 +154,9 @@ you prefer.
 ```bash
 npm install
 cp .env.example .env            # set DATABASE_URL (Neon), PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY — REQUIRED
+cp web/.env.example web/.env.local
+cp docs-web/.env.example docs-web/.env.local
+cp admin/.env.example admin/.env.local
 ```
 
 ```bash
@@ -170,10 +173,16 @@ TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd 
 #   tip: same machine as the consumer? add TUNNEL_MODE=local
 
 # 3a. Web UI                                      # http://localhost:5173
-cp web/.env.example web/.env.local    # set NEXT_PUBLIC_REGISTRY_URL (defaults to localhost:4000)
 npm run web                     # connect (wallet or email) → Sign in → Top up → Rent → ssh
 
-# 3b. …or the autonomous agent (its own funded key — signs in, tops up, rents)
+# 3b. Documentation UI                            # http://localhost:5175
+npm run docs
+
+# 3c. Admin UI                                    # http://localhost:5174
+#     requires ADMIN_EMAILS + Google OAuth config on backend
+npm run admin
+
+# 3d. …or the autonomous agent (its own funded key — signs in, tops up, rents)
 AVM_PRIVATE_KEY=<buyer-key> npm run client       # …or:  cd example-buyer && npm run start
 ```
 
@@ -216,6 +225,8 @@ The web app isn't a container — run its Next.js server or deploy to Vercel:
 
 ```bash
 NEXT_PUBLIC_REGISTRY_URL=http://your-host:4000 npm run build -w web   # → web/.next
+# Build web, docs, and admin together:
+npm run build:apps
 ```
 
 Deploy `web/.next` with `npm run start -w web` on a Node host or use Vercel (full steps in [DEPLOY.md](./DEPLOY.md)).
@@ -225,6 +236,7 @@ Deploy `web/.next` with `npm run start -w web` on a Node host or use Vercel (ful
 All Node services read the repo-root `.env` (and each app's own `.env`, which overrides it);
 inline `FOO=bar npm run …` overrides both. Browser apps read public `NEXT_PUBLIC_*` values from
 their `.env.local` files. See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
+[`docs-web/.env.example`](./docs-web/.env.example), [`admin/.env.example`](./admin/.env.example),
 and the env tables in [DEPLOY.md](./DEPLOY.md) for every variable.
 
 ### Testnet / mainnet
@@ -233,8 +245,19 @@ One switch picks the chain:
 
 ```bash
 ALGORAND_NETWORK=testnet        # backend, contributor, buyer
-NEXT_PUBLIC_ALGORAND_NETWORK=testnet   # web — Next.js inlines it, so set it at BUILD time
+NEXT_PUBLIC_ALGORAND_NETWORK=testnet   # web/.env.local — set it at BUILD time
 ```
+
+Frontend configuration is app-local:
+
+| App | Example file | Main values |
+|---|---|---|
+| Web | `web/.env.local` | `NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_ALGORAND_NETWORK`, `NEXT_PUBLIC_ALGOD_URL`, `NEXT_PUBLIC_EXPLORER_URL` |
+| Docs | `docs-web/.env.local` | `NEXT_PUBLIC_REGISTRY_URL` for URLs shown in examples |
+| Admin | `admin/.env.local` | `NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_EXPLORER_URL` |
+
+`NEXT_PUBLIC_*` values are browser-visible and embedded by Next.js at build time. Never put private
+keys, database credentials, or admin secrets in these files.
 
 Everything chain-specific derives from it — the CAIP-2 id every payment must be on, the algod
 endpoint, the USDC asset id (`10458941` testnet / `31566704` mainnet) and the block explorer — so
