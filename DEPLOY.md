@@ -131,7 +131,7 @@ Registry env vars:
 | `WEB_ORIGIN` | first `CORS_ORIGIN` | where to redirect after Google login, e.g. `https://tendril.your-domain.com` |
 | `WALLET_ENCRYPTION_KEY` | — | **required when Google auth enabled** — `openssl rand -base64 32` |
 | `ADMIN_EMAILS` | — | optional — comma-separated Google emails allowed into admin portal |
-| `ADMIN_WEB_ORIGIN` | `http://localhost:5174` | admin SPA origin (OAuth handoff + CORS) |
+| `ADMIN_WEB_ORIGIN` | `http://localhost:5174` | admin app origin (OAuth handoff + CORS) |
 | `ADMIN_GOOGLE_REDIRECT_URI` | — | admin OAuth callback, e.g. `https://api.your-domain.com/admin/auth/google/callback` |
 | `GAS_GRANT_MICRO_ALGOS` | `260000` | ALGO (microAlgos) sent per accepted gas request (0.26 ALGO) |
 | `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated; include admin origin |

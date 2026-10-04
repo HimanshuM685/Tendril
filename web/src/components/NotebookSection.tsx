@@ -171,7 +171,7 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal with numpy, pandas, matplotlib, and requests already installed. Both bill by the second from credit and stop when it runs out.";
+    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests already installed. Both bill by the second from credit and stop when it runs out.";
   }
   return "No contributor node is online, and priority training is not configured.";
 }
