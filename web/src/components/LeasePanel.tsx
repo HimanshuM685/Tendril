@@ -175,7 +175,7 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
                 End lease and destroy sandbox <code>{lease.label}</code>?
               </p>
               <p className="muted small">
-                The container and everything in it is destroyed — anything not pushed or copied out
+                The sandbox and everything in it is destroyed — anything not pushed or copied out
                 is gone. You're charged for the time used so far and the unused remainder of your
                 prepaid block comes back as credit. This can't be undone.
               </p>

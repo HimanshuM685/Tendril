@@ -254,9 +254,9 @@ function Manual() {
           </p>
           <CodeBlock lang="bash" code={"ssh root@<host> -p <port>   # password = your wallet address"} />
           <p>
-            The host and port resolve through a bore tunnel that runs inside the sandbox, so the
-            contributor never opens a port on their own host. The sandbox is a throwaway, hardened
-            Docker container — destroyed the moment the lease ends.
+            SSH reaches the sandbox through an outbound per-lease TLS/bore relay. Linux/KVM nodes
+            use a Firecracker guest with a separate kernel; legacy Docker shares the host kernel.
+            Capable nodes also offer Rent lab, then an explicit Open notebook click for Jupyter.
           </p>
 
           <h2 className="docs-h2" id="run-one-job">
@@ -272,10 +272,9 @@ function Manual() {
             code={`curl -X POST $API/x402/run -H 'content-type: application/json' \\\n  -d '{"payload":"print(sum(range(100)))"}'`}
           />
           <p>
-            <strong>Best value, not cheapest.</strong> Nodes are scored{" "}
-            <code>(cores + RAM_GB / 4) / pricePerHourUsd</code>, highest first. A machine at half
-            the rate that takes three times as long is not a saving, and you have no way to see
-            that happen.
+            Capability determines eligibility. Idle connected microVM peers win over hosted
+            fallback. Within each tier, nodes are scored{" "}
+            <code>(cores + RAM_GB / 4) / pricePerHourUsd</code>, highest first.
           </p>
 
           <h2 className="docs-h2" id="billing">
@@ -302,7 +301,8 @@ function Manual() {
               owe 0.10. A negative balance blocks renting until you top up by at least what you
               owe.
             </li>
-            <li>The contributor is paid on-chain in USDC when the lease ends, minus a small platform fee.</li>
+            <li>Release freezes billing immediately; the node stays reserved until guest/relay cleanup finishes.</li>
+            <li>Eligible contributors receive earnings credit at close, minus the platform fee, and withdraw on-chain later. Payout-blocked leases skip earnings credit.</li>
           </ul>
 
           <h2 className="docs-h2" id="for-agents">
@@ -344,9 +344,9 @@ function Manual() {
             Safety
           </h2>
           <ul className="docs-list">
-            <li>No host filesystem mounts, no host network, nearly all Linux capabilities dropped.</li>
-            <li>Hard CPU / memory / PID caps.</li>
-            <li>The container is destroyed when the lease ends — every time.</li>
+            <li>MicroVMs use a separate guest kernel, jailer/seccomp and private namespace/TAP with outbound NAT.</li>
+            <li>No host filesystem mounts; CPU / memory / PID / FD limits and fixed-size ephemeral disks.</li>
+            <li>Release removes guest resources and per-lease relay listeners before the node becomes available.</li>
           </ul>
 
           <h2 className="docs-h2" id="notes-limits">

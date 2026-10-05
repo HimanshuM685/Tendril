@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import type { ComputeNode, ExplorerNode, SandboxRuntime } from "@tendril/shared";
-import { isOnline } from "@tendril/shared";
+import type { ComputeNode, ExplorerNode, SandboxRuntime, SandboxCapabilities, SandboxCapability } from "@tendril/shared";
+import { isOnline, capabilities, runtimeAdvertisement } from "@tendril/shared";
 import { config } from "./config.js";
 import { hostedById, hostedCatalog, modalConfigured, toExplorer, withHostedFallback } from "./hosted.js";
 import { hasOptedIn } from "./payout.js";
@@ -12,6 +12,7 @@ import { hasOptedIn } from "./payout.js";
  * wallet money state is persisted (see db.ts).
  */
 const nodes = new Map<string, ComputeNode>();
+export const registryEffects = { optedIn: hasOptedIn };
 
 export interface UpsertNodeInput {
   id?: string;
@@ -24,6 +25,7 @@ export interface UpsertNodeInput {
   pricePerHourUsd: number;
   runtime?: SandboxRuntime;
   kvm?: boolean;
+  capabilities?: Partial<SandboxCapabilities>;
 }
 
 function withStatus(node: ComputeNode): ComputeNode {
@@ -38,8 +40,8 @@ function withStatus(node: ComputeNode): ComputeNode {
  *
  * A payout address that hasn't opted into the payment asset can't receive an
  * ASA transfer, so we check once at registration and flag the node rather than
- * turn it away — it still serves compute and still earns; the payouts are just
- * recorded unpaid until the contributor opts in.
+ * turn it away — it still serves compute, but payoutBlocked leases skip earnings
+ * credit. Opt in and reconnect before opening new leases.
  */
 export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   const now = Date.now();
@@ -49,14 +51,13 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
     id,
     ownerAddr: input.ownerAddr,
     payToAddr: input.payToAddr,
-    payoutBlocked: !(await hasOptedIn(input.payToAddr)),
+    payoutBlocked: !(await registryEffects.optedIn(input.payToAddr)),
     label: input.label,
     cpuCores: input.cpuCores,
     ramMb: input.ramMb,
     gpu: input.gpu,
     provider: "contributor",
-    runtime: input.runtime ?? existing?.runtime ?? "docker",
-    kvm: input.kvm ?? existing?.kvm ?? false,
+    ...runtimeAdvertisement(input),
     pricePerHourUsd: input.pricePerHourUsd,
     lastHeartbeat: now,
     createdAt: existing?.createdAt ?? now,
@@ -65,7 +66,7 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   nodes.set(id, node);
   if (node.payoutBlocked) {
     console.warn(
-      `[registry] node ${id}: ${node.payToAddr} has not opted into asset ${config.assetId} — payouts will be recorded unpaid`,
+      `[registry] node ${id}: ${node.payToAddr} has not opted into asset ${config.assetId} — lease earnings credit blocked`,
     );
   }
   return node;
@@ -78,20 +79,18 @@ function onlinePeers(): ComputeNode[] {
 export function getNode(id: string): ComputeNode | undefined {
   const node = nodes.get(id);
   if (node) return withStatus(node);
-  // Hosted rows exist only while no contributor is online.
-  if (onlinePeers().length > 0 || !modalConfigured()) return undefined;
+  if (!modalConfigured()) return undefined;
   return hostedById(id);
 }
 
 export function touchHeartbeat(
   id: string,
-  patch?: { runtime?: SandboxRuntime; kvm?: boolean },
+  patch?: { runtime?: SandboxRuntime; kvm?: boolean; capabilities?: Partial<SandboxCapabilities> },
 ): void {
   const node = nodes.get(id);
   if (!node) return;
   node.lastHeartbeat = Date.now();
-  if (patch?.runtime) node.runtime = patch.runtime;
-  if (patch?.kvm !== undefined) node.kvm = patch.kvm;
+  Object.assign(node, runtimeAdvertisement(patch ?? {}));
 }
 
 /** Mark a node offline immediately (e.g. on socket disconnect). */
@@ -140,8 +139,11 @@ export function chooseNode(
   peers: ComputeNode[],
   hosted: ComputeNode[],
   isFree: (nodeId: string) => boolean,
+  required: SandboxCapability = "python",
 ): ComputeNode | null {
-  const idle = (list: ComputeNode[]) => list.filter((n) => isFree(n.id));
+  const idle = (list: ComputeNode[]) => list.filter((n) =>
+    n.status === "online" && capabilities(n.capabilities)[required] && (n.provider === "modal" || isFree(n.id)),
+  );
   const micro = idle(peers.filter((n) => n.runtime === "microvm" && n.kvm));
   if (micro.length > 0) return best(micro);
   const modal = idle(hosted);
@@ -151,9 +153,13 @@ export function chooseNode(
   return null;
 }
 
-export function pickBestValueNode(isFree: (nodeId: string) => boolean): ComputeNode | null {
+export function pickBestValueNode(isFree: (nodeId: string) => boolean, required: SandboxCapability = "python"): ComputeNode | null {
   const hosted = modalConfigured() ? hostedCatalog() : [];
-  return chooseNode(onlinePeers(), hosted, isFree);
+  return chooseNode(onlinePeers(), hosted, isFree, required);
+}
+
+export function notebooksAvailable(): boolean {
+  return modalConfigured() || onlinePeers().some((n) => capabilities(n.capabilities).notebook);
 }
 
 export function listOnlineNodes(): ExplorerNode[] {

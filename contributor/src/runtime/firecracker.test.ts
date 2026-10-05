@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { advertise } from "./select.js";
-import { buildBootConfig, jailerArgv, removeLeaseDir } from "./firecracker.js";
+import { buildBootConfig, jailerArgv, removeLeaseDir, vmId, memoryMib } from "./firecracker.js";
 
 const kernel = "/opt/tendril/guest-vmlinux";
 const cfg = buildBootConfig({
@@ -37,6 +37,14 @@ assert.equal(argv.includes("--bind"), false);
 assert.equal(argv.includes("--gpus"), false);
 assert.equal(argv.includes("-p"), false);
 assert.equal(argv.join(" ").includes("/dev"), false);
+assert.equal(argv.includes("--no-seccomp"), false);
+assert.ok(argv.includes("cpu.max=100000 100000"));
+assert.ok(argv.includes("memory.max=2281701376"));
+assert.ok(argv.includes("pids.max=256"));
+assert.match(vmId("_../lease"), /^[A-Za-z0-9-]+$/);
+assert.notEqual(vmId("lease_a"), vmId("lease-a"));
+assert.equal(memoryMib("2g"), 2048);
+assert.throws(() => memoryMib("unlimited"));
 
 const dir = await mkdtemp(join(tmpdir(), "tendril-lease-"));
 await writeFile(join(dir, "rootfs.ext4"), "disk");

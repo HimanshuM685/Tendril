@@ -171,7 +171,7 @@ export function ArchDiagram() {
             </text>
           </g>
 
-          {/* 4. Contributor Daemon → Sandbox: Docker Run / Destroy */}
+          {/* 4. Contributor Daemon → Sandbox: Guest Boot / Destroy */}
           <g
             className={`arch-flow-group ${
               isDimmed(activeFlow === "run" ? "run" : "lease") ? "dimmed" : ""
@@ -246,14 +246,14 @@ export function ArchDiagram() {
             <text x="54" y="126" className="arch-node-desc">Funds USDC &amp; manages leases</text>
           </g>
 
-          {/* Node 2: Ephemeral Docker Sandbox */}
+          {/* Node 2: Ephemeral MicroVM Sandbox */}
           <g className="arch-node-group" filter="url(#node-shadow)">
             <rect x="680" y="35" width="240" height="110" rx="10" className="arch-node-bg" />
             <rect x="680" y="35" width="240" height="110" rx="10" className="arch-node-border" />
             <rect x="694" y="48" width="115" height="18" rx="4" fill="rgba(124, 179, 5, 0.12)" />
             <text x="700" y="61" className="arch-node-badge-lime">EXECUTION TIER</text>
-            <text x="694" y="90" className="arch-node-title">Docker Sandbox</text>
-            <text x="694" y="110" className="arch-node-sub">Ubuntu / Debian · Bore Relay</text>
+            <text x="694" y="90" className="arch-node-title">Firecracker Guest</text>
+            <text x="694" y="110" className="arch-node-sub">Separate Kernel · TLS Relay</text>
             <text x="694" y="126" className="arch-node-desc">Destroyed on lease closure</text>
           </g>
 
@@ -276,7 +276,7 @@ export function ArchDiagram() {
             <rect x="694" y="264" width="125" height="18" rx="4" fill="rgba(124, 179, 5, 0.12)" />
             <text x="700" y="277" className="arch-node-badge-lime">PROVIDER NODE</text>
             <text x="694" y="306" className="arch-node-title">Contributor PC</text>
-            <text x="694" y="328" className="arch-node-sub">Daemon · Docker Engine · Bore</text>
+            <text x="694" y="328" className="arch-node-sub">Linux/KVM · Jailer · OCI Cache</text>
             <text x="694" y="348" className="arch-node-desc">Outbound-only connection</text>
             <text x="694" y="364" className="arch-node-desc">No wallet keys on machine</text>
           </g>
@@ -308,7 +308,7 @@ export function ArchDiagram() {
       <div className="arch-caption-bar">
         <span className="acb-tag">// ARCHITECTURE FLOW</span>
         <span className="acb-desc">
-          The registry balances micro-metered runtime off-chain in Neon, settles USDC on Algorand with zero network gas for consumers, and orchestrates disposable Docker sandboxes over secure bore tunnels.
+          The registry meters runtime off-chain in Neon, settles USDC on Algorand with sponsored payment fees, and orchestrates ephemeral Firecracker guests over per-lease TLS relays. Legacy Docker and hosted CPU remain available.
         </span>
       </div>
     </div>

@@ -33,7 +33,7 @@ assert.equal(hostedHourlyUsd(4, 16, 0.3), 1.24);
   assert.ok(low / modal >= 1.25);
 }
 
-assert.deepEqual(withHostedFallback(["peer"], ["hosted"]), ["peer"]);
+assert.deepEqual(withHostedFallback(["peer"], ["hosted"]), ["peer", "hosted"]);
 assert.deepEqual(withHostedFallback([], ["hosted-cpu-2"]), ["hosted-cpu-2"]);
 
 console.log("hosted: ok");

@@ -107,6 +107,20 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "files": 7
+    },
+    {
+      "date": "2026-10-04T20:26:07.259357+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 47,
+      "usage_unavailable": true
+    },
+    {
+      "date": "2026-10-04T20:39:57.476519+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 7,
+      "usage_unavailable": true
     }
   ],
   "total_input_tokens": 523665,

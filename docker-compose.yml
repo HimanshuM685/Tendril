@@ -18,7 +18,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     image: tendril-backend
-    # State lives in Neon (Postgres) via DATABASE_URL in .env — no local volume.
+    # Hosted-only backend example. Contributor SSH/notebooks need the native
+    # backend/relay topology (Unix IPC + private namespace access): docs/runtime.md.
+    # Money state lives in Neon (Postgres) via DATABASE_URL in .env.
     # Set DATABASE_URL, PLATFORM_PAYTO and PLATFORM_PRIVATE_KEY (signs contributor
     # payouts) in .env before `up backend`.
     env_file: .env
@@ -36,13 +38,12 @@ services:
     # Connects to the backend at REGISTRY_URL (set in .env) — runs standalone:
     #   docker compose up --build contributor
     env_file: .env
+    environment:
+      TENDRIL_RUNTIME: docker
     # Launches sandboxes on the HOST Docker daemon (via the mounted socket) so it
     # needs no Docker-in-Docker of its own. In the default TUNNEL_MODE=bore, each
     # sandbox dials OUT for SSH, so host networking is NOT required.
-    #   ⚠ network_mode: host is only needed for TUNNEL_MODE=local (same-machine
-    #   SSH), and it doesn't share the host loopback on Docker Desktop (Mac/Win) —
-    #   there, run the contributor natively (`npm run contributor`) for local mode.
-    # network_mode: host
+    # Backend-allocated per-lease TLS relay takes priority over TUNNEL_MODE=local.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped

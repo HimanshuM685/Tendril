@@ -45,4 +45,7 @@ if [ -n "${NO_BORE}" ]; then
 fi
 
 # bore in the foreground (PID 1) so the container's lifetime tracks the tunnel.
+if [ -n "${TENDRIL_RELAY_JSON:-}" ]; then
+  exec /usr/local/bin/tendril-tunnel
+fi
 exec bore local 22 --to "${BORE_SERVER}"

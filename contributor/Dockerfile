@@ -6,7 +6,7 @@
 # itself needs no inbound ports. Standalone:
 #   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 #     --env-file .env -e REGISTRY_URL=http://localhost:4000 tendril-contributor
-# (Add --network host only if you use TUNNEL_MODE=local for same-machine SSH.)
+# This image runs legacy Docker. Native Linux/KVM setup: docs/runtime.md.
 FROM node:20-slim
 
 WORKDIR /app
@@ -16,7 +16,7 @@ WORKDIR /app
 # daemons reject ("client version too old, minimum supported API is 1.44"), so
 # install the official STATIC docker client binary (CLI only, no daemon) instead.
 ARG DOCKER_CLI_VERSION=27.3.1
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL "https://download.docker.com/linux/static/stable/$(uname -m)/docker-${DOCKER_CLI_VERSION}.tgz" \
          | tar -xz -C /usr/local/bin --strip-components=1 docker/docker \

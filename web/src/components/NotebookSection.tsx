@@ -14,7 +14,7 @@ interface Props {
   session: Session | null;
   activeAddress: string | null;
   signTransactions: SignTransactions;
-  /** Backend can run a notebook on hosted CPU. Independent of the rent pool. */
+  /** Backend has a notebook-capable peer or hosted CPU. */
   notebooks: boolean;
   checking: boolean;
   onOpenConnectWallet?: () => void;
@@ -163,9 +163,9 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Cells run on hosted CPU, then outputs, plots, and files appear here. Billed by the second from credit.";
+    return "Upload a .ipynb. Cells run on a capable machine, then outputs, plots, and files appear here. Billed by the second from credit.";
   }
-  return "Notebooks need hosted CPU. Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET on the backend and restart.";
+  return "No notebook-capable machines available. Connect a capable contributor or configure hosted CPU.";
 }
 
 export function NotebookSection({
@@ -321,8 +321,8 @@ export function NotebookSection({
               {canPick
                 ? "or click to choose a file · 1.5 MB max"
                 : checking
-                  ? "Checking hosted CPU"
-                  : "Modal tokens are not set"}
+                   ? "Checking notebook-capable machines"
+                   : "No notebook-capable machines available"}
             </span>
           </label>
 

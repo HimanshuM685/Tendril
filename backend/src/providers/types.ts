@@ -4,10 +4,11 @@ import type {
   RunArtifact,
   SandboxAccess,
   SandboxLimits,
+  SandboxSurface,
 } from "@tendril/shared";
 
 /** HTTP `surface` plus the internal one-shot path, which never opens a tunnel. */
-export type Surface = "ssh" | "jupyter" | "exec";
+export type Surface = SandboxSurface;
 
 export interface StartArgs {
   leaseId: string;
@@ -19,6 +20,7 @@ export interface StartArgs {
   timeoutMs: number;
   limits: SandboxLimits;
   image: string;
+  notebook?: boolean;
 }
 
 export interface ExecArgs {
@@ -39,7 +41,7 @@ export interface ExecResult {
 
 export interface ComputeProvider {
   id: ProviderKind;
-  start(args: StartArgs): Promise<SandboxAccess>;
+  start(args: StartArgs): Promise<SandboxAccess | null>;
   exec(args: ExecArgs): Promise<ExecResult>;
   destroy(leaseId: string, nodeId: string): Promise<void>;
 }

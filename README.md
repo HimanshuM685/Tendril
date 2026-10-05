@@ -16,19 +16,21 @@ sign-up and no sign-in.
 
 ## The trust model (why this is safe to contribute to)
 
-A contributor gives *compute*, never filesystem or account access. The safety boundary isn't a
-permissions system — it's an **ephemeral Docker container**:
+A contributor gives *compute*, never filesystem or account access. On native Linux/KVM,
+the isolation boundary is an **ephemeral Firecracker microVM with a separate guest kernel**:
 
-- no host filesystem mounts (`-v` is never used),
-- no inbound host ports — the sandbox dials *out* over a [bore](https://github.com/ekzhang/bore)
-  tunnel for SSH (in local mode it publishes SSH only to `127.0.0.1`),
-- nearly all Linux capabilities dropped (`--cap-drop ALL` + only the handful sshd needs to let a
-  root password login in, `--security-opt no-new-privileges`),
-- hard CPU / memory / PID caps (cgroups),
-- **destroyed the moment the paid lease ends.**
+- OCI images package userspace; startup builds a cached ext4 template, and each paid lease copies it,
+- jailer, seccomp, cgroup v2 CPU/memory/PID limits, FD limits, and a fixed-size ephemeral guest disk,
+- private namespace/TAP with outbound NAT, no host filesystem mounts or LAN bridging,
+- outbound, verified TLS/bore transport with per-lease credentials; SSH and HTTPS/WSS Jupyter,
+- Release freezes billing immediately and retains the node reservation until guest and relay
+  cleanup are acknowledged.
 
-This is the same containerization trade-off the entire DePIN compute sector already runs on —
-Tendril just makes it prepaid and individual-scale.
+`TENDRIL_RUNTIME=auto` selects microVM after preflight, or legacy Docker with SSH/Python
+capabilities when prerequisites are missing. Explicit `firecracker` fails startup instead.
+Explore defaults to `runtime=microvm` and `kvm=true`; show all runtimes for legacy or hosted
+inventory. P1 microVMs support CPU/Linux only. See **[docs/runtime.md](docs/runtime.md)** for setup
+and the opt-in real-kernel verification gate.
 
 ## Architecture
 
@@ -36,11 +38,11 @@ Tendril just makes it prepaid and individual-scale.
    Contributor PC                Registry + API                 Consumer / Agent
  ┌──────────────────┐  WebSocket ┌────────────────────────┐    ┌────────────────────┐
  │ contributor agent│◄──────────►│ GET  /explorer   (free)│◄──►│ browser (Explore UI)│
- │  docker run ...  │            │ POST /x402/topup       │    │   or                │
+ │ jailer + microVM │            │ POST /x402/topup       │    │   or                │
  │  (nodes/leases   │            │ POST /x402/rent         │    │ autonomous agent    │
  │   in memory)     │            │ watchdog + earnings    │    └────────────────────┘
  └──────────────────┘            └──────────┬─────────────┘   both are x402 clients
-        │ bore tunnel (SSH)        ┌─────────┴────────┬──────────────┐
+        │ TLS/bore (SSH/lab)       ┌─────────┴────────┬──────────────┐
         ▼                          │                  │              │
   sandboxed SSH shell     Neon (Postgres)      x402 facilitator   Algorand
                     credits·payments·charges  (verify/settle,   (contributor
@@ -50,7 +52,7 @@ Tendril just makes it prepaid and individual-scale.
 | Folder | What it is |
 |---|---|
 | `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
-| `contributor/` | **The contributor script.** The daemon a contributor runs. Authenticates with an API key minted in the web app (no wallet key on the machine), heartbeats, and on a lease spins up a hardened Docker **SSH** sandbox that exposes itself over a **bore** tunnel — torn down when the lease ends. |
+| `contributor/` | **The contributor daemon.** API-key authentication and capability heartbeats; cached-rootfs Firecracker guests on Linux/KVM, or legacy Docker. SSH/Python and capable-peer notebook/Jupyter surfaces share acknowledged teardown. |
 | `web/` | **The website.** Vite + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
@@ -130,10 +132,10 @@ CORS only ever constrained browsers; a headless agent was never subject to it.
 - A **Neon** Postgres database (free at [neon.tech](https://neon.tech)) — its connection string is `DATABASE_URL`
 - A **platform Algorand account** that receives top-ups *and* pays contributors: its address is
   `PLATFORM_PAYTO` and its 64-byte key is `PLATFORM_PRIVATE_KEY` (both from one `npm run keygen`)
-- **Docker** (daemon running) — for the contributor agent's SSH sandboxes
+- **Docker** (daemon running) — OCI guest packaging, or legacy Docker execution
+- Native **Linux/KVM + Firecracker/jailer** for microVM isolation; **native Linux relay beside the backend** for contributor SSH/notebooks. Full prerequisites: [runtime guide](docs/runtime.md).
 - An **SSH client** to connect to a rented box (built into macOS/Linux/Windows). Public exposure uses
-  an in-container **bore** tunnel — nothing to install on the contributor; or `TUNNEL_MODE=local`
-  when consumer + agent share a machine
+  an outbound **TLS/bore** tunnel allocated by the platform relay
 - **Algorand testnet** accounts holding **USDC** (ASA `10458941`). Opt in, then use the
   [asset dispenser](https://asset-dispenser.testnet.algorand.network/). A little
   [ALGO](https://bank.testnet.algorand.network/) is needed *only* to opt in — the facilitator pays
@@ -161,10 +163,9 @@ npm run backend                 # …or:  cd backend     && npm run dev
 # 2. Contributor agent — mint an API key in the web app (CONTRIBUTE → MINT API KEY) first.
 #    No wallet key on this machine: the key names the wallet that earns for the node.
 TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd contributor && npm run dev
-#   tip: the SSH sandbox image builds locally on the FIRST rent, then is cached.
-#        that build compiles `bore` from source for your CPU arch (~30s), so the
-#        tunnel works on both x86_64 and arm64 (bore ships no arm64-linux binary).
-#   tip: same machine as the consumer? add TUNNEL_MODE=local
+#   microVM mode builds the OCI image/rootfs cache BEFORE registration.
+#   configure Linux/KVM prerequisites and the backend's TLS relay first: docs/runtime.md
+#   without KVM, auto advertises legacy Docker (outside the default Explore filter).
 
 # 3a. Web UI                                      # http://localhost:5173
 cp web/.env.example web/.env    # set VITE_REGISTRY_URL (defaults to localhost:4000)
@@ -197,15 +198,16 @@ The contributor **doesn't run a Docker of its own**: it mounts the host Docker s
 each rented sandbox as a sibling container on the host daemon, so there's nothing extra to install
 or start. Just set `TENDRIL_API_KEY` in `.env` (plus `REGISTRY_URL` if the backend isn't the hosted
 one, e.g. `http://YOUR_SERVER_IP:4000`) and bring it up.
-The first rent then builds the SSH sandbox image on the host (compiles `bore` for the host arch,
-~30s) and caches it — later rents are instant.
+Compose contributor runs the **legacy Docker runtime**. Run the native systemd contributor from
+[docs/runtime.md](docs/runtime.md) for Firecracker. Legacy image builds on first use if absent;
+microVM templates are always prepared before registration.
 
 - **backend** keeps only money state in **Neon** (`DATABASE_URL`) — no local volume; set
-  `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` too.
+  `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` too. Contributor SSH/notebooks require the native
+  backend/relay deployment described in the runtime guide; stock Compose backend suits hosted-only use.
 - **contributor** needs no inbound ports in the default `TUNNEL_MODE=bore` — each SSH sandbox dials
-  *out* over bore. `network_mode: host` is only needed for `TUNNEL_MODE=local` (same-machine SSH),
-  and on Docker Desktop (**Mac/Windows**) host networking doesn't share the loopback, so for local
-  mode run the **contributor natively** (`npm run contributor`) instead.
+  *out* over its allocated TLS/bore relay. Backend allocations take priority over standalone
+  `TUNNEL_MODE=local`; configure the platform relay before renting contributor SSH.
 
 ### Web app (static SPA)
 
@@ -298,24 +300,24 @@ curl -s "https://facilitator.goplausible.xyz/discovery/resources?includeTestnets
 3. **Human path:** connect Pera (testnet) → **Top up** (one wallet approval, any amount) → watch
    the credit appear → click **Rent**. With enough credit that's **zero popups**; without, one 402
    and one approval. A copyable **`ssh root@… -p …`** command appears (password = your wallet
-   address) with a countdown to `paidUntil`. `ssh` in. **Release** refunds the unused time as credit
-   and destroys the sandbox.
+   address) with a countdown to `fundedUntil`. `ssh` in. **Release** freezes the meter, destroys
+   the guest/relay, and bills only the seconds used.
 4. **Autonomous path:** run `npm run client` and narrate the logs — **no sign-in anywhere**. The
    agent tops up over x402, rents the cheapest node, runs a tiny training loop *on someone else's
-   machine*, prints the falling loss, then releases and shows the refund landing back as credit.
-5. Show `docker ps` during the lease (a hardened, mount-less container) and that it's **gone** after
-   release. On a testnet explorer, confirm the top-up; in Neon, the single `testnet.charges` row
+   machine*, prints the falling loss, then releases and shows the final charge.
+5. Show guest `uname -r` ending in `-tendril` and different from the host, then verify VMM,
+   disk, namespace/cgroup and relay listeners disappear after Release. On a testnet explorer,
+   confirm the top-up; in Neon, the single `testnet.charges` row
    (with the billed seconds) and the `testnet.payouts` row that credited the contributor. Then hit
    **WITHDRAW** on the contributor's wallet and confirm that transfer on-chain.
 
 ## What's verified vs. what needs your machine
 
-Compiles + builds clean (full `npm run typecheck`, web production build). Requires your environment
-to run end-to-end: a **Neon** database (`DATABASE_URL`), a **platform account** (`PLATFORM_PAYTO` +
-`PLATFORM_PRIVATE_KEY`), the Docker sandbox lifecycle (a running Docker daemon), outbound network for
-the bore tunnel, an SSH client, a reachable **x402 facilitator** (`X402_FACILITATOR_URL`) to verify
-and settle payments, and Algod for asset opt-in checks + contributor withdrawals (funded testnet
-accounts holding USDC).
+Default checks are `npm run typecheck`, `npm run test:p1`, web build and OCI userspace smoke.
+They need no KVM or funded wallet. The separate-kernel/resource-removal gate is
+`TENDRIL_KVM_TEST=1 npm run test:p1:kvm` on a configured native Linux/KVM host with the local TLS
+relay; a skipped gate does not certify Firecracker. Ledger replay tests require a test PostgreSQL database.
+Real payments additionally need platform/funded USDC accounts, a reachable x402 facilitator and Algod.
 
 ## Notes & limitations
 
@@ -325,7 +327,8 @@ accounts holding USDC).
   Contributor earnings are **credited to a balance** on lease end, post-fee, and cashed out on-chain
   by `POST /withdraw` — one transfer per withdrawal rather than one per lease, with a **$5 minimum**
   (`MIN_WITHDRAW_ATOMIC`) so fees never outweigh what moves. Withdrawing needs
-  `PLATFORM_PRIVATE_KEY` and an address opted into the asset; earning needs neither.
+  `PLATFORM_PRIVATE_KEY` and an address opted into the asset. `payoutBlocked` leases skip
+  earnings credit; opt in and reconnect the contributor before opening new leases.
 - **Billing:** nothing is charged for compute up front. A session is billed **once**, when it
   closes, for the seconds it actually ran (`elapsed/3600 × rate`), and the debit is clamped to the
   balance. A watchdog checks every `METER_INTERVAL_MS` whether credit has run out, so worst-case
@@ -338,11 +341,10 @@ accounts holding USDC).
   `503` with **nothing settled**, so a failed rent costs the caller nothing.
 - **Nodes + leases are in-memory:** a registry restart drops live sessions (the sockets die anyway).
   This is what keeps the DB quiet — heartbeats and the watchdog never write to Postgres.
-- **SSH auth** is a throwaway root container either way. Send `sshPubKey` in the rent body and it
-  becomes the container's `authorized_keys` (`authMethod: "publickey"`) — the only option that works
-  without a session, since there is no wallet address to use as a password. Otherwise it falls back
-  to a per-lease password (your wallet address), which is fine for ephemeral compute but is a
-  password, not a key.
+- **SSH auth:** send `sshPubKey` for guest `authorized_keys` (`authMethod: "publickey"`), or
+  use the verified payer address as the ephemeral root password. Agent readiness uses its own
+  key and a pinned per-lease guest host key. Jupyter capability opens a token-authenticated lab
+  with an explicit second click.
 - **Auth:** paying needs no account at all — the settled transaction's sender *is* the identity.
   A **session token** (minted after signing a login nonce) is only needed to *spend existing credit*.
   Unauthenticated callers can still hint `?payer=`, but the discount is floored at

@@ -1,206 +1,130 @@
 import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
-import {
-  WS,
-  type AgentHelloMsg,
-  type ContainerFailedMsg,
-  type ContainerReadyMsg,
-  type HeartbeatMsg,
-  type HelloAckMsg,
-  type JobResultMsg,
-  type SandboxAccess,
-  type SandboxLimits,
-  type StartContainerMsg,
-} from "@tendril/shared";
+import { WS, type AgentHelloMsg, type ContainerFailedMsg, type ContainerReadyMsg,
+  type ContainerDestroyedMsg, type HeartbeatMsg, type HelloAckMsg, type JobResultMsg,
+  type SandboxAccess, type StartContainerMsg } from "@tendril/shared";
 import { ownerOfApiKey } from "./db.js";
 import { config } from "./config.js";
-import { markOffline, touchHeartbeat, upsertNode } from "./registry.js";
-import { activateLease, closeLease, getLease, leasesForNode, setLeaseStatus } from "./leases.js";
+import { getNode, markOffline, touchHeartbeat, upsertNode } from "./registry.js";
+import { closeLease, getLease, leasesForNode } from "./leases.js";
 
-/** nodeId -> the socket of the agent currently hosting that node. */
 const agentSockets = new Map<string, Socket>();
-
-/** Pending promises awaiting a container to come up, keyed by leaseId. */
-const pendingContainers = new Map<
-  string,
-  {
-    resolve: (access: SandboxAccess) => void;
-    reject: (err: Error) => void;
-    /** Set when the renter supplied a key, which decides `access.authMethod`. */
-    sshPubKey: string | null;
-  }
->();
-
-/** Pending promises awaiting job results, keyed by jobId. */
-const pendingJobs = new Map<
-  string,
-  { resolve: (r: JobResultMsg) => void; reject: (err: Error) => void }
->();
+interface Pending<T> { nodeId: string; leaseId: string; resolve(value: T): void; reject(err: Error): void }
+const starts = new Map<string, Pending<SandboxAccess | null>>();
+const jobs = new Map<string, Pending<JobResultMsg>>();
+const stops = new Map<string, Pending<void>>();
+const destroyed = new Set<string>();
+export const wsEffects = { ownerOfApiKey };
+const receiptKey = (nodeId: string, leaseId: string) => `${nodeId}:${leaseId}`;
 
 export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "*"): Server {
-  const io = new Server(httpServer, { cors: { origin: corsOrigin } });
-
+  // Guest stdout is bounded at 4 MB; default Socket.IO's 1 MB would disconnect
+  // a healthy agent when it returns an allowed result.
+  const io = new Server(httpServer, { cors: { origin: corsOrigin }, maxHttpBufferSize: 6_000_000 });
   io.on("connection", (socket) => {
-    let boundNodeId: string | null = null;
-
+    let bound: string | null = null;
+    const owns = (leaseId: string) => !!bound && getLease(leaseId)?.nodeId === bound && agentSockets.get(bound) === socket;
+    const onDestroyed = (msg: ContainerDestroyedMsg) => {
+      if (!owns(msg.leaseId)) return;
+      const key = receiptKey(bound!, msg.leaseId);
+      if (msg.ok) { destroyed.add(key); stops.get(key)?.resolve(); }
+      else stops.get(key)?.reject(new Error(msg.error || "agent cleanup failed"));
+      stops.delete(key);
+      const lease = getLease(msg.leaseId);
+      if (msg.ok && lease && (lease.status === "active" || lease.status === "starting")) void closeLease(lease.id, "agent-stopped").catch(() => undefined);
+    };
     socket.on(WS.hello, async (msg: AgentHelloMsg) => {
-      // The API key is the whole of the agent's identity: the wallet that minted
-      // it owns the node and earns for it. A contributor cannot claim someone
-      // else's address by editing their .env, because they never name one.
-      const ownerAddr = await ownerOfApiKey(msg.apiKey);
-      if (!ownerAddr) {
-        socket.emit("error-message", "hello rejected: unknown or revoked API key");
+      try {
+        const ownerAddr = await wsEffects.ownerOfApiKey(msg.apiKey);
+        const existing = msg.nodeId ? getNode(msg.nodeId) : undefined;
+        if (!ownerAddr || (existing && existing.ownerAddr !== ownerAddr)) throw new Error("unknown key or node owner");
+        const node = await upsertNode({ ...msg.spec, id: msg.nodeId, ownerAddr, payToAddr: ownerAddr });
+        bound = node.id;
+        agentSockets.set(node.id, socket);
+        const ack: HelloAckMsg = { nodeId: node.id, ownerAddr, bore: { server: config.boreServer, secret: config.boreSecret } };
+        socket.emit(WS.helloAck, ack);
+      } catch {
+        socket.emit("error-message", "hello rejected");
         socket.disconnect(true);
+      }
+    });
+    socket.on(WS.heartbeat, (msg: HeartbeatMsg) => {
+      if (!bound || agentSockets.get(bound) !== socket) return;
+      touchHeartbeat(bound, msg);
+      for (const leaseId of msg.destroyed ?? []) onDestroyed({ leaseId, ok: true });
+    });
+    socket.on(WS.containerReady, (msg: ContainerReadyMsg) => {
+      if (!owns(msg.leaseId)) return;
+      const pending = starts.get(msg.leaseId);
+      if (!pending || getLease(msg.leaseId)?.status !== "starting") {
+        socket.emit(WS.destroyContainer, { leaseId: msg.leaseId });
         return;
       }
-      const node = await upsertNode({ id: msg.nodeId, ownerAddr, payToAddr: ownerAddr, ...msg.spec });
-      boundNodeId = node.id;
-      agentSockets.set(node.id, socket);
-      const ack: HelloAckMsg = {
-        nodeId: node.id,
-        ownerAddr,
-        bore: { server: config.boreServer, secret: config.boreSecret },
-      };
-      socket.emit(WS.helloAck, ack);
-      console.log(`[ws] node online: ${node.id} (${node.label}) owner=${node.ownerAddr}`);
-    });
-
-    socket.on(WS.heartbeat, (msg: HeartbeatMsg) => {
-      if (!boundNodeId) return;
-      touchHeartbeat(boundNodeId, {
-        ...(msg.runtime ? { runtime: msg.runtime } : {}),
-        ...(msg.kvm !== undefined ? { kvm: msg.kvm } : {}),
-      });
-    });
-
-    socket.on(WS.containerReady, (msg: ContainerReadyMsg) => {
-      const lease = getLease(msg.leaseId);
-      if (!lease) return;
-      // A renter who supplied a public key authenticates with it; otherwise the
-      // password is their own address (only possible when they are signed in).
-      const usePubKey = pendingContainers.get(msg.leaseId)?.sshPubKey != null;
-      const access: SandboxAccess = {
-        kind: "ssh",
-        host: msg.host,
-        port: msg.port,
-        username: "root",
-        authMethod: usePubKey ? "publickey" : "password",
-        password: usePubKey ? null : lease.renterAddr,
+      pending.resolve(msg.access !== undefined ? msg.access : {
+        kind: "ssh", host: msg.host, port: msg.port, username: "root",
+        authMethod: "password", password: getLease(msg.leaseId)!.renterAddr,
         command: `ssh root@${msg.host} -p ${msg.port}`,
-      };
-      // Marks the lease active and starts the billable window.
-      activateLease(msg.leaseId, access);
-      pendingContainers.get(msg.leaseId)?.resolve(access);
-      pendingContainers.delete(msg.leaseId);
+      });
+      starts.delete(msg.leaseId);
     });
-
     socket.on(WS.containerFailed, (msg: ContainerFailedMsg) => {
-      setLeaseStatus(msg.leaseId, "failed");
-      pendingContainers.get(msg.leaseId)?.reject(new Error(msg.error));
-      pendingContainers.delete(msg.leaseId);
+      if (!owns(msg.leaseId)) return;
+      starts.get(msg.leaseId)?.reject(new Error(msg.error));
+      starts.delete(msg.leaseId);
+      if (getLease(msg.leaseId)?.status === "active") void closeLease(msg.leaseId, "guest-exited").catch(() => undefined);
     });
-
+    socket.on(WS.containerDestroyed, onDestroyed);
     socket.on(WS.jobResult, (msg: JobResultMsg) => {
-      pendingJobs.get(msg.jobId)?.resolve(msg);
-      pendingJobs.delete(msg.jobId);
+      const pending = jobs.get(msg.jobId);
+      if (!pending || !owns(pending.leaseId)) return;
+      pending.resolve(msg);
+      jobs.delete(msg.jobId);
     });
-
     socket.on("disconnect", () => {
-      if (boundNodeId) {
-        // The node's gone — bill + end any leases it was hosting, then mark it offline.
-        for (const lease of leasesForNode(boundNodeId)) {
-          void closeLease(lease.id, "node-disconnected");
-        }
-        markOffline(boundNodeId);
-        if (agentSockets.get(boundNodeId) === socket) agentSockets.delete(boundNodeId);
-        console.log(`[ws] node offline: ${boundNodeId}`);
+      if (!bound || agentSockets.get(bound) !== socket) return;
+      agentSockets.delete(bound);
+      markOffline(bound);
+      for (const map of [starts, jobs, stops]) for (const [key, pending] of map) {
+        if (pending.nodeId === bound) { pending.reject(new Error("agent disconnected; cleanup pending")); map.delete(key); }
       }
+      for (const lease of leasesForNode(bound)) void closeLease(lease.id, "node-disconnected").catch(() => undefined);
     });
   });
-
   return io;
 }
 
-export function isNodeConnected(nodeId: string): boolean {
-  return agentSockets.has(nodeId);
-}
+export function isNodeConnected(nodeId: string): boolean { return agentSockets.get(nodeId)?.connected === true; }
 
-/**
- * Ask the agent to start a sandbox; resolves with the SSH access details when
- * the container is up and the bore endpoint is known.
- */
-export function startContainer(args: {
-  nodeId: string;
-  leaseId: string;
-  image: string;
-  limits: SandboxLimits;
-  /** SSH password (the renter's address), or null under key auth. */
-  sshPassword: string | null;
-  /** OpenSSH public key to install in the sandbox, or null. */
-  sshPubKey: string | null;
-  timeoutMs?: number;
-}): Promise<SandboxAccess> {
-  const { nodeId, leaseId, image, limits, sshPassword, sshPubKey } = args;
-  const timeoutMs = args.timeoutMs ?? config.sandboxReadyTimeoutMs;
+function request<T>(map: Map<string, Pending<T>>, key: string, nodeId: string, leaseId: string, timeoutMs: number,
+  send: (socket: Socket) => void): Promise<T> {
   const socket = agentSockets.get(nodeId);
-  if (!socket) return Promise.reject(new Error("node not connected"));
-
-  return new Promise<SandboxAccess>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      pendingContainers.delete(leaseId);
-      reject(new Error("container start timed out"));
-    }, timeoutMs);
-
-    pendingContainers.set(leaseId, {
-      sshPubKey,
-      resolve: (access) => {
-        clearTimeout(timer);
-        resolve(access);
-      },
-      reject: (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    });
-
-    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword, sshPubKey };
-    socket.emit(WS.startContainer, msg);
+  if (!socket?.connected) return Promise.reject(new Error("node not connected; cleanup pending"));
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => { map.delete(key); reject(new Error("agent acknowledgement timed out")); }, timeoutMs);
+    map.set(key, { nodeId, leaseId, resolve: (value) => { clearTimeout(timer); resolve(value); },
+      reject: (err) => { clearTimeout(timer); reject(err); } });
+    send(socket);
   });
 }
 
-/** Tell the agent to destroy a lease's sandbox (best-effort). */
-export function destroyContainer(nodeId: string, leaseId: string): void {
-  agentSockets.get(nodeId)?.emit(WS.destroyContainer, { leaseId });
+export function startContainer(args: StartContainerMsg & { nodeId: string; timeoutMs?: number }): Promise<SandboxAccess | null> {
+  const { nodeId, timeoutMs = config.sandboxReadyTimeoutMs, ...msg } = args;
+  destroyed.delete(receiptKey(nodeId, msg.leaseId));
+  return request(starts, msg.leaseId, nodeId, msg.leaseId, timeoutMs,
+    (socket) => socket.emit(WS.startContainer, { ...msg, deadline: Date.now() + timeoutMs }));
 }
 
-/** Run a job inside an existing lease's sandbox; resolves with the result. */
-export function runJob(
-  nodeId: string,
-  leaseId: string,
-  jobId: string,
-  payload: string,
-  timeoutMs = 120_000,
-): Promise<JobResultMsg> {
-  const socket = agentSockets.get(nodeId);
-  if (!socket) return Promise.reject(new Error("node not connected"));
+export function destroyContainer(nodeId: string, leaseId: string): Promise<void> {
+  const key = receiptKey(nodeId, leaseId);
+  starts.get(leaseId)?.reject(new Error("lease stopping"));
+  starts.delete(leaseId);
+  if (destroyed.has(key)) return Promise.resolve();
+  return request(stops, key, nodeId, leaseId, config.sandboxStopTimeoutMs,
+    (socket) => socket.emit(WS.destroyContainer, { leaseId }));
+}
 
-  return new Promise<JobResultMsg>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      pendingJobs.delete(jobId);
-      reject(new Error("job timed out"));
-    }, timeoutMs);
-
-    pendingJobs.set(jobId, {
-      resolve: (r) => {
-        clearTimeout(timer);
-        resolve(r);
-      },
-      reject: (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    });
-
-    socket.emit(WS.runJob, { leaseId, jobId, payload });
-  });
+export function runJob(nodeId: string, leaseId: string, jobId: string, payload: string, timeoutMs = 120_000,
+  notebookJob = false): Promise<JobResultMsg> {
+  return request(jobs, jobId, nodeId, leaseId, timeoutMs,
+    (socket) => socket.emit(WS.runJob, { leaseId, jobId, payload, notebookJob, deadline: Date.now() + timeoutMs }));
 }

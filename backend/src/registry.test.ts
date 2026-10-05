@@ -8,7 +8,8 @@
  */
 import assert from "node:assert/strict";
 import type { ComputeNode } from "@tendril/shared";
-import { chooseNode, upsertNode } from "./registry.js";
+import { chooseNode, upsertNode, registryEffects, touchHeartbeat, getNode } from "./registry.js";
+registryEffects.optedIn = async () => true;
 
 const free = () => true;
 const peers: ComputeNode[] = [];
@@ -41,6 +42,7 @@ function modalRow(id: string): ComputeNode {
     provider: "modal",
     runtime: "docker",
     kvm: false,
+    capabilities: { ssh: false, python: true, notebook: true, jupyter: true },
     pricePerHourUsd: 0.2,
     status: "online",
     lastHeartbeat: Date.now(),
@@ -87,6 +89,7 @@ const micro = await upsertNode({
   pricePerHourUsd: 9,
   runtime: "microvm",
   kvm: true,
+  capabilities: { ssh: true, python: true, notebook: true, jupyter: true },
 });
 const dockerPeer = peers[0];
 const hosted = modalRow("hosted-cpu-2");
@@ -110,5 +113,12 @@ const fake = await upsertNode({
   kvm: false,
 });
 assert.equal(chooseNode([fake], [hosted], free)?.provider, "modal");
+assert.equal(chooseNode([micro, dockerPeer], [hosted], free, "notebook")?.id, micro.id);
+assert.equal(chooseNode([dockerPeer], [hosted], free, "notebook")?.provider, "modal");
+assert.equal(chooseNode([{ ...micro, capabilities: { ssh: true, python: true, notebook: false, jupyter: false } }], [hosted], free, "notebook")?.provider, "modal");
+assert.equal(chooseNode([], [hosted], () => false, "notebook")?.provider, "modal", "hosted SKUs bypass peer reservation");
+touchHeartbeat(micro.id, {});
+assert.equal(getNode(micro.id)?.runtime, "docker", "legacy heartbeat cannot retain a microVM claim");
+assert.equal(getNode(micro.id)?.capabilities?.notebook, false);
 
 console.log("node selection ok");

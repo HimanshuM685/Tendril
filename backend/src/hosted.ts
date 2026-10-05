@@ -69,6 +69,7 @@ export function hostedCatalog(now = Date.now()): ComputeNode[] {
     // Not a microVM. The default Explore filter hides these until "All".
     runtime: "docker" as const,
     kvm: false,
+    capabilities: { ssh: false, python: true, notebook: true, jupyter: true },
     pricePerHourUsd: hostedHourlyUsd(sku.physicalCores, sku.ramMb / 1024, markup),
     status: "online" as const,
     lastHeartbeat: now,
@@ -82,7 +83,7 @@ export function hostedById(id: string): ComputeNode | undefined {
 
 /** Peers win. Hosted rows are only the inventory when nobody is online. */
 export function withHostedFallback<T>(peers: T[], hosted: T[]): T[] {
-  return peers.length > 0 ? peers : hosted;
+  return [...peers, ...hosted];
 }
 
 export function toExplorer(node: ComputeNode): ExplorerNode {
@@ -98,6 +99,7 @@ export function toExplorer(node: ComputeNode): ExplorerNode {
     provider,
     runtime,
     kvm,
+    capabilities,
     pricePerHourUsd,
     status,
   } = node;
@@ -113,6 +115,7 @@ export function toExplorer(node: ComputeNode): ExplorerNode {
     provider,
     runtime,
     kvm,
+    capabilities,
     pricePerHourUsd,
     status,
   };

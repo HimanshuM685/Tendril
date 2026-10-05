@@ -533,6 +533,7 @@ export function Explore({
                     </div>
                     <div className="hw-action">
                       {isAvailable ? (
+                        <>
                         <button
                           type="button"
                           className="hw-pill-btn pill-available"
@@ -547,6 +548,11 @@ export function Explore({
                               ? "Open lab"
                               : "Available"}
                         </button>
+                        {n.provider !== "modal" && n.capabilities?.jupyter && (
+                          <button type="button" className="btn-tiny" disabled={renting === n.id}
+                            onClick={() => rent(n.id, n.pricePerHourUsd, "jupyter")}>Rent lab</button>
+                        )}
+                        </>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>
                       )}

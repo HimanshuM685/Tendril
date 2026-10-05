@@ -1,414 +1,237 @@
-import { spawn, execFile, type ChildProcess } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { cp, mkdir, readFile, rm, writeFile, chmod } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
-import { promisify } from "node:util";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
+import { chown, chmod, cp, mkdir, readFile, readdir, rm, rmdir, writeFile, stat } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
+import { release } from "node:os";
+import { setTimeout as delay } from "node:timers/promises";
 import { config } from "../config.js";
-import { ensureImage } from "../docker.js";
+import { command, terminate } from "./process.js";
+import { cloneRootfs, type RootfsTemplate } from "./rootfs.js";
+import { createNetwork, networkFor, removeNetwork, type GuestNetwork } from "./network.js";
 import type { LeaseRequest, RuntimeDriver, RunningLease } from "./types.js";
 
-const execFileP = promisify(execFile);
-const BORE_RE = /listening at ([a-zA-Z0-9.\-]+):(\d+)/i;
-
+export function vmId(leaseId: string): string { return `tnd-${createHash("sha256").update(leaseId).digest("hex").slice(0, 24)}`; }
+export function memoryMib(raw: string): number {
+  const m = /^(\d+(?:\.\d+)?)([gmk])b?$/i.exec(raw);
+  if (!m) throw new Error("memory must have a g/m/k suffix");
+  const value = Math.ceil(Number(m[1]) * ({ g: 1024, m: 1, k: 1 / 1024 }[m[2].toLowerCase()]!));
+  if (!Number.isFinite(value) || value < 128) throw new Error("guest memory must be at least 128 MiB");
+  return value;
+}
 export interface BootConfigInput {
-  kernelPath: string;
-  rootfsPath: string;
-  tap: string;
-  guestMac: string;
-  vcpus: number;
-  memMib: number;
-  guestIp: string;
-  hostIp: string;
+  kernelPath: string; rootfsPath: string; tap: string; guestMac: string; vcpus: number; memMib: number; guestIp: string; hostIp: string;
 }
-
-/** Firecracker boot document. `kernel_image_path` is the guest kernel, not the host's. */
-export function buildBootConfig(opts: BootConfigInput): Record<string, unknown> {
-  const bootArgs =
-    `console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/tendril-init.sh ` +
-    `ip=${opts.guestIp}::${opts.hostIp}:255.255.255.252::eth0:off:1.1.1.1`;
+export function buildBootConfig(o: BootConfigInput): Record<string, unknown> {
+  if (!Number.isFinite(o.vcpus) || o.vcpus <= 0 || o.vcpus > 32 || !Number.isInteger(o.memMib) || o.memMib < 128) throw new Error("invalid VM limits");
   return {
-    "boot-source": {
-      kernel_image_path: opts.kernelPath,
-      boot_args: bootArgs,
-    },
-    drives: [
-      {
-        drive_id: "rootfs",
-        path_on_host: opts.rootfsPath,
-        is_root_device: true,
-        is_read_only: false,
-      },
-    ],
-    "network-interfaces": [
-      {
-        iface_id: "eth0",
-        guest_mac: opts.guestMac,
-        host_dev_name: opts.tap,
-      },
-    ],
-    "machine-config": {
-      vcpu_count: Math.max(1, Math.floor(opts.vcpus) || 1),
-      mem_size_mib: Math.max(128, opts.memMib),
-    },
+    "boot-source": { kernel_image_path: o.kernelPath, boot_args: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/tendril-init.sh" },
+    drives: [{ drive_id: "rootfs", path_on_host: o.rootfsPath, is_root_device: true, is_read_only: false }],
+    "network-interfaces": [{ iface_id: "eth0", guest_mac: o.guestMac, host_dev_name: o.tap }],
+    "machine-config": { vcpu_count: Math.ceil(o.vcpus), mem_size_mib: o.memMib },
   };
 }
-
 export interface JailerArgvInput {
-  jailer: string;
-  firecracker: string;
-  id: string;
-  uid: number;
-  gid: number;
-  chrootBase: string;
+  jailer: string; firecracker: string; id: string; uid: number; gid: number; chrootBase: string;
+  namespace?: string; cgroupParent?: string; cpus?: number; memoryMib?: number; overheadMib?: number;
 }
-
-/**
- * Jailer command. No `--bind` of a host path, no GPU flag, no published port.
- * Caps are the cgroup parent plus the machine-config vcpu and memory.
- */
-export function jailerArgv(opts: JailerArgvInput): string[] {
-  return [
-    opts.jailer,
-    "--id",
-    opts.id,
-    "--exec-file",
-    opts.firecracker,
-    "--uid",
-    String(opts.uid),
-    "--gid",
-    String(opts.gid),
-    "--chroot-base-dir",
-    opts.chrootBase,
-    "--parent-cgroup",
-    "tendril",
-    "--",
-    "--config-file",
-    "/config.json",
-  ];
+export function jailerArgv(o: JailerArgvInput): string[] {
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(o.id) || o.uid <= 0 || o.gid <= 0) throw new Error("invalid jailer identity");
+  const args = [o.jailer, "--id", o.id, "--exec-file", o.firecracker, "--uid", String(o.uid), "--gid", String(o.gid),
+    "--chroot-base-dir", o.chrootBase, "--cgroup-version", "2", "--parent-cgroup", o.cgroupParent ?? "tendril",
+    "--cgroup", `cpu.max=${Math.floor((o.cpus ?? 1) * 100000)} 100000`,
+    "--cgroup", `memory.max=${((o.memoryMib ?? 2048) + (o.overheadMib ?? 128)) * 1024 ** 2}`,
+    "--cgroup", "memory.swap.max=0", "--cgroup", "pids.max=256", "--resource-limit", "no-file=256"];
+  if (o.namespace) args.push("--netns", `/var/run/netns/${o.namespace}`);
+  return [...args, "--", "--no-api", "--config-file", "/config.json"];
 }
+export async function removeLeaseDir(dir: string) { await rm(dir, { recursive: true, force: true }); }
 
-export async function removeLeaseDir(dir: string): Promise<void> {
-  await rm(dir, { recursive: true, force: true });
+interface Vm {
+  leaseId: string; id: string; dir: string; jailDir: string; network: GuestNetwork; cgroup: string;
+  phase: "preparing" | "running" | "stopping" | "destroyed";
+  abort: AbortController; child?: ChildProcess; start?: Promise<RunningLease>; stop?: Promise<void>;
+  executions: Set<Promise<unknown>>;
+  pid?: number;
+  startTicks?: string;
 }
-
-interface LiveVm {
-  child: ChildProcess | null;
-  tap: string;
-  dir: string;
-  jailDir: string;
-  guestIp: string;
-  hostIp: string;
-  execKey: string;
+export interface FirecrackerOptions {
+  kernelPath: string; jailerBin: string; firecrackerBin: string; stateDir: string; template: RootfsTemplate;
+  uid?: number; gid?: number; cgroupParent?: string; overheadMib?: number;
 }
-
-const live = new Map<string, LiveVm>();
-
-function memMib(raw: string): number {
-  const m = /^(\d+(?:\.\d+)?)([gmk])?b?$/i.exec(raw.trim());
-  if (!m) return 2048;
-  const n = Number(m[1]);
-  const unit = (m[2] ?? "m").toLowerCase();
-  if (unit === "g") return Math.ceil(n * 1024);
-  if (unit === "k") return Math.max(1, Math.ceil(n / 1024));
-  return Math.ceil(n);
-}
-
-function shQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
-function pairFor(index: number): { hostIp: string; guestIp: string } {
-  const third = Math.floor(index / 64);
-  const fourth = (index % 64) * 4;
-  return {
-    hostIp: `10.200.${third}.${fourth + 1}`,
-    guestIp: `10.200.${third}.${fourth + 2}`,
+export function firecrackerDriver(o: FirecrackerOptions): RuntimeDriver {
+  const root = resolve(o.stateDir || "/var/lib/tendril");
+  const live = new Map<string, Vm>(), tombstones = new Set<string>();
+  const uid = o.uid ?? config.jailerUid, gid = o.gid ?? config.jailerGid;
+  const parent = o.cgroupParent ?? config.cgroupParent;
+  const ticks = async (pid: number) => {
+    const value = await readFile(`/proc/${pid}/stat`, "utf8");
+    return value.slice(value.lastIndexOf(")") + 2).split(" ")[19];
   };
-}
-
-function allocateNet(used: Set<string>): { hostIp: string; guestIp: string; tap: string } {
-  for (let n = 0; n < 4096; n++) {
-    const pair = pairFor(n);
-    if (used.has(pair.guestIp)) continue;
-    return { ...pair, tap: `tnd${n.toString(16)}` };
-  }
-  throw new Error("no free guest subnet");
-}
-
-function macFor(guestIp: string): string {
-  const parts = guestIp.split(".").map((p) => Number(p).toString(16).padStart(2, "0"));
-  return `06:00:${parts.join(":")}`.slice(0, 17);
-}
-
-const INIT_SCRIPT = `#!/bin/sh
-set -a
-[ -f /etc/tendril.env ] && . /etc/tendril.env
-set +a
-exec /entrypoint.sh
-`;
-
-async function run(cmd: string, args: string[]): Promise<void> {
-  await execFileP(cmd, args, { maxBuffer: 64 * 1024 * 1024 });
-}
-
-async function buildRootfs(image: string, disk: string, envBody: string): Promise<void> {
-  const extract = `${disk}.root`;
-  const name = `tendril-export-${randomBytes(4).toString("hex")}`;
-  await mkdir(extract, { recursive: true });
-  await run("docker", ["create", "--name", name, image]);
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const exporter = spawn("docker", ["export", name], { stdio: ["ignore", "pipe", "pipe"] });
-      const tar = spawn("tar", ["-C", extract, "-xf", "-"], { stdio: ["pipe", "ignore", "pipe"] });
-      exporter.stdout?.pipe(tar.stdin!);
-      let err = "";
-      exporter.stderr?.on("data", (d) => (err += d.toString()));
-      tar.stderr?.on("data", (d) => (err += d.toString()));
-      tar.on("close", (code) => (code === 0 ? resolve() : reject(new Error(err || "rootfs extract failed"))));
-      exporter.on("error", reject);
-      tar.on("error", reject);
-    });
-  } finally {
-    await execFileP("docker", ["rm", "-f", name]).catch(() => undefined);
-  }
-  await mkdir(join(extract, "etc"), { recursive: true });
-  await writeFile(join(extract, "tendril-init.sh"), INIT_SCRIPT);
-  await chmod(join(extract, "tendril-init.sh"), 0o755);
-  await writeFile(join(extract, "etc", "tendril.env"), envBody);
-  await run("truncate", ["-s", "2G", disk]);
-  await run("mkfs.ext4", ["-F", "-d", extract, disk]);
-  await rm(extract, { recursive: true, force: true });
-}
-
-async function ensureExecKey(dir: string): Promise<string> {
-  const key = join(dir, "exec_ed25519");
-  if (!existsSync(key)) {
-    await run("ssh-keygen", ["-t", "ed25519", "-N", "", "-f", key, "-q"]);
-  }
-  return key;
-}
-
-function waitForBore(child: ChildProcess, timeoutMs: number): Promise<{ host: string; port: number }> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      fn();
-    };
-    const timer = setTimeout(
-      () => finish(() => reject(new Error("bore endpoint not announced in time"))),
-      timeoutMs,
-    );
-    const onData = (buf: Buffer) => {
-      const match = buf.toString().match(BORE_RE);
-      if (match) finish(() => resolve({ host: match[1], port: Number(match[2]) }));
-    };
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.on("error", (err) => finish(() => reject(err)));
-    child.on("exit", () => finish(() => reject(new Error("guest exited before bore came up"))));
-  });
-}
-
-async function addTap(tap: string, hostIp: string): Promise<void> {
-  // Owned by the jailer uid so the guest NIC is not a host-port forward.
-  await run("ip", ["tuntap", "add", "dev", tap, "mode", "tap", "user", "123"]);
-  await run("ip", ["addr", "add", `${hostIp}/30`, "dev", tap]);
-  await run("ip", ["link", "set", tap, "up"]);
-  await execFileP("sysctl", ["-w", "net.ipv4.ip_forward=1"]).catch(() => undefined);
-}
-
-async function addNat(guestIp: string): Promise<void> {
-  await execFileP("iptables", [
-    "-t",
-    "nat",
-    "-C",
-    "POSTROUTING",
-    "-s",
-    `${guestIp}/32`,
-    "-j",
-    "MASQUERADE",
-  ]).catch(() =>
-    execFileP("iptables", [
-      "-t",
-      "nat",
-      "-A",
-      "POSTROUTING",
-      "-s",
-      `${guestIp}/32`,
-      "-j",
-      "MASQUERADE",
-    ]),
-  );
-}
-
-async function delNat(guestIp: string): Promise<void> {
-  await execFileP("iptables", [
-    "-t",
-    "nat",
-    "-D",
-    "POSTROUTING",
-    "-s",
-    `${guestIp}/32`,
-    "-j",
-    "MASQUERADE",
-  ]).catch(() => undefined);
-}
-
-export function firecrackerDriver(opts: {
-  kernelPath: string;
-  jailerBin: string;
-  firecrackerBin: string;
-  stateDir: string;
-}): RuntimeDriver {
-  const root = opts.stateDir || join(tmpdir(), "tendril-leases");
-
-  return {
-    kind: "microvm",
-    async start(lease: LeaseRequest): Promise<RunningLease> {
-      const image = await ensureImage(lease.image || config.sandbox.image);
-      const used = new Set([...live.values()].map((row) => row.guestIp));
-      const net = allocateNet(used);
-      const dir = join(root, lease.leaseId);
-      const jailDir = join(root, "jail", basename(opts.firecrackerBin), lease.leaseId);
-      await mkdir(dir, { recursive: true });
-      live.set(lease.leaseId, {
-        child: null,
-        tap: net.tap,
-        dir,
-        jailDir,
-        guestIp: net.guestIp,
-        hostIp: net.hostIp,
-        execKey: "",
-      });
+  const manifest = async (row: Vm) => {
+    const path = join(row.dir, "manifest.json");
+    const { rename } = await import("node:fs/promises");
+    await writeFile(`${path}.new`, JSON.stringify({ leaseId: row.leaseId, id: row.id, index: row.network.index, pid: row.pid, startTicks: row.startTicks }), { mode: 0o600 });
+    await rename(`${path}.new`, path);
+  };
+  const cgroupKill = async (row: Vm) => {
+    if (await stat(row.cgroup).catch(() => null)) {
+      await writeFile(join(row.cgroup, "cgroup.kill"), "1");
+      for (let i = 0; i < 50; i++) {
+        if (!(await readFile(join(row.cgroup, "cgroup.procs"), "utf8")).trim()) return;
+        await delay(100);
+      }
+      throw new Error("VMM cgroup still populated");
+    }
+  };
+  const cleanup = async (row: Vm) => {
+    row.phase = "stopping";
+    row.abort.abort();
+    await Promise.allSettled([...row.executions]);
+    if (row.child) await terminate(row.child);
+    await cgroupKill(row);
+    // Covers a jailer that died/restarted before joining its cgroup. Never kill a reused PID.
+    if (row.pid && row.startTicks && await ticks(row.pid).then((value) => value === row.startTicks).catch(() => false)) {
+      try { process.kill(-row.pid, "SIGKILL"); } catch (err) { if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err; }
+    }
+    await removeNetwork(row.network);
+    if (await stat(row.cgroup).catch(() => null)) await rmdir(row.cgroup);
+    await removeLeaseDir(row.jailDir);
+    await removeLeaseDir(row.dir);
+    row.phase = "destroyed";
+    live.delete(row.leaseId);
+    tombstones.add(row.leaseId);
+  };
+  const ssh = (row: Vm, host: string, port: number, args: string[], input?: string, timeoutMs = 5000, privateTap = true) => {
+    const sshArgs = ["ssh", "-i", join(row.dir, "exec"), "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+      "-o", `UserKnownHostsFile=${join(row.dir, "known_hosts")}`, "-o", "ConnectTimeout=2", "-p", String(port), `root@${host}`, ...args];
+    return privateTap ? command("ip", ["netns", "exec", row.network.namespace, ...sshArgs], { signal: row.abort.signal, input, timeoutMs })
+      : command("ssh", sshArgs.slice(1), { signal: row.abort.signal, input, timeoutMs });
+  };
+  const driver: RuntimeDriver = {
+    kind: "microvm", capabilities: { ssh: true, python: true, notebook: true, jupyter: true },
+    start(lease) {
+      const found = live.get(lease.leaseId);
+      if (found?.start) return found.start;
+      if (tombstones.has(lease.leaseId)) return Promise.reject(new Error("lease already destroyed"));
+      if (lease.image && lease.image !== o.template.image) return Promise.reject(new Error("image has no prepared guest template"));
+      const used = new Set([...live.values()].map((v) => v.network.index));
+      let index = 0; while (used.has(index) && index < 4096) index++;
+      if (index === 4096) return Promise.reject(new Error("guest network pool exhausted"));
+      const id = vmId(lease.leaseId);
+      const row: Vm = { leaseId: lease.leaseId, id, dir: join(root, "leases", id),
+        jailDir: join(root, "jail", basename(o.firecrackerBin), id), cgroup: join("/sys/fs/cgroup", parent, id),
+        network: networkFor(id, index), phase: "preparing", abort: new AbortController(), executions: new Set() };
+      live.set(lease.leaseId, row);
+      row.start = (async () => {
+        const deadline = lease.deadline ?? Date.now() + 45_000;
+        const timer = setTimeout(() => row.abort.abort(), Math.max(0, deadline - Date.now()));
+        try {
+          await mkdir(row.dir, { recursive: true, mode: 0o700 });
+          await manifest(row);
+          const signal = row.abort.signal;
+          await command("ssh-keygen", ["-t", "ed25519", "-N", "", "-f", join(row.dir, "exec"), "-q"], { signal });
+          await command("ssh-keygen", ["-t", "ed25519", "-N", "", "-f", join(row.dir, "host"), "-q"], { signal });
+          const hostPub = (await readFile(join(row.dir, "host.pub"), "utf8")).trim().split(" ").slice(0, 2).join(" ");
+          const known = [`${row.network.guestIp} ${hostPub}`];
+          if (lease.relay?.ssh) known.push(`[${lease.relay.ssh.publicHost}]:${lease.relay.ssh.publicPort} ${hostPub}`);
+          await writeFile(join(row.dir, "known_hosts"), known.join("\n") + "\n", { mode: 0o600 });
+          const guest = { password: lease.sshPubKey ? null : lease.sshPassword,
+            keys: [lease.sshPubKey, (await readFile(join(row.dir, "exec.pub"), "utf8")).trim()].filter(Boolean),
+            ip: row.network.guestIp, gateway: row.network.gateway, dns: config.guestDns,
+            relay: lease.relay, token: lease.jupyterToken, notebook: !!lease.relay?.notebook };
+          const jailRoot = join(row.jailDir, "root");
+          await cloneRootfs(o.template, join(jailRoot, "rootfs.ext4"), {
+            "/etc/tendril/lease.json": JSON.stringify(guest), "/etc/ssh/ssh_host_ed25519_key": await readFile(join(row.dir, "host"), "utf8"),
+          }, uid, gid, signal);
+          await cp(o.kernelPath, join(jailRoot, "vmlinux"));
+          const cpus = Number(lease.limits.cpus || config.sandbox.cpus), mem = memoryMib(lease.limits.memory || config.sandbox.memory);
+          await writeFile(join(jailRoot, "config.json"), JSON.stringify(buildBootConfig({ kernelPath: "vmlinux", rootfsPath: "rootfs.ext4",
+            tap: row.network.tap, guestMac: "06:00:0a:c8:00:02", vcpus: cpus, memMib: mem, guestIp: row.network.guestIp, hostIp: row.network.gateway })));
+          for (const file of [row.jailDir, jailRoot, join(jailRoot, "vmlinux"), join(jailRoot, "config.json")]) await chown(file, uid, gid);
+          await chmod(jailRoot, 0o700);
+          await chmod(join(jailRoot, "vmlinux"), 0o400);
+          await createNetwork(row.network, uid, signal);
+          signal.throwIfAborted();
+          const argv = jailerArgv({ jailer: o.jailerBin, firecracker: o.firecrackerBin, id, uid, gid, chrootBase: join(root, "jail"),
+            namespace: row.network.namespace, cgroupParent: parent, cpus, memoryMib: mem, overheadMib: o.overheadMib });
+          const child = spawn(argv[0], argv.slice(1), { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+          row.child = child;
+          row.pid = child.pid;
+          let bootError: Error | undefined;
+          child.on("error", (err) => { bootError = err; });
+          // Drain serial output without logging guest credentials or retaining unbounded buffers.
+          child.stdout?.resume(); child.stderr?.resume();
+          child.once("close", () => { if (row.phase === "running") driver.onFailure?.(row.leaseId); });
+          if (child.pid) { row.startTicks = await ticks(child.pid).catch(() => undefined); await manifest(row); }
+          while (true) {
+            signal.throwIfAborted();
+            if (bootError || child.exitCode !== null || child.signalCode !== null) throw bootError ?? new Error("guest boot exited");
+            try {
+              const kernel = (await ssh(row, row.network.guestIp, 22, ["uname", "-r"])).stdout.trim();
+              if (!kernel.endsWith("-tendril") || kernel === release()) throw new Error("guest kernel identity failed");
+              break;
+            } catch (err) {
+              if ((err as Error).message === "guest kernel identity failed") throw err;
+              await delay(250, undefined, { signal });
+            }
+          }
+          if ((lease.surface ?? "ssh") === "ssh") {
+            const relay = lease.relay?.ssh;
+            if (!relay) throw new Error("SSH relay allocation missing");
+            while (true) {
+              try { await ssh(row, relay.publicHost, relay.publicPort, ["true"], undefined, 5000, false); break; }
+              catch { signal.throwIfAborted(); await delay(250, undefined, { signal }); }
+            }
+            row.phase = "running";
+            const access = { kind: "ssh" as const, host: relay.publicHost, port: relay.publicPort, username: "root",
+              authMethod: lease.sshPubKey ? "publickey" as const : "password" as const, password: lease.sshPubKey ? null : lease.sshPassword,
+              command: `ssh root@${relay.publicHost} -p ${relay.publicPort}` };
+            return { leaseId: lease.leaseId, access, host: access.host, port: access.port };
+          }
+          row.phase = "running";
+          return { leaseId: lease.leaseId, access: null, host: "", port: 0 };
+        } catch (err) {
+          await cleanup(row).catch(() => undefined); // manifest retained if cleanup needs retry
+          throw err;
+        } finally { clearTimeout(timer); }
+      })();
+      return row.start;
+    },
+    stop(leaseId) {
+      const row = live.get(leaseId);
+      if (!row) { tombstones.add(leaseId); return Promise.resolve(); }
+      if (row.stop) return row.stop;
+      row.abort.abort();
+      row.stop = (async () => { await row.start?.catch(() => undefined); if (row.phase !== "destroyed") await cleanup(row); })()
+        .finally(() => { row.stop = undefined; });
+      return row.stop;
+    },
+    async exec(leaseId, payload, timeoutMs = 120_000, notebookJobId) {
+      const row = live.get(leaseId);
+      if (!row || row.phase !== "running") throw new Error("lease not running");
+      if (notebookJobId && !/^[A-Za-z0-9_-]{1,64}$/.test(notebookJobId)) throw new Error("invalid job id");
+      const request = { payload: notebookJobId ? undefined : payload, jobId: notebookJobId, timeout: timeoutMs / 1000 };
       try {
-      const execKey = await ensureExecKey(root);
-      live.get(lease.leaseId)!.execKey = execKey;
-      const pub = (await readFile(`${execKey}.pub`, "utf8")).trim();
-      const renterKey = lease.sshPubKey?.trim();
-      const keys = [renterKey, pub].filter(Boolean).join("\n");
-      const envBody = [
-        `BORE_SERVER=${shQuote(config.sandbox.boreServer)}`,
-        `BORE_SECRET=${shQuote(config.sandbox.boreSecret)}`,
-        lease.sshPassword ? `SSH_PASSWORD=${shQuote(lease.sshPassword)}` : "",
-        `SSH_PUBKEY=${shQuote(keys)}`,
-        "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-      const disk = join(dir, "rootfs.ext4");
-      await buildRootfs(image, disk, envBody);
-      const recorded = buildBootConfig({
-        kernelPath: opts.kernelPath,
-        rootfsPath: disk,
-        tap: net.tap,
-        guestMac: macFor(net.guestIp),
-        vcpus: Number(lease.limits.cpus) || config.sandbox.cpus,
-        memMib: memMib(lease.limits.memory || config.sandbox.memory),
-        guestIp: net.guestIp,
-        hostIp: net.hostIp,
-      });
-      if ((recorded["boot-source"] as { kernel_image_path: string }).kernel_image_path !== opts.kernelPath) {
-        throw new Error("guest kernel path was rewritten");
-      }
-      await writeFile(join(dir, "boot.json"), JSON.stringify(recorded));
-      const jailRoot = join(jailDir, "root");
-      await mkdir(jailRoot, { recursive: true });
-      await cp(opts.kernelPath, join(jailRoot, "vmlinux"));
-      await cp(disk, join(jailRoot, "rootfs.ext4"));
-      const jailBoot = buildBootConfig({
-        kernelPath: "vmlinux",
-        rootfsPath: "rootfs.ext4",
-        tap: net.tap,
-        guestMac: macFor(net.guestIp),
-        vcpus: Number(lease.limits.cpus) || config.sandbox.cpus,
-        memMib: memMib(lease.limits.memory || config.sandbox.memory),
-        guestIp: net.guestIp,
-        hostIp: net.hostIp,
-      });
-      await writeFile(join(jailRoot, "config.json"), JSON.stringify(jailBoot));
-      const args = jailerArgv({
-        jailer: opts.jailerBin,
-        firecracker: opts.firecrackerBin,
-        id: lease.leaseId,
-        uid: 123,
-        gid: 123,
-        chrootBase: join(root, "jail"),
-      });
-      if (args.includes("--bind") || args.includes("--gpus") || args.includes("-p")) {
-        throw new Error("jailer argv must not bind host paths or publish ports");
-      }
-      await addTap(net.tap, net.hostIp);
-        await addNat(net.guestIp);
-      const child = spawn(args[0], args.slice(1), {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      live.get(lease.leaseId)!.child = child;
-      const endpoint = await waitForBore(child, 90_000);
-      return { leaseId: lease.leaseId, host: endpoint.host, port: endpoint.port, guestIp: net.guestIp };
-      } catch (err) {
-        await this.stop(lease.leaseId);
-        throw err;
-      }
+        const task = ssh(row, row.network.guestIp, 22, ["/usr/local/bin/tendril-job"], JSON.stringify(request), timeoutMs + 2000);
+        row.executions.add(task);
+        const result = await task.finally(() => row.executions.delete(task));
+        return JSON.parse(result.stdout) as { ok: boolean; output: string };
+      } catch (err) { return { ok: false, output: (err as Error).message }; }
     },
-    async stop(leaseId: string): Promise<void> {
-      const row = live.get(leaseId);
-      live.delete(leaseId);
-      if (row?.child && row.child.exitCode === null && !row.child.killed) {
-        row.child.kill("SIGTERM");
-        await new Promise((r) => setTimeout(r, 500));
-        if (row.child.exitCode === null) row.child.kill("SIGKILL");
+    async reconcile() {
+      await mkdir(join(root, "leases"), { recursive: true, mode: 0o700 });
+      for (const id of await readdir(join(root, "leases"))) {
+        if (!/^tnd-[a-f0-9]{24}$/.test(id)) continue;
+        const path = join(root, "leases", id, "manifest.json");
+        if (!await stat(path).catch(() => null)) { await removeLeaseDir(join(root, "leases", id)); continue; }
+        const meta = JSON.parse(await readFile(path, "utf8")) as { leaseId: string; index: number; pid?: number; startTicks?: string };
+        if (vmId(meta.leaseId) !== id || !Number.isInteger(meta.index) || meta.index < 0 || meta.index >= 4096) throw new Error("invalid orphan metadata");
+        const row: Vm = { leaseId: meta.leaseId, id, dir: join(root, "leases", id), jailDir: join(root, "jail", basename(o.firecrackerBin), id),
+          cgroup: join("/sys/fs/cgroup", parent, id), network: networkFor(id, meta.index), phase: "stopping", abort: new AbortController(), executions: new Set() };
+        if (Number.isInteger(meta.pid) && meta.pid! > 1) { row.pid = meta.pid; row.startTicks = meta.startTicks; }
+        await cleanup(row);
       }
-      if (row) {
-        await execFileP("ip", ["link", "del", row.tap]).catch(() => undefined);
-        await delNat(row.guestIp);
-        await removeLeaseDir(row.dir);
-        await removeLeaseDir(row.jailDir);
-      } else {
-        await removeLeaseDir(join(root, leaseId));
-      }
-    },
-    exec(leaseId, payload, timeoutMs = 120_000) {
-      const row = live.get(leaseId);
-      if (!row) return Promise.resolve({ ok: false, output: "lease is not running" });
-      return new Promise((resolve) => {
-        const child = spawn(
-          "ssh",
-          [
-            "-i",
-            row.execKey,
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            `root@${row.guestIp}`,
-            "python3",
-            "-",
-          ],
-          { stdio: ["pipe", "pipe", "pipe"] },
-        );
-        let out = "";
-        let err = "";
-        const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-        child.stdout.on("data", (d) => (out += d.toString()));
-        child.stderr.on("data", (d) => (err += d.toString()));
-        child.on("close", (code) => {
-          clearTimeout(timer);
-          resolve({ ok: code === 0, output: code === 0 ? out : `${out}\n${err}`.trim() });
-        });
-        child.on("error", (e) => {
-          clearTimeout(timer);
-          resolve({ ok: false, output: String(e) });
-        });
-        child.stdin.write(payload);
-        child.stdin.end();
-      });
     },
   };
+  return driver;
 }
