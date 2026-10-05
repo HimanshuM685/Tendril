@@ -3,11 +3,13 @@ import type {
   LeaseCloseResponse,
   PlatformInfo,
   RunResponse,
+  RunJobResponse,
   WalletSummary,
   WithdrawResponse,
   X402RentResponse,
   X402TopUpResponse,
 } from "@tendril/shared";
+import { NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
 import {
   authedJson,
   paidAuthedJson,
@@ -50,19 +52,24 @@ export async function run(payload: string, leaseToken?: string): Promise<RunResp
   })) as RunResponse;
 }
 
-const NOTEBOOK_MAX_BYTES = 1_500_000;
-
-/** Hosted-CPU notebook. Same POST /x402/run the site uses. No lease. */
-export async function runNotebook(notebook: Record<string, unknown>): Promise<RunResponse> {
-  const body = JSON.stringify({ notebook });
-  if (body.length > NOTEBOOK_MAX_BYTES) {
+/** Start an asynchronous notebook job. Poll with its returned jobToken. */
+export async function runNotebook(notebook: Record<string, unknown>, lane?: "contributor" | "priority"): Promise<RunJobResponse> {
+  const invalid = notebookError(notebook);
+  if (invalid) throw new Error(invalid);
+  if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) {
     throw new Error("notebook must be under 1.5 MB");
   }
   return (await paidJson(`${api()}/x402/run`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body,
-  })) as RunResponse;
+    body: JSON.stringify({ notebook, lane }),
+  })) as RunJobResponse;
+}
+
+export async function notebookJob(jobId: string, jobToken: string): Promise<RunJobResponse> {
+  return (await plainJson(`${api()}/x402/run/${encodeURIComponent(jobId)}`, {
+    headers: { authorization: `Bearer ${jobToken}` },
+  })) as RunJobResponse;
 }
 
 export async function rent(nodeId: string, sshPubKey?: string): Promise<X402RentResponse> {

@@ -74,11 +74,44 @@ charge. The contributor is credited out of what was collected, minus `PLATFORM_F
 withdraws that balance on-chain in one transfer ($5 minimum) rather than one per lease.
 Signing in still exists, but its job has shrunk to reading your balance.
 
-Or skip renting entirely: `POST /x402/run` takes some code, finds the best-value idle machine, runs
-it in a throwaway sandbox and gives you the output. No lease to open, choose or release. The
-execution time comes out of credit — and because a job is never killed part-way to protect a
-balance, that one charge **can leave you owing**. A negative balance blocks renting and further runs
-until it is topped back up.
+Or skip renting entirely: `POST /x402/run` takes Python source or a Python notebook and runs it in
+a throwaway sandbox. No lease to open, choose or release. Script execution can overdraw credit;
+notebook jobs stop at their prepaid execution budget. A negative balance blocks further runs until
+it is topped back up.
+
+### Notebook jobs
+
+Upload an nbformat 4 `.ipynb` in Explore, or send `{ "notebook": <notebook>, "lane": "contributor" }`
+to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox. Both lanes use a real
+IPython kernel: `%pip`, `!commands`, cell magics, top-level `await`, plots, and process pools work.
+Bundled images include NumPy, pandas, matplotlib, SciPy, scikit-learn, Pillow, requests, and psutil.
+Custom contributor images must supply `nbclient`, `nbformat`, `ipykernel`, and workload dependencies.
+
+- Upload: **1.5 MB**, **500 cells**, Python only. Syntax errors stop before earlier cells execute;
+  source is never silently repaired. Runtime errors preserve earlier cell output when available.
+- Execution: `RUN_TIMEOUT_MS` (default **120 seconds**, maximum **15 minutes**), additionally capped
+  by prepaid credit. One notebook per payer; release existing sessions first. Failed executed jobs
+  still consume billable time.
+- Results: **2 MB** cell output, **4 MB total** artifacts, **12 MB** transport. Save small files in
+  `/work`; hidden files, symlinks, and special files are not returned. Oversized artifacts are skipped.
+- `POST` settles the gate fee before provisioning and returns `jobId`/`jobToken`. Poll
+  `GET /x402/run/:id` with `Authorization: Bearer <jobToken>` until `run` or `error` is present.
+  Terminal status can appear before billing/result collection finishes. The gate fee remains paid
+  if provisioning fails; execution charges begin only when the sandbox is ready.
+- Results are in-memory: download promptly. Retained for up to one hour, subject to oldest-first
+  eviction at 32 jobs or 64 MB total; restart or eviction makes old job tokens return `404`.
+
+Contributor one-shot sandboxes have no SSH/bore tunnel, no host mounts, no added capabilities,
+a read-only image, and bounded writable `/work`/`/tmp`. `%pip` installs into a disposable venv.
+Registry and contributor agents must both be updated; bundled sandbox image tags include a content
+hash and rebuild after Dockerfile changes. Explicit custom images need rebuilding by their operator.
+
+Try [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb). Local execution tests:
+
+```bash
+docker build -t tendril-notebook-test contributor/sandbox-ssh
+TENDRIL_NOTEBOOK_TEST_IMAGE=tendril-notebook-test npx tsx --test backend/src/providers/notebookRunner.test.ts backend/src/runLimits.test.ts backend/src/leases.lifecycle.test.ts contributor/tests/docker.test.ts
+```
 
 ## The payable endpoints
 

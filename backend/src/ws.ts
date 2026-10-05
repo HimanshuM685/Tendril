@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
 import {
   WS,
+  JOB_RESULT_MAX_BYTES,
   type AgentHelloMsg,
   type ContainerFailedMsg,
   type ContainerReadyMsg,
@@ -15,7 +16,7 @@ import {
 import { ownerOfApiKey } from "./db.js";
 import { config } from "./config.js";
 import { markOffline, touchHeartbeat, upsertNode } from "./registry.js";
-import { activateLease, closeLease, getLease, leasesForNode, setLeaseStatus } from "./leases.js";
+import { activateLease, closeLease, getLease, leasesForNode } from "./leases.js";
 
 /** nodeId -> the socket of the agent currently hosting that node. */
 const agentSockets = new Map<string, Socket>();
@@ -34,11 +35,11 @@ const pendingContainers = new Map<
 /** Pending promises awaiting job results, keyed by jobId. */
 const pendingJobs = new Map<
   string,
-  { resolve: (r: JobResultMsg) => void; reject: (err: Error) => void }
+  { nodeId: string; leaseId: string; resolve: (r: JobResultMsg) => void; reject: (err: Error) => void }
 >();
 
 export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "*"): Server {
-  const io = new Server(httpServer, { cors: { origin: corsOrigin } });
+  const io = new Server(httpServer, { cors: { origin: corsOrigin }, maxHttpBufferSize: JOB_RESULT_MAX_BYTES + 100_000 });
 
   io.on("connection", (socket) => {
     let boundNodeId: string | null = null;
@@ -66,12 +67,21 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
     });
 
     socket.on(WS.heartbeat, (_msg: HeartbeatMsg) => {
-      if (boundNodeId) touchHeartbeat(boundNodeId);
+      if (boundNodeId && agentSockets.get(boundNodeId) === socket) touchHeartbeat(boundNodeId);
     });
 
     socket.on(WS.containerReady, (msg: ContainerReadyMsg) => {
+      if (!boundNodeId || agentSockets.get(boundNodeId) !== socket) return;
       const lease = getLease(msg.leaseId);
-      if (!lease) return;
+      if (!lease) {
+        socket.emit(WS.destroyContainer, { leaseId: msg.leaseId });
+        return;
+      }
+      if (lease.nodeId !== boundNodeId) return;
+      if (lease.status !== "starting" || !pendingContainers.has(msg.leaseId)) {
+        socket.emit(WS.destroyContainer, { leaseId: msg.leaseId });
+        return;
+      }
       // A renter who supplied a public key authenticates with it; otherwise the
       // password is their own address (only possible when they are signed in).
       const usePubKey = pendingContainers.get(msg.leaseId)?.sshPubKey != null;
@@ -91,18 +101,24 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
     });
 
     socket.on(WS.containerFailed, (msg: ContainerFailedMsg) => {
-      setLeaseStatus(msg.leaseId, "failed");
+      const lease = getLease(msg.leaseId);
+      if (!lease || lease.nodeId !== boundNodeId || agentSockets.get(lease.nodeId) !== socket) return;
+      if (lease.status !== "starting" || !pendingContainers.has(msg.leaseId)) return;
       pendingContainers.get(msg.leaseId)?.reject(new Error(msg.error));
       pendingContainers.delete(msg.leaseId);
     });
 
     socket.on(WS.jobResult, (msg: JobResultMsg) => {
-      pendingJobs.get(msg.jobId)?.resolve(msg);
+      const job = pendingJobs.get(msg.jobId);
+      if (!job || job.nodeId !== boundNodeId || agentSockets.get(job.nodeId) !== socket) return;
+      if (typeof msg.result !== "string" || Buffer.byteLength(msg.result) > JOB_RESULT_MAX_BYTES) {
+        job.reject(new Error("job result exceeded output limit"));
+      } else job.resolve(msg);
       pendingJobs.delete(msg.jobId);
     });
 
     socket.on("disconnect", () => {
-      if (boundNodeId) {
+      if (boundNodeId && agentSockets.get(boundNodeId) === socket) {
         // The node's gone — bill + end any leases it was hosting, then mark it offline.
         for (const lease of leasesForNode(boundNodeId)) {
           void closeLease(lease.id, "node-disconnected");
@@ -135,6 +151,8 @@ export function startContainer(args: {
   /** OpenSSH public key to install in the sandbox, or null. */
   sshPubKey: string | null;
   timeoutMs?: number;
+  surface?: "ssh" | "exec";
+  lifetimeMs?: number;
 }): Promise<SandboxAccess> {
   const { nodeId, leaseId, image, limits, sshPassword, sshPubKey } = args;
   const timeoutMs = args.timeoutMs ?? config.sandboxReadyTimeoutMs;
@@ -144,6 +162,7 @@ export function startContainer(args: {
   return new Promise<SandboxAccess>((resolve, reject) => {
     const timer = setTimeout(() => {
       pendingContainers.delete(leaseId);
+      destroyContainer(nodeId, leaseId);
       reject(new Error("container start timed out"));
     }, timeoutMs);
 
@@ -159,7 +178,7 @@ export function startContainer(args: {
       },
     });
 
-    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword, sshPubKey };
+    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword, sshPubKey, surface: args.surface, lifetimeMs: args.lifetimeMs };
     socket.emit(WS.startContainer, msg);
   });
 }
@@ -183,10 +202,13 @@ export function runJob(
   return new Promise<JobResultMsg>((resolve, reject) => {
     const timer = setTimeout(() => {
       pendingJobs.delete(jobId);
+      destroyContainer(nodeId, leaseId);
       reject(new Error("job timed out"));
     }, timeoutMs);
 
     pendingJobs.set(jobId, {
+      nodeId,
+      leaseId,
       resolve: (r) => {
         clearTimeout(timer);
         resolve(r);
@@ -197,6 +219,6 @@ export function runJob(
       },
     });
 
-    socket.emit(WS.runJob, { leaseId, jobId, payload });
+    socket.emit(WS.runJob, { leaseId, jobId, payload, timeoutMs });
   });
 }

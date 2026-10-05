@@ -89,15 +89,29 @@ server.tool(
 
 server.tool(
   "tendril_run_notebook",
-  "Run a Jupyter notebook on hosted CPU. POST /x402/run {notebook}. notebook is nbformat JSON (cells array). Returns the executed notebook plus artifacts. Gate fee on-chain; seconds bill from credit. Needs AVM_PRIVATE_KEY.",
+  "Start a Python/IPython notebook job on contributor or priority CPU. Returns jobId and jobToken; use tendril_notebook_job to collect outputs and artifacts. Gate fee on-chain; seconds bill from prepaid credit. Needs AVM_PRIVATE_KEY.",
   {
     notebook: z
       .record(z.unknown())
       .describe("nbformat JSON object, under 1.5 MB"),
+    lane: z.enum(["contributor", "priority"]).optional().describe("Priority uses Modal CPU; contributor uses an idle peer. Omitted prefers priority when configured."),
   },
-  async ({ notebook }) => {
+  async ({ notebook, lane }) => {
     try {
-      return text(await tools.runNotebook(notebook));
+      return text(await tools.runNotebook(notebook, lane));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "tendril_notebook_job",
+  "Poll a notebook job for status, executed cells, artifacts, and billed usage. Free. Poll every few seconds until run or error is present; terminal status alone may precede result collection.",
+  { jobId: z.string(), jobToken: z.string().describe("Token returned by tendril_run_notebook") },
+  async ({ jobId, jobToken }) => {
+    try {
+      return text(await tools.notebookJob(jobId, jobToken));
     } catch (err) {
       return fail(err);
     }

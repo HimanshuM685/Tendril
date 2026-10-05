@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { ModalClient, type Image, type Sandbox } from "modal";
-import type { JupyterAccess, RunArtifact, SandboxAccess } from "@tendril/shared";
+import type { JupyterAccess, SandboxAccess } from "@tendril/shared";
+import { JOB_RESULT_MAX_BYTES } from "@tendril/shared";
 import { config } from "../config.js";
+import { notebookToPayload, parseNotebookRun } from "./notebookRunner.js";
 import type { ComputeProvider, ExecArgs, ExecResult, StartArgs } from "./types.js";
 
 const JUPYTER_PORT = 8888;
-const ARTIFACT_CAP_BYTES = 4_000_000;
 /** python:3.12-slim's default CMD is `python3`, which exits when stdin closes. */
 const KEEP_ALIVE = ["python3", "-c", "import time; time.sleep(2**31)"];
 
@@ -46,7 +47,7 @@ async function buildImage(): Promise<Image> {
     // Keep notebook dependencies in the cached image. Installing scipy and
     // scikit-learn inside every priority run adds avoidable cold-start time and
     // makes a run depend on package-index availability.
-    "RUN pip install --no-cache-dir jupyterlab papermill nbconvert ipykernel numpy pandas matplotlib requests scipy scikit-learn pillow psutil && python -m ipykernel install --sys-prefix && mkdir -p /work",
+    "RUN pip install --no-cache-dir jupyterlab nbclient nbformat nbconvert ipykernel numpy pandas matplotlib requests scipy scikit-learn pillow psutil && python -m ipykernel install --sys-prefix && mkdir -p /work",
   ]);
   return image.build(app);
 }
@@ -86,9 +87,29 @@ async function execText(
     workdir: "/work",
     timeoutMs,
   });
+  let used = 0;
+  async function readBounded(stream: ReadableStream<string>): Promise<string> {
+    const reader = stream.getReader();
+    const chunks: string[] = [];
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        used += Buffer.byteLength(chunk.value);
+        if (used > JOB_RESULT_MAX_BYTES) {
+          void sb.terminate().catch(() => undefined);
+          throw new Error("Job output exceeded 12 MB; sandbox stopped.");
+        }
+        chunks.push(chunk.value);
+      }
+      return chunks.join("");
+    } finally {
+      reader.releaseLock();
+    }
+  }
   const [stdout, stderr, code] = await Promise.all([
-    proc.stdout.readText(),
-    proc.stderr.readText(),
+    readBounded(proc.stdout),
+    readBounded(proc.stderr),
     proc.wait(),
   ]);
   return { code, stdout, stderr };
@@ -198,82 +219,21 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
   }
 }
 
-const SKIP_ARTIFACTS = new Set(["in.ipynb", "out.ipynb", "job.py"]);
-
-function mediaType(name: string): string {
-  const ext = name.toLowerCase().split(".").pop() ?? "";
-  const known: Record<string, string> = {
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    svg: "image/svg+xml",
-    csv: "text/csv",
-    json: "application/json",
-    txt: "text/plain",
-    html: "text/html",
-    pdf: "application/pdf",
-  };
-  return known[ext] ?? "application/octet-stream";
-}
-
-function safeName(name: string): boolean {
-  return name.length > 0 && !name.startsWith("/") && !name.split("/").includes("..");
-}
-
-async function walkFiles(sb: Sandbox, dir: string, rel: string): Promise<{ name: string; size: number }[]> {
-  const entries = await sb.filesystem.listFiles(dir);
-  const rows: { name: string; size: number }[] = [];
-  for (const entry of entries) {
-    const name = rel ? `${rel}/${entry.name}` : entry.name;
-    if (entry.type === "directory") {
-      rows.push(...(await walkFiles(sb, entry.path, name)));
-      continue;
-    }
-    if (entry.type !== "file" || SKIP_ARTIFACTS.has(name)) continue;
-    rows.push({ name, size: entry.size });
-  }
-  return rows;
-}
-
-async function collectArtifacts(sb: Sandbox): Promise<RunArtifact[]> {
-  const rows = await walkFiles(sb, "/work", "");
-  const artifacts: RunArtifact[] = [];
-  let used = 0;
-  for (const row of rows) {
-    if (!safeName(row.name) || used + row.size > ARTIFACT_CAP_BYTES) continue;
-    const bytes = await sb.filesystem.readBytes(`/work/${row.name}`);
-    if (used + bytes.byteLength > ARTIFACT_CAP_BYTES) continue;
-    used += bytes.byteLength;
-    artifacts.push({
-      name: row.name,
-      mediaType: mediaType(row.name),
-      base64: Buffer.from(bytes).toString("base64"),
-    });
-  }
-  return artifacts;
-}
-
 async function runNotebook(sb: Sandbox, notebook: Record<string, unknown>, timeoutMs: number): Promise<ExecResult> {
-  await sb.filesystem.writeText(JSON.stringify(notebook), "/work/in.ipynb");
-
+  // One execution engine for both providers: real IPython magics/rich output,
+  // private IPC kernel, syntax preflight, and bounded result/artifact collection.
+  await sb.filesystem.writeText(notebookToPayload(notebook, timeoutMs), "/work/.tendril-runner.py");
   const ran = await execText(
     sb,
-    ["papermill", "/work/in.ipynb", "/work/out.ipynb", "--cwd", "/work", "--kernel", "python3"],
+    ["python3", "/work/.tendril-runner.py"],
     timeoutMs,
   );
-  let executed: Record<string, unknown>;
-  try {
-    const text = await sb.filesystem.readText("/work/out.ipynb");
-    executed = JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    const detail = (ran.stderr || ran.stdout).trim().slice(0, 4_000);
-    throw new Error(detail || "notebook execution failed");
-  }
-
-  const artifacts = await collectArtifacts(sb);
-  const log = [ran.stdout, ran.stderr].filter(Boolean).join("\n").trim();
-  return { ok: ran.code === 0, result: log, notebook: executed, artifacts };
+  const parsed = parseNotebookRun(ran.stdout);
+  return {
+    ok: ran.code === 0 && parsed.ok,
+    result: parsed.notebook ? parsed.log : `${parsed.log}\n${ran.stderr.slice(0, 4000)}`.trim(),
+    notebook: parsed.notebook, artifacts: parsed.artifacts,
+  };
 }
 
 async function runPython(sb: Sandbox, payload: string, timeoutMs: number): Promise<ExecResult> {

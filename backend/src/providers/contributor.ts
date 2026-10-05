@@ -2,7 +2,7 @@ import { destroyContainer, runJob, startContainer } from "../ws.js";
 import { notebookToPayload, parseNotebookRun } from "./notebookRunner.js";
 import type { ComputeProvider, ExecArgs, ExecResult, StartArgs } from "./types.js";
 
-/** Contributor machines: the existing socket + Docker path. SSH only. */
+/** Contributor machines: socket + Docker, with SSH or private one-shot execution. */
 export const id = "contributor" as const;
 
 export async function start(args: StartArgs) {
@@ -16,6 +16,9 @@ export async function start(args: StartArgs) {
     limits: args.limits,
     sshPassword: args.sshPassword,
     sshPubKey: args.sshPubKey,
+    surface: args.surface === "exec" ? "exec" : "ssh",
+    lifetimeMs: args.timeoutMs,
+    timeoutMs: args.surface === "exec" ? args.timeoutMs : undefined,
   });
 }
 
@@ -25,11 +28,11 @@ export async function exec(args: ExecArgs): Promise<ExecResult> {
       args.nodeId,
       args.leaseId,
       args.jobId,
-      notebookToPayload(args.notebook),
+      notebookToPayload(args.notebook, args.timeoutMs),
       args.timeoutMs,
     );
     const parsed = parseNotebookRun(msg.result);
-    return { ok: parsed.ok && msg.ok, result: parsed.log || msg.result, notebook: parsed.notebook };
+    return { ok: parsed.ok && msg.ok, result: parsed.log, notebook: parsed.notebook, artifacts: parsed.artifacts };
   }
   if (typeof args.payload !== "string") {
     throw new Error("payload (string) required");

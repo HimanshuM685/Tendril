@@ -378,6 +378,10 @@ export interface StartContainerMsg {
    * renter with no session (nothing to use as a password).
    */
   sshPubKey: string | null;
+  /** One-shot jobs have no SSH server or bore tunnel. Old agents default to SSH. */
+  surface?: "ssh" | "exec";
+  /** Maximum lifetime of an exec sandbox, including readiness and execution. */
+  lifetimeMs?: number;
 }
 
 /** agent -> registry: the sandbox is up and reachable for SSH at host:port. */
@@ -405,6 +409,8 @@ export interface RunJobMsg {
   leaseId: string;
   jobId: string;
   payload: string;
+  /** Enforced inside the container, not only by the registry's wait timer. */
+  timeoutMs?: number;
 }
 
 /** agent -> registry: job finished (or errored). */
@@ -860,3 +866,4 @@ export function networkDefaults(name?: string | null): NetworkDefaults {
   }
   return found;
 }
+export * from "./notebook.js";

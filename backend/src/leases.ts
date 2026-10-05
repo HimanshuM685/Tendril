@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import type { ComputeProvider, Lease, LeaseStatus, RunArtifact, SandboxAccess } from "@tendril/shared";
-import { fundedSeconds, proratedCost } from "@tendril/shared";
+import { fundedSeconds, proratedCost, JOB_RESULT_MAX_BYTES } from "@tendril/shared";
 import { chargeUsage, creditBalance, creditEarnings } from "./x402/credit.js";
 import { destroyForLease } from "./providers/index.js";
 import { config } from "./config.js";
@@ -63,6 +63,10 @@ export function getLease(id: string): Lease | undefined {
   return leases.get(id);
 }
 
+export function hasLivePayerLease(address: string): boolean {
+  return [...leases.values()].some((l) => l.payerAddr === address && (l.status === "starting" || l.status === "active"));
+}
+
 export function setLeaseStatus(id: string, status: LeaseStatus): void {
   const lease = leases.get(id);
   if (lease) lease.status = status;
@@ -106,14 +110,47 @@ export interface RunJobResult {
 // Keyed by lease id (the job id). In-memory like leases themselves — see the
 // module doc comment; a job in flight when the backend restarts is lost, same
 // as a lease would be.
-const runResults = new Map<string, RunJobResult>();
+const RUN_RESULT_TTL_MS = 60 * 60_000;
+const RUN_RESULT_CACHE_BYTES = 64_000_000;
+const runResults = new Map<string, { result: RunJobResult; bytes: number; storedAt: number }>();
+let runResultBytes = 0;
+
+function removeRunResult(id: string): void {
+  const entry = runResults.get(id);
+  if (!entry) return;
+  runResultBytes -= entry.bytes;
+  runResults.delete(id);
+  const lease = leases.get(id);
+  if (lease?.status === "ended" || lease?.status === "failed") leases.delete(id);
+}
+
+function pruneRunResults(): void {
+  const expiredBefore = Date.now() - RUN_RESULT_TTL_MS;
+  for (const [id, entry] of runResults) {
+    if (entry.storedAt <= expiredBefore) removeRunResult(id);
+  }
+  while (runResults.size > 32 || runResultBytes > RUN_RESULT_CACHE_BYTES) {
+    removeRunResult(runResults.keys().next().value!);
+  }
+}
 
 export function setRunResult(leaseId: string, result: RunJobResult): void {
-  runResults.set(leaseId, result);
+  let bytes = Buffer.byteLength(JSON.stringify(result));
+  if (bytes > JOB_RESULT_MAX_BYTES) {
+    result = { ok: false, result: "Notebook result exceeded transport limit.", error: "Notebook result exceeded transport limit.", execution: result.execution };
+    bytes = Buffer.byteLength(JSON.stringify(result));
+  }
+  const previous = runResults.get(leaseId);
+  if (previous) runResultBytes -= previous.bytes;
+  runResults.delete(leaseId);
+  runResults.set(leaseId, { result, bytes, storedAt: Date.now() });
+  runResultBytes += bytes;
+  pruneRunResults();
 }
 
 export function getRunResult(leaseId: string): RunJobResult | undefined {
-  return runResults.get(leaseId);
+  pruneRunResults();
+  return runResults.get(leaseId)?.result;
 }
 
 /**
@@ -121,15 +158,17 @@ export function getRunResult(leaseId: string): RunJobResult | undefined {
  * `expiresAt` is set from here, so a slow container start doesn't eat time the
  * renter paid for.
  */
-export function activateLease(id: string, access: SandboxAccess): void {
+export function activateLease(id: string, access: SandboxAccess): boolean {
   const lease = leases.get(id);
-  if (!lease) return;
+  if (!lease || (lease.status !== "starting" && lease.status !== "active")) return false;
+  if (lease.status === "active") return true;
   lease.access = access;
   lease.status = "active";
   // The meter starts when the sandbox is actually reachable, so a slow container
   // start is never billed and never eats the renter's funded window.
   lease.startedAt = Date.now();
   lease.expiresAt = fundedUntil(lease.startedAt, lease.fundingAtomic, lease.rateAtomicPerHour);
+  return true;
 }
 
 export function leasesForNode(nodeId: string): Lease[] {
@@ -307,6 +346,7 @@ export function startWatchdog(intervalMs = config.meterIntervalMs): NodeJS.Timeo
 }
 
 async function watchdogTick(): Promise<void> {
+  pruneRunResults();
   const now = Date.now();
   for (const lease of leases.values()) {
     if (lease.status !== "active") continue;

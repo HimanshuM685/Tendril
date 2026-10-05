@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { SandboxLimits } from "@tendril/shared";
+import { JOB_RESULT_MAX_BYTES, boundedRunTimeoutMs, RUN_MAX_TIMEOUT_MS } from "@tendril/shared";
 import { config } from "./config.js";
 
 const execFileP = promisify(execFile);
@@ -118,6 +119,8 @@ export async function startSandbox(
   limits: SandboxLimits,
   sshPassword: string | null,
   sshPubKey: string | null,
+  surface: "ssh" | "exec" = "ssh",
+  lifetimeMs = RUN_MAX_TIMEOUT_MS + 300_000,
 ): Promise<SandboxEndpoint> {
   const image = imageOverride || config.sandbox.image;
   const runImage = await ensureImage(image);
@@ -135,6 +138,7 @@ export async function startSandbox(
   const cpus = String(cpusNum);
   const gpus = limits.gpus || config.sandbox.gpus;
   const local = config.tunnelMode === "local";
+  const execOnly = surface === "exec";
 
   const args = [
     "run",
@@ -152,52 +156,81 @@ export async function startSandbox(
     "256",
     "--cap-drop",
     "ALL",
-    // The few caps sshd needs to accept a root password login under PAM.
-    // SYS_CHROOT is required for sshd's privilege-separation chroot — without it
-    // sshd accepts the TCP connection then drops it before the banner.
-    "--cap-add",
-    "CHOWN",
-    "--cap-add",
-    "DAC_OVERRIDE",
-    "--cap-add",
-    "FOWNER",
-    "--cap-add",
-    "SETUID",
-    "--cap-add",
-    "SETGID",
-    "--cap-add",
-    "SYS_CHROOT",
-    "--cap-add",
-    "AUDIT_WRITE",
     "--security-opt",
     "no-new-privileges",
   ];
+  if (execOnly) {
+    args.push(
+      "--init", "--read-only",
+      "--tmpfs", "/work:rw,nosuid,nodev,size=256m,mode=1777",
+      "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m,mode=1777",
+      "--ulimit", "fsize=134217728:134217728",
+      "-e", "HOME=/work", "-e", "PYTHONDONTWRITEBYTECODE=1",
+      "-e", "PIP_NO_CACHE_DIR=1", "-e", "MPLBACKEND=Agg",
+      "-e", `OMP_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
+      "-e", `OPENBLAS_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
+    );
+  } else {
+    args.push(
+      // The few caps sshd needs to accept a root password login under PAM.
+      // SYS_CHROOT is required for sshd's privilege-separation chroot — without it
+      // sshd accepts the TCP connection then drops it before the banner.
+      "--cap-add",
+      "CHOWN",
+      "--cap-add",
+      "DAC_OVERRIDE",
+      "--cap-add",
+      "FOWNER",
+      "--cap-add",
+      "SETUID",
+      "--cap-add",
+      "SETGID",
+      "--cap-add",
+      "SYS_CHROOT",
+      "--cap-add",
+      "AUDIT_WRITE",
+    );
+  }
 
   // Exactly one of the two: a key the renter brought, or their address as the
   // password. The entrypoint locks the root password outright under key auth.
-  if (sshPubKey) {
+  if (!execOnly && sshPubKey) {
     args.push("-e", `SSH_PUBKEY=${sshPubKey}`);
-  } else if (sshPassword) {
+  } else if (!execOnly && sshPassword) {
     args.push("-e", `SSH_PASSWORD=${sshPassword}`);
   }
 
   let hostPort = 0;
-  if (local) {
+  if (!execOnly && local) {
     hostPort = await getFreePort();
     args.push("-e", "NO_BORE=1", "-p", `127.0.0.1:${hostPort}:22`);
-  } else {
+  } else if (!execOnly) {
     args.push("-e", `BORE_SERVER=${config.sandbox.boreServer}`);
     // bore (client) authenticates to a self-hosted server via BORE_SECRET.
     if (config.sandbox.boreSecret) args.push("-e", `BORE_SECRET=${config.sandbox.boreSecret}`);
   }
   if (gpus) args.push("--gpus", gpus);
+  if (execOnly) args.push("--entrypoint", "sleep");
   args.push(runImage);
+  if (execOnly) args.push(String(Math.ceil(Math.min(RUN_MAX_TIMEOUT_MS + 300_000, lifetimeMs) / 1000)));
 
   console.log(
-    `[docker] starting SSH sandbox ${name} (${runImage})` +
-      (local ? ` on 127.0.0.1:${hostPort}` : ` via bore (${config.sandbox.boreServer})`),
+    `[docker] starting ${execOnly ? "exec" : "SSH"} sandbox ${name} (${runImage})` +
+      (execOnly ? "" : local ? ` on 127.0.0.1:${hostPort}` : ` via bore (${config.sandbox.boreServer})`),
   );
   await execFileP("docker", args, { maxBuffer: 10 * 1024 * 1024 });
+
+  if (execOnly) {
+    // A venv on bounded writable storage allows %pip without changing the
+    // read-only image or the contributor host. The kernel uses this interpreter.
+    try {
+      await execFileP("docker", ["exec", name, "python3", "-m", "venv", "--system-site-packages", "/work/.venv"], { timeout: 30_000 });
+    } catch (err) {
+      await stopSandbox(leaseId);
+      throw err;
+    }
+    return { leaseId, containerName: name, host: "", port: 0 };
+  }
 
   if (local) {
     await waitForPort(hostPort);
@@ -270,18 +303,40 @@ export function runInSandbox(
 ): Promise<{ ok: boolean; output: string }> {
   const name = containerName(leaseId);
   return new Promise((resolve) => {
-    const child = spawn("docker", ["exec", "-i", name, "python3", "-"], {
+    const duration = boundedRunTimeoutMs(timeoutMs);
+    // timeout runs INSIDE the container and terminates the process group.
+    // Killing only `docker exec` on the host leaves Python descendants alive.
+    const child = spawn("docker", ["exec", "-i", name, "timeout", "--signal=TERM", "--kill-after=2s", `${duration / 1000}s`,
+      "sh", "-c", "if [ -x /work/.venv/bin/python ]; then exec /work/.venv/bin/python -; else exec python3 -; fi"], {
       stdio: ["pipe", "pipe", "pipe"],
     });
-    let out = "";
-    let err = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-    child.stdout.on("data", (d) => (out += d.toString()));
-    child.stderr.on("data", (d) => (err += d.toString()));
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+    let bytes = 0;
+    let failure = "";
+    const abort = (message: string) => {
+      if (failure) return;
+      failure = message;
+      child.kill("SIGKILL");
+      void stopSandbox(leaseId);
+    };
+    const timer = setTimeout(() => abort("Job timed out; sandbox stopped."), duration + 3_000);
+    const receive = (chunks: Buffer[], data: Buffer) => {
+      bytes += data.byteLength;
+      if (bytes > JOB_RESULT_MAX_BYTES) abort("Job output exceeded 12 MB; sandbox stopped.");
+      else chunks.push(data);
+    };
+    child.stdout.on("data", (d: Buffer) => receive(out, d));
+    child.stderr.on("data", (d: Buffer) => receive(err, d));
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve({ ok: code === 0, output: code === 0 ? out : `${out}\n${err}`.trim() });
+      const stdout = Buffer.concat(out).toString();
+      const stderr = Buffer.concat(err).toString();
+      const timedOut = code === 124 || code === 137;
+      if (timedOut) void stopSandbox(leaseId);
+      resolve({ ok: !failure && code === 0, output: failure || (timedOut ? "Job timed out; sandbox stopped." : code === 0 ? stdout : `${stdout}\n${stderr}`.trim()) });
     });
+    child.stdin.on("error", () => { /* process exited before consuming payload */ });
     child.on("error", (e) => {
       clearTimeout(timer);
       resolve({ ok: false, output: String(e) });

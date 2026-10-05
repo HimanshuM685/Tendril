@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
     ];
   },
   webpack(config) {
+    // Shared source uses NodeNext .js specifiers; resolve their TypeScript
+    // sources when Next transpiles the workspace package directly.
+    config.resolve.extensionAlias = { ...config.resolve.extensionAlias, ".js": [".ts", ".tsx", ".js"] };
     // use-wallet treats these connectors as optional peers. Webpack needs
     // explicit empty aliases when only Lute, Pera, and Defly are enabled here.
     config.resolve.alias = {

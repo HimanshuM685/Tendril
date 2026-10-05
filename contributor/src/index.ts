@@ -33,6 +33,7 @@ async function main() {
   console.log(`[agent] price: $${config.pricePerHourUsd}/hr`);
 
   const socket = io(config.registryUrl, { transports: ["websocket"] });
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
 
   socket.on("connect", () => {
     const hello: AgentHelloMsg = {
@@ -55,7 +56,8 @@ async function main() {
     config.sandbox.boreServer = ack.bore.server;
     config.sandbox.boreSecret = ack.bore.secret;
     console.log(`[agent] registered as node ${nodeId}; earnings go to ${ack.ownerAddr}`);
-    setInterval(() => {
+    if (heartbeat) clearInterval(heartbeat);
+    heartbeat = setInterval(() => {
       const hb: HeartbeatMsg = { nodeId: nodeId! };
       socket.emit(WS.heartbeat, hb);
     }, config.heartbeatIntervalMs);
@@ -67,7 +69,12 @@ async function main() {
   socket.on(WS.destroyContainer, (msg: DestroyContainerMsg) => handleDestroy(msg.leaseId));
   socket.on(WS.runJob, (msg: RunJobMsg) => handleRun(socket, msg));
 
-  socket.on("disconnect", () => console.log("[agent] disconnected from registry"));
+  socket.on("disconnect", () => {
+    if (heartbeat) clearInterval(heartbeat);
+    heartbeat = undefined;
+    console.log("[agent] disconnected from registry; stopping sandboxes");
+    void shutdown();
+  });
 
   process.on("SIGINT", async () => {
     console.log("\n[agent] shutting down, destroying sandboxes...");
@@ -85,10 +92,16 @@ async function handleStart(socket: Socket, msg: StartContainerMsg) {
       msg.limits,
       msg.sshPassword,
       msg.sshPubKey,
+      msg.surface ?? "ssh",
+      msg.lifetimeMs,
     );
+    if (!activeLeases.has(msg.leaseId)) {
+      await stopSandbox(msg.leaseId);
+      return;
+    }
     const ready: ContainerReadyMsg = { leaseId: msg.leaseId, host, port };
     socket.emit(WS.containerReady, ready);
-    console.log(`[agent] lease ${msg.leaseId} ready — ssh root@${host} -p ${port}`);
+    console.log(`[agent] lease ${msg.leaseId} ready${msg.surface === "exec" ? " — private exec" : ` — ssh root@${host} -p ${port}`}`);
   } catch (err) {
     await handleDestroy(msg.leaseId);
     const failed: ContainerFailedMsg = { leaseId: msg.leaseId, error: (err as Error).message };
@@ -104,7 +117,11 @@ async function handleDestroy(leaseId: string) {
 }
 
 async function handleRun(socket: Socket, msg: RunJobMsg) {
-  const { ok, output } = await runInSandbox(msg.leaseId, msg.payload);
+  if (!activeLeases.has(msg.leaseId)) {
+    socket.emit(WS.jobResult, { jobId: msg.jobId, ok: false, result: "sandbox is not active" });
+    return;
+  }
+  const { ok, output } = await runInSandbox(msg.leaseId, msg.payload, msg.timeoutMs);
   const result: JobResultMsg = { jobId: msg.jobId, ok, result: output };
   socket.emit(WS.jobResult, result);
 }

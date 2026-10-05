@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
-import { formatUsdc } from "@tendril/shared";
+import { formatUsdc, NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
 import { pollRunJob, runNotebook } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { isCustodialSession } from "../lib/session";
 
-const NOTEBOOK_MAX_BYTES = 1_500_000;
 const OUTPUT_TEXT_CAP = 12_000;
 
 type TrainLane = "contributor" | "priority";
@@ -139,14 +138,14 @@ function parseNotebookFile(name: string, text: string): PendingNotebook {
     throw new Error("That file is not a Jupyter notebook.");
   }
   const notebook = parsed as Record<string, unknown>;
-  if (!Array.isArray(notebook.cells)) {
-    throw new Error("That file is not a Jupyter notebook.");
-  }
-  if (text.length > NOTEBOOK_MAX_BYTES) {
+  const invalid = notebookError(notebook);
+  if (invalid) throw new Error(invalid);
+  if (new TextEncoder().encode(text).byteLength > NOTEBOOK_MAX_BYTES) {
     throw new Error("Notebooks must be under 1.5 MB.");
   }
-  const cells = notebook.cells.length;
-  const codeCells = notebook.cells.filter(
+  const entries = notebook.cells as Record<string, unknown>[];
+  const cells = entries.length;
+  const codeCells = entries.filter(
     (cell) => !!cell && typeof cell === "object" && (cell as { cell_type?: string }).cell_type === "code",
   ).length;
   return { name, notebook, cells, codeCells };
@@ -210,6 +209,12 @@ export function NotebookSection({
   function takeFile(file: File | undefined) {
     if (!file || !canPick) return;
     setError(null);
+    if (file.size > NOTEBOOK_MAX_BYTES) {
+      setPending(null);
+      setError("Notebooks must be under 1.5 MB.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     void file.text().then(
       (text) => {
         try {
@@ -282,20 +287,29 @@ export function NotebookSection({
       if (!alive) return;
       setJobStatus(r.status);
       if (r.status !== "ended" && r.status !== "failed") return;
-      if (r.run?.ok) {
+      // Teardown claims terminal status before billing/result collection
+      // finishes. Keep polling until the result is actually recorded.
+      if (!r.run && !r.error) return;
+      if (r.run) {
         setView({
           fileName: pending?.name ?? "",
           ok: r.run.ok,
-          log: stripAnsi(r.run.result ?? "").trim(),
+          log: clip(stripAnsi(r.run.result ?? "").trim()),
           seconds: r.run.execution?.seconds,
           costAtomic: r.run.execution?.costAtomic,
           cells: cellsFrom(r.run.notebook),
           artifacts: r.run.artifacts ?? [],
           notebook: r.run.notebook,
         });
+        if (!r.run.ok) {
+          const failure = cellsFrom(r.run.notebook).flatMap((c) => c.outputs
+            .filter((o) => o.kind === "error")
+            .map((o) => `Cell ${c.index}: ${o.text.split("\n")[0]}`))[0];
+          setError(failure ?? stripAnsi(r.error ?? r.run.result ?? "Notebook run failed.").slice(0, 500));
+        }
         onWalletChanged?.();
       } else {
-        setError(r.error ?? r.run?.result ?? "Notebook run failed.");
+        setError(r.error ?? "Notebook run failed.");
       }
       setUploading(false);
       setJob(null);
