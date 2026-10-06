@@ -710,7 +710,7 @@ button {
 }
 
 /* ============================================================
-   2. THREE STEPS SECTION (painting1, painting2, painting3)
+   2. THREE STEPS SECTION (countryside-cottages, meadow-path-and-hills, lake-and-Mountain-vista)
    ============================================================ */
 .steps-section {
   padding: 96px 0 80px;
@@ -770,7 +770,7 @@ button {
 }
 
 /* ============================================================
-   3. DASHBOARD SHOWCASE (field-paint.jpg) & 6 FEATURES
+   3. DASHBOARD SHOWCASE (meadow-under-cloudy-skies.jpg) & 6 FEATURES
    ============================================================ */
 .platform-section {
   padding: 80px 0 96px;
@@ -1360,7 +1360,7 @@ button {
 }
 
 /* ============================================================
-   4. BUILT ON ACCURACY (field-paint.jpg & hills-smudge-art.jpg)
+   4. BUILT ON ACCURACY (meadow-under-cloudy-skies.jpg & lake-Valley.jpg)
    ============================================================ */
 .accuracy-section {
   padding: 96px 0;
@@ -2053,7 +2053,7 @@ button {
 }
 
 /* ============================================================
-   9. PRE-FOOTER CTA (clouds-painting.jpg)
+   9. PRE-FOOTER CTA (cloudscape.jpg)
    ============================================================ */
 .final-cta-section {
   position: relative;
@@ -2118,7 +2118,7 @@ button {
 }
 
 /* ============================================================
-   10. SITE FOOTER (lime-field-paint.jpg)
+   10. SITE FOOTER (countryside-meadow-panorama.jpg)
    ============================================================ */
 .site-footer {
   background-color: var(--bg-primary);

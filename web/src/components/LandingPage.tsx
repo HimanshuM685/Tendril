@@ -292,10 +292,10 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/*  Right Hero Mockup with hills-smudge-art.jpg  */}
+        {/*  Right Hero Mockup with lake-Valley.jpg  */}
         <div className="hero-visual reveal-on-scroll reveal-stagger-1">
           <div className="hero-art-frame">
-            <img  src="/assets/hills-smudge-art.jpg" alt="Painted green landscape" className="hero-art-img" />
+            <img  src="/assets/lake-Valley.jpg" alt="Painted green landscape" className="hero-art-img" />
 
             {/*  Floating Node Explorer Card  */}
             <div className="hero-floating-card">
@@ -475,7 +475,7 @@ export function LandingPage() {
       </div>
     </section>
 
-    {/*  ================= 2. THREE STEPS (painting1, painting2, painting3) =================  */}
+    {/*  ================= 2. THREE STEPS (countryside-cottages, meadow-path-and-hills, lake-and-Mountain-vista) =================  */}
     <section className="steps-section wrap" id="how-it-works">
       <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">HOW IT WORKS</span>
@@ -483,10 +483,10 @@ export function LandingPage() {
       </div>
 
       <div className="steps-grid">
-        {/*  Step 1: painting1.jpg  */}
+        {/*  Step 1: countryside-cottages.jpg  */}
         <article className="step-card reveal-on-scroll">
           <div className="step-card-media">
-            <img  src="/assets/painting1.jpg" alt="Cozy painted cottage with lush garden" loading="lazy" />
+            <img  src="/assets/countryside-cottages.jpg" alt="Cozy painted cottage with lush garden" loading="lazy" />
           </div>
           <div className="step-card-content">
             <h3 className="step-title">Connect &amp; Top Up USDC</h3>
@@ -495,10 +495,10 @@ export function LandingPage() {
           </div>
         </article>
 
-        {/*  Step 2: painting2.jpg  */}
+        {/*  Step 2: meadow-path-and-hills.jpg  */}
         <article className="step-card reveal-on-scroll reveal-stagger-1">
           <div className="step-card-media">
-            <img  src="/assets/painting2.jpg" alt="Vibrant landscape with rolling greens" loading="lazy" />
+            <img  src="/assets/meadow-path-and-hills.jpg" alt="Vibrant landscape with rolling greens" loading="lazy" />
           </div>
           <div className="step-card-content">
             <h3 className="step-title">Pick Node or Run Script</h3>
@@ -507,10 +507,10 @@ export function LandingPage() {
           </div>
         </article>
 
-        {/*  Step 3: painting3.jpg  */}
+        {/*  Step 3: lake-and-Mountain-vista.jpg  */}
         <article className="step-card reveal-on-scroll reveal-stagger-2">
           <div className="step-card-media">
-            <img  src="/assets/painting3.jpg" alt="Scenic mountain valley in paint texture" loading="lazy" />
+            <img  src="/assets/lake-and-Mountain-vista.jpg" alt="Scenic mountain valley in paint texture" loading="lazy" />
           </div>
           <div className="step-card-content">
             <h3 className="step-title">SSH In &amp; Pay by Second</h3>
@@ -521,7 +521,7 @@ export function LandingPage() {
       </div>
     </section>
 
-    {/*  ================= 3. DASHBOARD SHOWCASE (field-paint.jpg) & 6 FEATURES =================  */}
+    {/*  ================= 3. DASHBOARD SHOWCASE (meadow-under-cloudy-skies.jpg) & 6 FEATURES =================  */}
     <section className="platform-section wrap" id="explore">
       <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">A COMPLETE DECENTRALIZED PLATFORM</span>
@@ -531,10 +531,10 @@ export function LandingPage() {
         </div>
       </div>
 
-      {/*  App Backdrop with field-paint.jpg  */}
+      {/*  App Backdrop with meadow-under-cloudy-skies.jpg  */}
       <div className="app-stage-wrapper reveal-on-scroll">
         <div className="app-stage-backdrop">
-          <img  src="/assets/field-paint.jpg" alt="Painted green landscape meadow" className="stage-bg-img" loading="lazy" />
+          <img  src="/assets/meadow-under-cloudy-skies.jpg" alt="Painted green landscape meadow" className="stage-bg-img" loading="lazy" />
         </div>
 
         {/*  Realistic Web App Dashboard Mockup  */}
@@ -917,7 +917,7 @@ export function LandingPage() {
       </div>
     </section>
 
-    {/*  ================= 4. BUILT ON ACCURACY / TRUST (field-paint.jpg & hills-smudge-art.jpg) =================  */}
+    {/*  ================= 4. BUILT ON ACCURACY / TRUST (meadow-under-cloudy-skies.jpg & lake-Valley.jpg) =================  */}
     <section className="accuracy-section wrap" id="contribute">
       <div className="section-title-center reveal-on-scroll">
         <span className="section-eyebrow">WHY TENDRIL</span>
@@ -927,10 +927,10 @@ export function LandingPage() {
       </div>
 
       <div className="comparison-dual-grid">
-        {/*  Card 1: field-paint.jpg  */}
+        {/*  Card 1: meadow-under-cloudy-skies.jpg  */}
         <div className="comparison-card reveal-on-scroll">
           <div className="comparison-visual-frame">
-            <img  src="/assets/field-paint.jpg" alt="Painted green landscape" className="comparison-bg-art" loading="lazy" />
+            <img  src="/assets/meadow-under-cloudy-skies.jpg" alt="Painted green landscape" className="comparison-bg-art" loading="lazy" />
             <div className="comparison-ui-overlay">
               <div className="filter-checklist">
                 <div className="check-pill">
@@ -1015,10 +1015,10 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/*  Card 2: hills-smudge-art.jpg  */}
+        {/*  Card 2: lake-Valley.jpg  */}
         <div className="comparison-card reveal-on-scroll reveal-stagger-1">
           <div className="comparison-visual-frame">
-            <img  src="/assets/hills-smudge-art.jpg" alt="Painted mountain slopes" className="comparison-bg-art"
+            <img  src="/assets/lake-Valley.jpg" alt="Painted mountain slopes" className="comparison-bg-art"
               loading="lazy" />
             <div className="comparison-ui-overlay">
               <div className="sync-status-bar">
@@ -1271,10 +1271,10 @@ export function LandingPage() {
       </div>
     </section>
 
-    {/*  ================= 9. PRE-FOOTER CTA (clouds-painting.jpg) =================  */}
+    {/*  ================= 9. PRE-FOOTER CTA (cloudscape.jpg) =================  */}
     <section className="final-cta-section">
       <div className="final-cta-bg-frame">
-        <img  src="/assets/clouds-painting.jpg" alt="Painted green landscape with clouds" className="final-cta-img"
+        <img  src="/assets/cloudscape.jpg" alt="Painted green landscape with clouds" className="final-cta-img"
           loading="lazy" />
         <div className="final-cta-overlay"></div>
       </div>
@@ -1298,7 +1298,7 @@ export function LandingPage() {
 
   </main>
 
-  {/*  ================= 10. FOOTER (lime-field-paint.jpg) =================  */}
+  {/*  ================= 10. FOOTER (countryside-meadow-panorama.jpg) =================  */}
   <footer className="site-footer">
     <div className="wrap footer-main-grid reveal-on-scroll">
       {/*  Brand & Mission  */}
@@ -1390,9 +1390,9 @@ export function LandingPage() {
       </div>
     </div>
 
-    {/*  Landscape banner at the very bottom: lime-field-paint.jpg  */}
+    {/*  Landscape banner at the very bottom: countryside-meadow-panorama.jpg  */}
     <div className="footer-landscape-banner">
-      <img  src="/assets/lime-field-paint.jpg" alt="Panoramic field painting with village and countryside" loading="lazy" />
+      <img  src="/assets/countryside-meadow-panorama.jpg" alt="Panoramic field painting with village and countryside" loading="lazy" />
     </div>
   </footer>
 
