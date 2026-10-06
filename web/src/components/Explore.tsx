@@ -524,7 +524,13 @@ export function Explore({
                           disabled={renting === n.id}
                           onClick={() => rent(n.id, n.pricePerHourUsd)}
                         >
-                          {renting === n.id ? stage || "Starting…" : "Available"}
+                          {renting === n.id
+                            ? stage === "signing"
+                              ? "Approve in wallet…"
+                              : stage === "settling" || stage === "confirming"
+                                ? "Starting machine…"
+                                : "Starting…"
+                            : "Available"}
                         </button>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>

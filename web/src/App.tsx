@@ -1,18 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
 import { WalletBar } from "./components/WalletBar";
-import { Marketplace } from "./components/Marketplace";
-import { LandingPage } from "./components/LandingPage";
-import { Docs } from "./components/Docs";
-import { Dashboard } from "./components/Dashboard";
-import { Metrics } from "./components/Metrics";
-import { GoogleCallback } from "./components/GoogleCallback";
 import { Sidebar } from "./components/Sidebar";
-import { TopUpModal } from "./components/TopUpModal";
-import { McpModal } from "./components/McpModal";
-import { ConnectWalletModal } from "./components/ConnectWalletModal";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
@@ -28,6 +19,18 @@ export type Session = {
 };
 
 const SESSION_KEY = "tendril.session";
+
+// Keep first paint small. Wallet chrome stays eager; route screens and modals
+// load only when their route/state needs them.
+const Marketplace = lazy(() => import("./components/Marketplace").then(({ Marketplace }) => ({ default: Marketplace })));
+const LandingPage = lazy(() => import("./components/LandingPage").then(({ LandingPage }) => ({ default: LandingPage })));
+const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ DocsRedirect }) => ({ default: DocsRedirect })));
+const Dashboard = lazy(() => import("./components/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
+const Metrics = lazy(() => import("./components/Metrics").then(({ Metrics }) => ({ default: Metrics })));
+const GoogleCallback = lazy(() => import("./components/GoogleCallback").then(({ GoogleCallback }) => ({ default: GoogleCallback })));
+const TopUpModal = lazy(() => import("./components/TopUpModal").then(({ TopUpModal }) => ({ default: TopUpModal })));
+const McpModal = lazy(() => import("./components/McpModal").then(({ McpModal }) => ({ default: McpModal })));
+const ConnectWalletModal = lazy(() => import("./components/ConnectWalletModal").then(({ ConnectWalletModal }) => ({ default: ConnectWalletModal })));
 
 function loadSession(): Session | null {
   try {
@@ -80,7 +83,7 @@ export function App() {
 
   const path = location.pathname;
   const isLanding = path === "/";
-  const isDocs = path.startsWith("/docs") || path === "/api";
+  const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -175,14 +178,16 @@ export function App() {
   if (isLanding) {
     return (
       <div className="app app-landing">
-        <LandingPage />
+        <Suspense fallback={<p className="muted">Loading Tendril…</p>}>
+          <LandingPage />
+        </Suspense>
       </div>
     );
   }
 
-  // Standalone docs portal matching docs-page-layout.png (docs.tendrilhq.com)
+  // Documentation is independently deployed at docs.tendrilhq.com.
   if (isDocs) {
-    return <Docs />;
+    return <Suspense fallback={<p className="muted">Opening documentation…</p>}><DocsRedirect /></Suspense>;
   }
 
   return (
@@ -296,101 +301,105 @@ export function App() {
             </div>
           )}
 
-          <Routes>
-            <Route
-              path="/auth/google"
-              element={<GoogleCallback onSession={(s) => setSession(s)} />}
-            />
-            <Route
-              path="/explore"
-              element={
-                <Marketplace
-                  tab="explore"
-                  session={session}
-                  wallet={wallet}
-                  activeAddress={effectiveAddress}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeased={setLease}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
-                />
-              }
-            />
-            <Route
-              path="/contribute"
-              element={
-                <Marketplace
-                  tab="contribute"
-                  session={session}
-                  wallet={wallet}
-                  activeAddress={effectiveAddress}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeased={setLease}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                  onOpenConnectWallet={() => setConnectWalletOpen(true)}
-                />
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <Dashboard
-                  session={session}
-                  wallet={wallet}
-                  address={effectiveAddress}
-                  signedIn={!!session}
-                  signTransactions={signTransactions}
-                  onWalletChanged={onWalletChanged}
-                  onError={setError}
-                  lease={lease}
-                  onLeaseEnded={() => setLease(null)}
-                  onOpenTopUp={() => setTopUpOpen(true)}
-                />
-              }
-            />
-            <Route path="/metrics" element={<Metrics />} />
-<Route path="*" element={<Navigate to="/explore" replace />} />
-          </Routes>
+          <Suspense fallback={<p className="muted">Loading workspace…</p>}>
+            <Routes>
+              <Route
+                path="/auth/google"
+                element={<GoogleCallback onSession={(s) => setSession(s)} />}
+              />
+              <Route
+                path="/explore"
+                element={
+                  <Marketplace
+                    tab="explore"
+                    session={session}
+                    wallet={wallet}
+                    activeAddress={effectiveAddress}
+                    signTransactions={signTransactions}
+                    onWalletChanged={onWalletChanged}
+                    onError={setError}
+                    lease={lease}
+                    onLeased={setLease}
+                    onOpenTopUp={() => setTopUpOpen(true)}
+                    onOpenConnectWallet={() => setConnectWalletOpen(true)}
+                  />
+                }
+              />
+              <Route
+                path="/contribute"
+                element={
+                  <Marketplace
+                    tab="contribute"
+                    session={session}
+                    wallet={wallet}
+                    activeAddress={effectiveAddress}
+                    signTransactions={signTransactions}
+                    onWalletChanged={onWalletChanged}
+                    onError={setError}
+                    lease={lease}
+                    onLeased={setLease}
+                    onOpenTopUp={() => setTopUpOpen(true)}
+                    onOpenConnectWallet={() => setConnectWalletOpen(true)}
+                  />
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <Dashboard
+                    session={session}
+                    wallet={wallet}
+                    address={effectiveAddress}
+                    signedIn={!!session}
+                    signTransactions={signTransactions}
+                    onWalletChanged={onWalletChanged}
+                    onError={setError}
+                    lease={lease}
+                    onLeaseEnded={() => setLease(null)}
+                    onOpenTopUp={() => setTopUpOpen(true)}
+                  />
+                }
+              />
+              <Route path="/metrics" element={<Metrics />} />
+              <Route path="*" element={<Navigate to="/explore" replace />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 
       {/* Global Modals */}
-      {connectWalletOpen && (
-        <ConnectWalletModal
-          onClose={() => setConnectWalletOpen(false)}
-          onCustodialSession={(res) => {
-            setSession({
-              token: res.token,
-              address: res.address,
-              authType: res.authType,
-              email: res.email,
-              name: res.name,
-            });
-          }}
-          onWalletConnected={() => {
-            autoSignIn.current = true;
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {connectWalletOpen && (
+          <ConnectWalletModal
+            onClose={() => setConnectWalletOpen(false)}
+            onCustodialSession={(res) => {
+              setSession({
+                token: res.token,
+                address: res.address,
+                authType: res.authType,
+                email: res.email,
+                name: res.name,
+              });
+            }}
+            onWalletConnected={() => {
+              autoSignIn.current = true;
+            }}
+          />
+        )}
 
-      {topUpOpen && (
-        <TopUpModal
-          address={effectiveAddress}
-          session={session}
-          signTransactions={signTransactions as never}
-          onClose={() => setTopUpOpen(false)}
-          onChanged={onWalletChanged}
-          onError={setError}
-        />
-      )}
+        {topUpOpen && (
+          <TopUpModal
+            address={effectiveAddress}
+            session={session}
+            signTransactions={signTransactions as never}
+            onClose={() => setTopUpOpen(false)}
+            onChanged={onWalletChanged}
+            onError={setError}
+          />
+        )}
 
-      {mcpOpen && <McpModal onClose={() => setMcpOpen(false)} />}
+        {mcpOpen && <McpModal onClose={() => setMcpOpen(false)} />}
+      </Suspense>
     </div>
   );
 }

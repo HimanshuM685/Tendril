@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { docsUrl } from "../lib/docsLinks";
 
 /**
  * Landing hero with an encryption / hashing animation — purely presentational.
@@ -28,11 +29,10 @@ function prefersReducedMotion(): boolean {
 
 interface HashHeroProps {
   onEnter: () => void;
-  onDocs: () => void;
   onAbout: () => void;
 }
 
-export function HashHero({ onEnter, onDocs, onAbout }: HashHeroProps) {
+export function HashHero({ onEnter, onAbout }: HashHeroProps) {
   const [display, setDisplay] = useState<string>(TITLE);
   const [hashes, setHashes] = useState<string[]>(() => ROWS.map(() => randomHex(48)));
 
@@ -77,9 +77,9 @@ export function HashHero({ onEnter, onDocs, onAbout }: HashHeroProps) {
         <button className="btn" onClick={onEnter}>
           EXPLORE THE MARKETPLACE&nbsp;→
         </button>
-        <button className="btn ghost" onClick={onDocs}>
+        <a className="btn ghost" href={docsUrl()}>
           DOCS
-        </button>
+        </a>
         <button className="btn ghost" onClick={onAbout}>
           ABOUT
         </button>

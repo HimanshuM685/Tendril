@@ -71,10 +71,11 @@ wrong.
     │<───────────────────────────────│                              │              │
 ```
 
-**Verify, then work, then settle.** `verify()` only simulates the transaction group — nothing
-reaches the chain. The server does the work in that gap and settles afterwards. So a sandbox that
-fails to start returns `503` with **nothing settled**: the caller has paid nothing and can retry
-elsewhere.
+**Rent: verify, provision, then settle.** `verify()` only simulates the transaction group — nothing
+reaches the chain. A rented sandbox that fails to start returns `503` with **nothing settled**.
+Leaseless runs settle their gate fee before provisioning so long jobs do not outlive the signed
+transaction's validity window. A subsequent run startup failure does not undo that gate fee;
+execution usage starts billing only after sandbox readiness.
 
 **Fees are sponsored.** The 402 carries `extra.feePayer`, the facilitator's address. The client
 builds a two-transaction group — its own transfer plus an unsigned self-payment from the fee payer
@@ -637,7 +638,9 @@ Send a lease token and it runs inside a machine you already hold instead; that t
 the lease, not here. Both are the same URL, so the endpoint is one entry in the Bazaar.
 **Legacy alias:** `POST /lease/:id/run`, where `:id` must match the token, as before.
 
-**The job runs before the payment settles.** A job that never ran is never paid for.
+**Leaseless jobs settle the gate fee before provisioning.** Their signed payment must not expire
+during a long run. Jobs inside an existing lease settle after execution. Startup failures consume
+no execution credit, but do not undo an already-settled leaseless gate fee.
 
 | | |
 |---|---|
@@ -657,7 +660,7 @@ optimises capability per unit of rate. A free node (`pricePerHourUsd = 0`) alway
 The gate fee is on-chain. The execution is not: it comes out of your credit balance, charged once
 when the job finishes, at `elapsed / 3600 × rate`.
 
-**A run is never killed part-way to protect your balance.** So if 0.50 USDC of credit meets a job
+**A script run can overdraw credit.** So if 0.50 USDC of credit meets a job
 that costs 0.60, the job finishes and the balance lands at **−0.10 USDC**. That debt is real:
 
 - `POST /x402/rent` refuses with `402 credit_exhausted` until it is cleared,
@@ -666,6 +669,8 @@ that costs 0.60, the job finishes and the balance lands at **−0.10 USDC**. Tha
 
 You need a **positive** balance to start a leaseless run at all. `RUN_TIMEOUT_MS` (default 120s) caps
 how long one job can run, which is also the cap on how far a single run can overdraw you.
+For leaseless runs the configured timeout is capped at 15 minutes. Notebook jobs additionally stop
+at the prepaid budget and cannot overdraw execution credit.
 
 ### Request headers
 
@@ -678,11 +683,54 @@ how long one job can run, which is also the cap on how far a single run can over
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `payload` | string | yes | Python source to execute. Its stdout comes back in `result`. |
+| `payload` | string | one of payload/notebook | Python source to execute. Its stdout comes back in `result`. |
+| `notebook` | object | one of payload/notebook | Python nbformat 4 notebook, up to 1.5 MB and 500 cells. |
+| `lane` | `contributor` or `priority` | no | Notebook only. Omitted prefers priority when Modal is configured; otherwise contributor. |
 
 ```jsonc
 { "payload": "print(sum(range(100)))" }
 ```
+
+### Asynchronous notebook response
+
+Both lanes use IPython with `%pip`, shell/cell magics, top-level `await`, inline plots, and process
+pools. Python syntax is checked before code runs, without altering source. Non-Python kernels are
+unsupported. Runtime errors stop later cells and preserve earlier outputs when available.
+
+A notebook without a lease token returns immediately after gate-fee settlement:
+
+```json
+{ "jobId": "notebook-job", "jobToken": "<bearer token>", "status": "starting" }
+```
+
+Poll `GET /x402/run/notebook-job` with `Authorization: Bearer <jobToken>`:
+
+```jsonc
+{
+  "jobId": "notebook-job",
+  "status": "ended",
+  "run": {
+    "jobId": "notebook-job",
+    "ok": true,
+    "result": "Notebook completed.",
+    "notebook": { /* executed nbformat 4 JSON */ },
+    "artifacts": [{ "name": "result.txt", "mediaType": "text/plain", "base64": "ZG9uZQ==" }],
+    "execution": { "nodeId": "node", "seconds": 5, "costAtomic": "139", "balance": "999861" }
+  }
+}
+```
+
+Wait for `run` or `error`, not terminal status alone: teardown claims `ended` before billing and
+result collection finish. Failed executions can still carry an executed notebook and artifacts.
+Hard timeouts or sandbox failure can prevent partial results. Polling is free and requires the
+matching job token; expired/evicted records return `404`.
+
+Notebook execution is capped by prepaid credit and `RUN_TIMEOUT_MS` (at most 15 minutes).
+Release existing sessions first; another notebook or session cannot share the same payer's credit
+while this notebook is running (`409 payer_busy`). Limits are 2 MB cell output, 4 MB total artifacts,
+and 12 MB transport. Artifacts come from `/work`; hidden paths, symlinks, and special files are
+excluded. Oversized artifacts are skipped with a notice. Results are retained in-memory for up to
+one hour, subject to oldest-first eviction at 32 jobs or 64 MB total, and are lost on restart.
 
 ### `200 OK`
 
@@ -721,17 +769,18 @@ A **leaseless** run carries one extra object naming the machine it found and wha
 |---|---|---|
 | `402` | *(PaymentRequired body)* | Pay `FLAT_RUN_ATOMIC`. |
 | `402` | `insufficient_credit` | Leaseless run with a zero or negative balance. **Nothing settled** — top up first. Carries `creditAtomic`. |
-| `402` | `settlement_failed` | Job ran but the payment would not settle. Carries `detail`. |
-| `400` | `payload (string) required` | Body had no `payload` string. |
+| `402` | `settlement_failed` | Gate fee could not settle; leaseless job does not start. Carries `detail`. |
+| `400` | *(validation detail)* | Pass exactly one payload/notebook; notebook must be valid Python nbformat 4 within upload limits. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
 | `401` | `invalid_token` | An `Authorization` header that is neither a lease nor a session token. |
 | `401` | `invalid or missing lease token` | Lease path: token malformed or for a different lease. |
 | `404` | `lease not found` | Token valid but the lease is gone. |
 | `409` | `lease not active` | Lease has not started, or has already ended. |
+| `409` | `payer_busy` or `node_or_payer_busy` | Credit or selected node is already reserved. Nothing settled. |
 | `409` | `payment_already_used` | That payment already bought something. Carries `txid`. |
 | `503` | `no_node_available` | Leaseless run and every machine is busy or offline. **Nothing settled.** |
-| `503` | `provisioning_failed` | The sandbox did not come up. **Nothing settled.** |
-| `502` | *(message from the agent)* | Job timed out or the node dropped. **Nothing settled, nothing billed.** |
+| `503` | `provisioning_failed` | Synchronous run sandbox did not come up. Gate fee may already be settled; no execution time billed. Async notebooks report this through polling. |
+| `502` | *(message from the agent)* | Synchronous job timed out or node dropped; started leaseless execution is billed. Async notebooks report failure through polling. |
 
 ### Example — no lease, no setup
 

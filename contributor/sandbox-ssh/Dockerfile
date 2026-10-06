@@ -1,4 +1,5 @@
-# Tendril SSH sandbox image. A renter gets a plain SSH shell here — no Jupyter.
+# Tendril sandbox image. Interactive rentals use SSH; notebook jobs use a
+# private IPython kernel inside the container, with no Jupyter web server.
 # The container dials OUT to a bore server (so no inbound port needs publishing
 # on the contributor's host) and the renter connects with the printed host:port.
 #
@@ -24,7 +25,7 @@ FROM python:3.12-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-server ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir numpy pandas matplotlib requests
+    && pip install --no-cache-dir nbclient nbformat ipykernel numpy pandas matplotlib requests scipy scikit-learn pillow psutil
 COPY --from=bore /out/bin/bore /usr/local/bin/bore
 
 COPY entrypoint.sh /entrypoint.sh

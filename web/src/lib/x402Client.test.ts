@@ -8,7 +8,7 @@
  * concurrency.
  *
  * `serialize` is re-implemented here rather than imported: x402Client.ts pulls in
- * `@x402/avm` and `import.meta.env`, neither of which loads outside Vite. This
+ * `@x402/avm` and browser-only configuration, neither of which loads in Node. This
  * file and that one must stay in step — the assertions below are the contract.
  */
 import assert from "node:assert/strict";

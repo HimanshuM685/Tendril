@@ -19,7 +19,7 @@ import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Cli
 import { EXPLORER_URL } from "./lib/network";
 
 export const REGISTRY_URL = (
-  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000"
+  process.env.NEXT_PUBLIC_REGISTRY_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
 
 export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;
@@ -70,7 +70,7 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   } catch (err) {
     if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("Failed"))) {
       throw new Error(
-        `Unable to connect to backend API at ${REGISTRY_URL}. Ensure backend server is running and VITE_REGISTRY_URL is configured correctly.`
+        `Unable to connect to backend API at ${REGISTRY_URL}. Ensure backend server is running and NEXT_PUBLIC_REGISTRY_URL is configured correctly.`
       );
     }
     throw err;

@@ -7,11 +7,11 @@ import type {
 } from "@tendril/shared";
 
 export const REGISTRY_URL = (
-  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000"
+  process.env.NEXT_PUBLIC_REGISTRY_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
 
 export const EXPLORER_URL =
-  (import.meta.env.VITE_EXPLORER_URL as string | undefined) ??
+  process.env.NEXT_PUBLIC_EXPLORER_URL ??
   "https://lora.algokit.io/testnet";
 
 export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;

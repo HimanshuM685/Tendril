@@ -1,125 +1,189 @@
-const SENTINEL = "\n__TENDRIL_NB__\n";
+import {
+  JOB_LOG_MAX_BYTES, JOB_RESULT_MAX_BYTES, NOTEBOOK_ARTIFACT_BYTES,
+  NOTEBOOK_OUTPUT_BYTES, boundedRunTimeoutMs, notebookError,
+} from "@tendril/shared";
+import type { RunArtifact } from "@tendril/shared";
 
-/**
- * Contributor sandboxes only accept a Python payload. This script executes the
- * notebook's code cells in-process and prints the executed notebook after a
- * sentinel so the registry can hand cell output back to the UI.
- */
-export function notebookToPayload(notebook: Record<string, unknown>): string {
+const SENTINEL = "__TENDRIL_NB__";
+
+/** This code runs ONLY inside a disposable sandbox, never in the registry. */
+export function notebookToPayload(notebook: Record<string, unknown>, timeoutMs = 120_000): string {
   const encoded = Buffer.from(JSON.stringify(notebook), "utf8").toString("base64");
-  return `import ast, base64, io, json, os, sys, traceback, subprocess, types
+  return `import asyncio, base64, json, os, sys, tempfile, time, stat, mimetypes
+from pathlib import Path
+import nbformat
+from nbclient import NotebookClient
+from jupyter_client import AsyncKernelManager
+from jupyter_client.kernelspec import KernelSpecManager
+from IPython.core.inputtransformer2 import TransformerManager
+import ast
+
 os.makedirs("/work", exist_ok=True)
 os.chdir("/work")
-nb = json.loads(base64.b64decode(${JSON.stringify(encoded)}))
-# Cells run as a real __main__ module: pickle (ProcessPoolExecutor, multiprocessing)
-# resolves functions by sys.modules["__main__"], and a bare dict would not be found.
-# A fresh module, not this script's own, so cell variables cannot clobber runner state.
-main = types.ModuleType("__main__")
-sys.modules["__main__"] = main
-ns = main.__dict__
-current = []
-_show = None
-try:
-    import matplotlib
-    matplotlib.use("Agg", force=True)
-    import matplotlib.pyplot as plt
-    def _show(*_a, **_k):
-        for num in list(plt.get_fignums()):
-            fig = plt.figure(num)
-            bio = io.BytesIO()
-            fig.savefig(bio, format="png", bbox_inches="tight")
-            current.append({"output_type":"display_data","metadata":{},"data":{"image/png": base64.b64encode(bio.getvalue()).decode(), "text/plain":"<Figure>"}})
-        plt.close("all")
-    plt.show = _show
-    ns["plt"] = plt
-except Exception:
-    pass
+nb = nbformat.reads(base64.b64decode(${JSON.stringify(encoded)}).decode(), as_version=4)
+for cell in nb.cells:
+    if cell.cell_type == "code":
+        cell.outputs = []
+        cell.execution_count = None
+# Never select a kernel command from uploaded metadata. Both lanes use the
+# sandbox interpreter and a private IPC connection, with no exposed TCP port.
+nb.metadata.kernelspec = {"name": "tendril-python3", "display_name": "Python 3", "language": "python"}
+nb.metadata.pop("widgets", None)
+OUTPUT_CAP = ${NOTEBOOK_OUTPUT_BYTES}
+ARTIFACT_CAP = ${NOTEBOOK_ARTIFACT_BYTES}
+deadline = time.monotonic() + ${boundedRunTimeoutMs(timeoutMs) / 1000}
+notices = []
+ok = False
+failure = ""
+output_bytes = 0
 
-def src(cell):
-    raw = cell.get("source") or ""
-    return "".join(raw) if isinstance(raw, list) else str(raw)
+class BoundedClient(NotebookClient):
+    def process_message(self, msg, cell, cell_index):
+        global output_bytes
+        if msg.get("header", {}).get("msg_type") in ("stream", "display_data", "execute_result", "error"):
+            size = len(json.dumps(msg.get("content", {})).encode())
+            output_bytes += size
+            if output_bytes > OUTPUT_CAP:
+                raise RuntimeError("Notebook output exceeded 2 MB; reduce printed data or save a small artifact.")
+        return super().process_message(msg, cell, cell_index)
 
-def shell(line):
-    proc = subprocess.run(line[1:], shell=True, capture_output=True, text=True)
-    text = (proc.stdout or "") + (proc.stderr or "")
-    if proc.returncode:
-        raise RuntimeError(text.strip() or f"shell exited {proc.returncode}")
-    return text
-
-def emit(text, name="stdout"):
-    if not text:
-        return
-    if not text.endswith("\\n"):
-        text += "\\n"
-    current.append({"output_type":"stream","name":name,"text":text})
-
-ok = True
-count = 0
-for cell in nb.get("cells") or []:
-    if cell.get("cell_type") != "code":
-        continue
-    count += 1
-    current = []
-    cell["execution_count"] = count
-    text = src(cell)
+with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
+    kernel = Path(runtime) / "kernels" / "tendril-python3"
+    kernel.mkdir(parents=True)
+    (kernel / "kernel.json").write_text(json.dumps({
+        "argv": [sys.executable, "-m", "ipykernel_launcher", "--matplotlib=inline", "-f", "{connection_file}"],
+        "display_name": "Python 3", "language": "python"
+    }))
+    km = AsyncKernelManager(kernel_name="tendril-python3", transport="ipc",
+        connection_file=str(Path(runtime) / "connection.json"),
+        kernel_spec_manager=KernelSpecManager(kernel_dirs=[str(kernel.parent)]))
+    def cell_timeout(cell):
+        return max(1, int(deadline - time.monotonic()))
+    client = BoundedClient(nb, km=km, kernel_name="tendril-python3", allow_errors=False,
+        force_raise_errors=True, timeout_func=cell_timeout, startup_timeout=30,
+        resources={"metadata": {"path": "/work"}}, store_widget_state=False)
     try:
-        if _show is not None:
-            mod = sys.modules.get("matplotlib.pyplot")
-            if mod is not None:
-                mod.show = _show
-            if "plt" in ns:
-                ns["plt"].show = _show
-        py = []
-        for line in text.splitlines():
-            if line.startswith("!"):
-                if py:
-                    exec(compile("\\n".join(py), "<cell>", "exec"), ns)
-                    py = []
-                emit(shell(line))
-            else:
-                py.append(line)
-        body = "\\n".join(py).strip()
-        if body:
-            tree = ast.parse(body)
-            last = tree.body.pop() if tree.body and isinstance(tree.body[-1], ast.Expr) else None
-            buf = io.StringIO()
-            old = sys.stdout
-            sys.stdout = buf
+        # Catch syntax mistakes before earlier, expensive cells run. IPython's
+        # transformer supports %pip, !commands, %%bash, and top-level await.
+        transformer = TransformerManager()
+        for index, cell in enumerate(nb.cells):
+            if cell.cell_type != "code":
+                continue
             try:
-                if tree.body:
-                    exec(compile(tree, "<cell>", "exec"), ns)
-                value = eval(compile(ast.Expression(last.value), "<cell>", "eval"), ns) if last is not None else None
-            finally:
-                sys.stdout = old
-            emit(buf.getvalue())
-            if value is not None:
-                current.append({"output_type":"execute_result","execution_count":count,"metadata":{},"data":{"text/plain":repr(value)}})
+                compile(transformer.transform_cell(cell.source), f"<cell {index + 1}>", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
+            except SyntaxError as exc:
+                cell.outputs = [nbformat.v4.new_output("error", ename=type(exc).__name__, evalue=str(exc), traceback=[str(exc)])]
+                raise
+        client.execute()
+        ok = True
     except Exception as exc:
-        ok = False
-        err = traceback.format_exc()
-        current.append({"output_type":"error","ename":type(exc).__name__,"evalue":str(exc),"traceback":err.splitlines(True)})
-    cell["outputs"] = current
+        failure = str(exc)[-4000:]
+    finally:
+        # A supplied KernelManager is caller-owned; always stop its processes.
+        async def cleanup():
+            if km.has_kernel:
+                await km.shutdown_kernel(now=True)
+            await km.cleanup_resources()
+        try:
+            asyncio.run(cleanup())
+        except Exception:
+            pass
 
-sys.stdout.write(${JSON.stringify(SENTINEL)} + json.dumps({"ok": ok, "notebook": nb}))
-sys.exit(0)
+# Preserve useful partial output. Failures are concise; full cell errors stay
+# in the executed notebook. Uploaded source is never automatically rewritten.
+code_index = 0
+for cell in nb.cells:
+    if cell.cell_type != "code":
+        continue
+    code_index += 1
+    for out in cell.get("outputs", []):
+        if out.get("output_type") == "error":
+            failure = f"Cell {code_index}: {out.get('ename', 'Error')}: {out.get('evalue', '')}"[:4000]
+            break
+artifacts = []
+used = 0
+visited = 0
+for root, dirs, files in os.walk("/work", followlinks=False):
+    dirs[:] = sorted(d for d in dirs if not d.startswith(".") and not os.path.islink(os.path.join(root, d)))
+    if len(Path(root).relative_to("/work").parts) > 8:
+        dirs[:] = []
+        continue
+    for name in sorted(files):
+        visited += 1
+        if visited > 256:
+            break
+        path = Path(root) / name
+        rel = path.relative_to("/work").as_posix()
+        if name.startswith(".") or rel in ("in.ipynb", "out.ipynb", "job.py"):
+            continue
+        try:
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, "rb") as f:
+                info = os.fstat(f.fileno())
+                if not stat.S_ISREG(info.st_mode):
+                    continue
+                if info.st_size > ARTIFACT_CAP - used:
+                    notices.append(f"Skipped {rel[:160]}: artifact limit is 4 MB total.")
+                    continue
+                data = f.read(ARTIFACT_CAP - used + 1)
+                if len(data) > ARTIFACT_CAP - used:
+                    continue
+            used += len(data)
+            artifacts.append({"name": rel, "mediaType": mimetypes.guess_type(name)[0] or "application/octet-stream",
+                "base64": base64.b64encode(data).decode()})
+        except OSError:
+            continue
+    if visited > 256:
+        notices.append("Artifact scan stopped at 256 files.")
+        break
+# Strip oversized metadata supplied by cell output before serializing.
+nb.metadata = {"kernelspec": nb.metadata.kernelspec, "language_info": {"name": "python"}}
+for cell in nb.cells:
+    cell.metadata = {}
+    cell.pop("attachments", None)
+log = failure if not ok else "Notebook completed."
+if notices:
+    log += "\\n" + "\\n".join(notices[:20])
+frame = json.dumps({"ok": ok, "notebook": nb, "artifacts": artifacts, "log": log})
+if len(frame.encode()) > ${JOB_RESULT_MAX_BYTES - JOB_LOG_MAX_BYTES}:
+    frame = json.dumps({"ok": False, "log": "Notebook result exceeded transport limit. Reduce output."})
+sys.stdout.write("\\n${SENTINEL}\\n" + frame)
 `;
 }
 
-export function parseNotebookRun(output: string): {
+export interface NotebookRun {
   ok: boolean;
   notebook?: Record<string, unknown>;
+  artifacts?: RunArtifact[];
   log: string;
-} {
-  const at = output.lastIndexOf(SENTINEL);
-  if (at < 0) return { ok: false, log: output.trim() };
-  const log = output.slice(0, at).trim();
+}
+
+export function parseNotebookRun(output: string): NotebookRun {
+  // Some older agents trim the leading newline. Match the marker at either
+  // start of output or a line boundary and never display encoded frame data.
+  const marker = /(?:^|\r?\n)__TENDRIL_NB__\r?\n/g;
+  let last: RegExpExecArray | null = null;
+  for (let match = marker.exec(output); match; match = marker.exec(output)) last = match;
+  if (!last) return { ok: false, log: output.slice(0, JOB_LOG_MAX_BYTES).trim() || "Notebook runner produced no result." };
+  const log = output.slice(0, last.index).slice(0, JOB_LOG_MAX_BYTES).trim();
+  if (Buffer.byteLength(output) > JOB_RESULT_MAX_BYTES) return { ok: false, log: "Notebook result exceeded transport limit." };
   try {
-    const parsed = JSON.parse(output.slice(at + SENTINEL.length)) as {
-      ok?: boolean;
-      notebook?: Record<string, unknown>;
+    const parsed = JSON.parse(output.slice(last.index + last[0].length)) as NotebookRun;
+    if (parsed.notebook && notebookError(parsed.notebook)) throw new Error("invalid notebook result");
+    const artifacts: RunArtifact[] = [];
+    let used = 0;
+    for (const art of Array.isArray(parsed.artifacts) ? parsed.artifacts.slice(0, 256) : []) {
+      if (!art || typeof art.name !== "string" || art.name.startsWith("/") || art.name.split(/[\\/]/).includes("..")
+        || typeof art.base64 !== "string" || typeof art.mediaType !== "string") continue;
+      used += Buffer.byteLength(art.base64, "base64");
+      if (used > NOTEBOOK_ARTIFACT_BYTES) break;
+      artifacts.push(art);
+    }
+    return {
+      ok: parsed.ok === true, notebook: parsed.notebook, artifacts,
+      log: [log, typeof parsed.log === "string" ? parsed.log : ""].filter(Boolean).join("\n").slice(0, JOB_LOG_MAX_BYTES),
     };
-    return { ok: !!parsed.ok, notebook: parsed.notebook, log };
   } catch {
-    return { ok: false, log: output.trim() };
+    return { ok: false, log: log || "Notebook result was incomplete or malformed. Update the contributor agent and rerun." };
   }
 }
