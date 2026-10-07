@@ -8,7 +8,7 @@
 export type NodeStatus = "online" | "offline";
 
 /** Who actually runs the sandbox. Contributor machines stay on the socket path. */
-export type ComputeProvider = "contributor" | "modal";
+export type ComputeProvider = "contributor" | "modal" | "e2b";
 
 /** A compute node advertised by a contributor, or a hosted CPU row. */
 export interface ComputeNode {
@@ -28,7 +28,7 @@ export interface ComputeNode {
   ramMb: number;
   /** GPU model string, or null if none. */
   gpu: string | null;
-  /** `"modal"` is a hosted CPU row. Everything a contributor registers is `"contributor"`. */
+  /** `"modal"` / `"e2b"` are hosted CPU rows. Everything a contributor registers is `"contributor"`. */
   provider: ComputeProvider;
   /** Advertised price per hour, in USD (industry-standard hourly billing). */
   pricePerHourUsd: number;
@@ -103,7 +103,7 @@ export type SandboxAccess = SshAccess | JupyterAccess;
 export interface Lease {
   id: string;
   nodeId: string;
-  /** Which provider started the sandbox. Modal leases never create a payout row. */
+  /** Which provider started the sandbox. Hosted (Modal, E2B) leases never create a payout row. */
   provider: ComputeProvider;
   /** Algorand address of the renter (the sandbox user). */
   renterAddr: string;

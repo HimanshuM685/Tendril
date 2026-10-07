@@ -94,7 +94,7 @@ server.tool(
     notebook: z
       .record(z.unknown())
       .describe("nbformat JSON object, under 1.5 MB"),
-    lane: z.enum(["contributor", "priority"]).optional().describe("Priority uses Modal CPU; contributor uses an idle peer. Omitted prefers priority when configured."),
+    lane: z.enum(["contributor", "priority", "e2b"]).optional().describe("Priority uses Modal CPU; e2b uses an E2B cloud sandbox; contributor uses an idle peer. Omitted prefers priority, then e2b, when configured."),
   },
   async ({ notebook, lane }) => {
     try {

@@ -23,7 +23,7 @@ The full request schema, timeouts, and error responses are in [POST /x402/run](/
 ## Notebook jobs
 
 Upload a Python nbformat 4 `.ipynb` in Explore, or send `{ "notebook": <notebook>, "lane": "contributor" }`.
-Choose `"priority"` for Modal CPU. Both use a real IPython kernel, including `%pip`, shell/cell magics,
+Choose `"priority"` for Modal CPU or `"e2b"` for an E2B cloud sandbox. All use a real IPython kernel, including `%pip`, shell/cell magics,
 top-level `await`, inline plots, and process pools. Standard images include NumPy, pandas, matplotlib,
 SciPy, scikit-learn, Pillow, requests, and psutil; custom images must provide their own dependencies.
 

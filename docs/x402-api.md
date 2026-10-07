@@ -685,7 +685,7 @@ at the prepaid budget and cannot overdraw execution credit.
 |---|---|---|---|
 | `payload` | string | one of payload/notebook | Python source to execute. Its stdout comes back in `result`. |
 | `notebook` | object | one of payload/notebook | Python nbformat 4 notebook, up to 1.5 MB and 500 cells. |
-| `lane` | `contributor` or `priority` | no | Notebook only. Omitted prefers priority when Modal is configured; otherwise contributor. |
+| `lane` | `contributor`, `priority` or `e2b` | no | Notebook only. Omitted prefers priority when Modal is configured, then e2b when E2B is configured; otherwise contributor. |
 
 ```jsonc
 { "payload": "print(sum(range(100)))" }

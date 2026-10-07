@@ -82,6 +82,8 @@ export async function fetchExplorer(): Promise<{
   notebooks: boolean;
   priority: boolean;
   priorityUsdPerHour: number | null;
+  e2b: boolean;
+  e2bUsdPerHour: number | null;
 }> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
@@ -90,12 +92,16 @@ export async function fetchExplorer(): Promise<{
     notebooks?: boolean;
     priority?: boolean;
     priorityUsdPerHour?: number | null;
+    e2b?: boolean;
+    e2bUsdPerHour?: number | null;
   };
   return {
     nodes: body.nodes ?? [],
     notebooks: !!body.notebooks,
     priority: !!body.priority,
     priorityUsdPerHour: typeof body.priorityUsdPerHour === "number" ? body.priorityUsdPerHour : null,
+    e2b: !!body.e2b,
+    e2bUsdPerHour: typeof body.e2bUsdPerHour === "number" ? body.e2bUsdPerHour : null,
   };
 }
 
@@ -248,7 +254,7 @@ export async function runNotebook(
   address: string,
   sign: SignTransactions,
   notebook: Record<string, unknown>,
-  lane: "contributor" | "priority",
+  lane: "contributor" | "priority" | "e2b",
   onStage?: (stage: PayStage) => void,
 ): Promise<RunJobResponse> {
   const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {

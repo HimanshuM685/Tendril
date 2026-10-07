@@ -62,6 +62,8 @@ export function Explore({
   const [notebooks, setNotebooks] = useState(false);
   const [priority, setPriority] = useState(false);
   const [priorityUsdPerHour, setPriorityUsdPerHour] = useState<number | null>(null);
+  const [e2b, setE2b] = useState(false);
+  const [e2bUsdPerHour, setE2bUsdPerHour] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
@@ -85,12 +87,14 @@ export function Explore({
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then(({ nodes: next, notebooks: canRun, priority, priorityUsdPerHour }) => {
+        .then(({ nodes: next, notebooks: canRun, priority, priorityUsdPerHour, e2b, e2bUsdPerHour }) => {
           if (!alive) return;
           setNodes(next);
           setNotebooks(canRun);
           setPriority(priority);
           setPriorityUsdPerHour(priorityUsdPerHour);
+          setE2b(e2b);
+          setE2bUsdPerHour(e2bUsdPerHour);
           setError(null);
         })
         .catch((err) => {
@@ -337,6 +341,8 @@ export function Explore({
         notebooks={notebooks}
         priority={priority}
         priorityUsdPerHour={priorityUsdPerHour}
+        e2b={e2b}
+        e2bUsdPerHour={e2bUsdPerHour}
         peers={nodes.length > 0}
         checking={loading && nodes.length === 0}
         onOpenConnectWallet={onOpenConnectWallet}

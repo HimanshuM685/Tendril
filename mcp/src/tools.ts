@@ -53,7 +53,7 @@ export async function run(payload: string, leaseToken?: string): Promise<RunResp
 }
 
 /** Start an asynchronous notebook job. Poll with its returned jobToken. */
-export async function runNotebook(notebook: Record<string, unknown>, lane?: "contributor" | "priority"): Promise<RunJobResponse> {
+export async function runNotebook(notebook: Record<string, unknown>, lane?: "contributor" | "priority" | "e2b"): Promise<RunJobResponse> {
   const invalid = notebookError(notebook);
   if (invalid) throw new Error(invalid);
   if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) {

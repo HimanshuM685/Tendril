@@ -82,7 +82,7 @@ it is topped back up.
 ### Notebook jobs
 
 Upload an nbformat 4 `.ipynb` in Explore, or send `{ "notebook": <notebook>, "lane": "contributor" }`
-to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox. Both lanes use a real
+to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox, or `"e2b"` for an E2B cloud sandbox (needs `E2B_API_KEY`). All lanes use a real
 IPython kernel: `%pip`, `!commands`, cell magics, top-level `await`, plots, and process pools work.
 Bundled images include NumPy, pandas, matplotlib, SciPy, scikit-learn, Pillow, requests, and psutil.
 Custom contributor images must supply `nbclient`, `nbformat`, `ipykernel`, and workload dependencies.

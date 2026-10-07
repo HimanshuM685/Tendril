@@ -84,6 +84,7 @@ async function main(): Promise<void> {
     console.log(
       `[registry] modal hosted ${config.modalTokenId && config.modalTokenSecret ? "enabled" : "off (set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET)"}`,
     );
+    console.log(`[registry] e2b hosted ${config.e2bApiKey ? "enabled" : "off (set E2B_API_KEY)"}`);
   });
 }
 

@@ -1,4 +1,4 @@
-import type { ComputeNode, ExplorerNode } from "@tendril/shared";
+import type { ComputeNode, ComputeProvider, ExplorerNode } from "@tendril/shared";
 import { fundedSeconds } from "@tendril/shared";
 import { config } from "./config.js";
 
@@ -41,6 +41,21 @@ export function modalConfigured(): boolean {
   return !!(config.modalTokenId && config.modalTokenSecret);
 }
 
+/** True when the backend can call E2B. The key is never sent anywhere else. */
+export function e2bConfigured(): boolean {
+  return !!config.e2bApiKey;
+}
+
+/** Hosted = a sandbox Tendril runs for you (Modal, E2B), as opposed to a contributor's machine. */
+export function isHosted(provider: ComputeProvider): boolean {
+  return provider !== "contributor";
+}
+
+/** E2B bills per vCPU-second (memory is not a separate line). $0.000014/s per vCPU, 2 vCPU default. */
+export const E2B_USD_PER_VCPU_SECOND = 0.000014;
+export const E2B_NOTEBOOK_VCPU = 2;
+export const E2B_NODE_ID = "hosted-e2b-cpu-2";
+
 /** Keep the markup inside 25–40% even if the env value is wild. */
 export function clampMarkup(raw: number): number {
   if (!Number.isFinite(raw)) return 0.3;
@@ -68,6 +83,23 @@ export function hostedHourlyUsd(physicalCores: number, gib: number, markup: numb
   return price;
 }
 
+/** Customer USD/hour for an E2B sandbox: E2B's rate plus the same clamped markup, rounded up to the cent. */
+export function e2bHourlyUsd(vCpu: number, markup: number): number {
+  const e2b = vCpu * E2B_USD_PER_VCPU_SECOND * 3600;
+  const marked = e2b * (1 + clampMarkup(markup));
+  let price = Math.ceil(marked * 100) / 100;
+  const min = Math.ceil(e2b * 1.25 * 100) / 100;
+  const max = Math.floor(e2b * 1.4 * 100) / 100;
+  if (price < min) price = min;
+  if (price > max) price = max;
+  return price;
+}
+
+/** What an E2B notebook is billed at. */
+export function e2bUsdPerHour(): number {
+  return e2bHourlyUsd(E2B_NOTEBOOK_VCPU, config.hostedMarkup);
+}
+
 /** What a priority notebook is billed at: 2 vCPU (1 core) + 4 GiB, no GPU. */
 export function priorityHourlyUsd(): number {
   return hostedHourlyUsd(1, 4, config.hostedMarkup);
@@ -75,7 +107,22 @@ export function priorityHourlyUsd(): number {
 
 export function hostedCatalog(now = Date.now()): ComputeNode[] {
   const markup = clampMarkup(config.hostedMarkup);
-  return HOSTED_SKUS.map((sku) => ({
+  const e2b: ComputeNode = {
+    id: E2B_NODE_ID,
+    ownerAddr: "hosted",
+    payToAddr: "",
+    payoutBlocked: true,
+    label: `Tendril E2B · ${E2B_NOTEBOOK_VCPU} vCPU`,
+    cpuCores: E2B_NOTEBOOK_VCPU,
+    ramMb: 1024,
+    gpu: null,
+    provider: "e2b",
+    pricePerHourUsd: e2bHourlyUsd(E2B_NOTEBOOK_VCPU, markup),
+    status: "online",
+    lastHeartbeat: now,
+    createdAt: 0,
+  };
+  return [...HOSTED_SKUS.map((sku) => ({
     id: sku.id,
     ownerAddr: "hosted",
     payToAddr: "",
@@ -89,7 +136,7 @@ export function hostedCatalog(now = Date.now()): ComputeNode[] {
     status: "online" as const,
     lastHeartbeat: now,
     createdAt: 0,
-  }));
+  })), e2b];
 }
 
 export function hostedById(id: string): ComputeNode | undefined {

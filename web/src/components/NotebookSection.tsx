@@ -9,7 +9,7 @@ import { isCustodialSession } from "../lib/session";
 
 const OUTPUT_TEXT_CAP = 12_000;
 
-type TrainLane = "contributor" | "priority";
+type TrainLane = "contributor" | "priority" | "e2b";
 
 interface Props {
   session: Session | null;
@@ -21,6 +21,10 @@ interface Props {
   priority: boolean;
   /** Customer USD/hour for the priority sandbox (2 vCPU + 4 GiB). */
   priorityUsdPerHour: number | null;
+  /** E2B lane. An isolated E2B cloud sandbox with the code-interpreter stack. */
+  e2b: boolean;
+  /** Customer USD/hour for the E2B sandbox (2 vCPU). */
+  e2bUsdPerHour: number | null;
   /** Contributor lane. Uses a live peer and that node's own Python image. */
   peers: boolean;
   checking: boolean;
@@ -170,9 +174,9 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests already installed. Both bill by the second from credit and stop when it runs out.";
+    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal and E2B training in an E2B cloud sandbox, both with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests ready. All lanes bill by the second from credit and stop when it runs out.";
   }
-  return "No contributor node is online, and priority training is not configured.";
+  return "No contributor node is online, and no hosted lane is configured.";
 }
 
 export function NotebookSection({
@@ -182,6 +186,8 @@ export function NotebookSection({
   notebooks,
   priority,
   priorityUsdPerHour,
+  e2b,
+  e2bUsdPerHour,
   peers,
   checking,
   onOpenConnectWallet,
@@ -198,10 +204,12 @@ export function NotebookSection({
   const [job, setJob] = useState<{ jobId: string; jobToken: string } | null>(null);
   const [jobStatus, setJobStatus] = useState<LeaseStatus | null>(null);
   const [lane, setLane] = useState<TrainLane>("contributor");
+  const laneOpen: Record<TrainLane, boolean> = { contributor: peers, priority, e2b };
   useEffect(() => {
-    if (lane === "priority" && !priority && peers) setLane("contributor");
-    if (lane === "contributor" && !peers && priority) setLane("priority");
-  }, [lane, peers, priority]);
+    if (laneOpen[lane]) return;
+    const next = (["contributor", "priority", "e2b"] as const).find((l) => laneOpen[l]);
+    if (next) setLane(next);
+  }, [lane, peers, priority, e2b]);
 
   const isCustodial = isCustodialSession(session);
   const canPick = notebooks && !uploading;
@@ -353,7 +361,9 @@ export function NotebookSection({
           : "Provisioning…"
     : lane === "priority"
       ? "Run priority"
-      : "Run on contributor";
+      : lane === "e2b"
+        ? "Run on E2B"
+        : "Run on contributor";
 
   const costLabel =
     view?.costAtomic !== undefined && Number.isFinite(Number(view.costAtomic))
@@ -410,7 +420,7 @@ export function NotebookSection({
                 ? "or click to choose a file · 1.5 MB max"
                 : checking
                   ? "Checking machines"
-                  : "No peer online and priority is off"}
+                  : "No peer online and no hosted lane is on"}
             </span>
           </label>
 
@@ -460,12 +470,26 @@ export function NotebookSection({
                 2 vCPU · 4 GiB. No GPU.
               </small>
             </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "e2b"}
+              className={`notebook-lane${lane === "e2b" ? " is-on" : ""}`}
+              disabled={uploading || !e2b}
+              onClick={() => setLane("e2b")}
+            >
+              <span>E2B training</span>
+              <small>
+                {e2bUsdPerHour != null ? `$${e2bUsdPerHour}/hr · ` : ""}
+                2 vCPU cloud sandbox. No GPU.
+              </small>
+            </button>
           </div>
 
           <button
             type="button"
             className="ca-btn ca-btn-primary notebook-run-btn"
-            disabled={!pending || uploading || !notebooks || (lane === "priority" ? !priority : !peers)}
+            disabled={!pending || uploading || !notebooks || !laneOpen[lane]}
             onClick={() => void run()}
           >
             {runLabel}

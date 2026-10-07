@@ -62,5 +62,7 @@ const lease = (graceUntil: number | null) => ({
 
 assert.equal(earnsPayout("contributor"), true);
 assert.equal(earnsPayout("modal"), false);
+assert.equal(earnsPayout("e2b"), false);
+assert.equal(earnsPayout("contributor"), true);
 
 console.log("leases: ok");
