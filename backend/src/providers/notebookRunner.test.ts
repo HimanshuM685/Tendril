@@ -104,3 +104,77 @@ test("bundled benchmark runs successfully with bounded artifacts", { skip: !imag
   assert.ok(result.artifacts?.some((a) => a.name === "results/summary.json"));
   assert.ok(result.artifacts?.some((a) => a.name === "results/bundle.zip"));
 });
+
+function trainingQaNotebook(mode = "smoke") {
+  const nb = JSON.parse(readFileSync(new URL("../../../example-buyer/notebooks/tendril_qa_training.ipynb", import.meta.url), "utf8"));
+  const config = nb.cells.find((cell: { id: string }) => cell.id === "config");
+  assert.ok(config, "QA notebook must have a configuration cell");
+  config.source = config.source.join("").replace("QA_MODE = 'smoke'", `QA_MODE = '${mode}'`);
+  return nb;
+}
+
+test("training QA notebook preserves held-out metrics, resumed model, rich output, and bounded downloads", { skip: !image }, () => {
+  const result = executeNotebook(trainingQaNotebook());
+  assert.equal(result.ok, true, result.log);
+  const reportArtifact = result.artifacts?.find((a) => a.name === "results/qa_report.json");
+  assert.ok(reportArtifact);
+  const report = JSON.parse(Buffer.from(reportArtifact.base64, "base64").toString("utf8"));
+  assert.equal(report.status, "PASS");
+  assert.ok(report.metrics.classification_accuracy >= 0.8);
+  assert.ok(report.metrics.regression_r2 >= 0.95);
+  assert.ok(report.checks.some((check: { name: string; status: string }) =>
+    check.name === "checkpoint_resume_and_inference" && check.status === "PASS"));
+  for (const name of ["qa_bundle.zip", "artifact_manifest.json", "checkpoint.joblib", "classifier.joblib", "training_curves.png"]) {
+    assert.ok(result.artifacts?.some((a) => a.name === `results/${name}`), name);
+  }
+  assert.ok(result.artifacts!.every((a) => !a.name.split("/").some((part) => part.startsWith("."))));
+  assert.ok(result.artifacts!.reduce((bytes, a) => bytes + Buffer.byteLength(a.base64, "base64"), 0) < 3_500_000);
+  const cells = result.notebook!.cells as { id: string; outputs?: Record<string, unknown>[] }[];
+  assert.ok(cells.find((cell) => cell.id === "plots")!.outputs!.some((output) =>
+    (output.data as Record<string, unknown> | undefined)?.["image/png"]));
+  assert.ok(JSON.stringify(cells.find((cell) => cell.id === "success")!.outputs).includes("TENDRIL_QA_PASS"));
+});
+
+test("training QA runtime-error mode returns trained artifacts and earlier output without executing success cell", { skip: !image }, () => {
+  const result = executeNotebook(trainingQaNotebook("runtime_error"));
+  assert.equal(result.ok, false);
+  assert.match(result.log, /ValueError: TENDRIL_QA_INTENTIONAL_FAILURE/);
+  assert.ok(result.artifacts?.some((a) => a.name === "results/qa_bundle.zip"));
+  const cells = result.notebook!.cells as { id: string; outputs?: unknown[]; execution_count?: number | null }[];
+  assert.ok(JSON.stringify(cells.find((cell) => cell.id === "epoch-training")!.outputs).includes("epoch="));
+  assert.deepEqual(cells.find((cell) => cell.id === "success")!.outputs, []);
+  assert.equal(cells.find((cell) => cell.id === "success")!.execution_count, null);
+});
+
+test("training QA artifact-limit mode skips oversized file and retains normal training downloads", { skip: !image }, () => {
+  const result = executeNotebook(trainingQaNotebook("artifact_limit"));
+  assert.equal(result.ok, true, result.log);
+  assert.match(result.log, /Skipped results\/oversized.bin/);
+  assert.ok(result.artifacts?.some((a) => a.name === "results/qa_report.json"));
+  assert.ok(result.artifacts?.some((a) => a.name === "results/qa_bundle.zip"));
+  assert.ok(result.artifacts!.every((a) => a.name !== "results/oversized.bin"));
+});
+
+test("training QA extended mode completes the larger dataset and all 20 epochs", { skip: !image }, () => {
+  const result = executeNotebook(trainingQaNotebook("training"));
+  assert.equal(result.ok, true, result.log);
+  const cells = result.notebook!.cells as { id: string; outputs?: unknown[] }[];
+  assert.ok(JSON.stringify(cells.find((cell) => cell.id === "epoch-training")!.outputs).includes("epoch=20/20"));
+  assert.ok(JSON.stringify(cells.find((cell) => cell.id === "success")!.outputs).includes("TENDRIL_QA_PASS"));
+  assert.ok(result.artifacts!.reduce((bytes, a) => bytes + Buffer.byteLength(a.base64, "base64"), 0) < 3_500_000);
+});
+
+for (const [mode, failure, timeoutMs] of [
+  ["output_limit", /output exceeded/, 30_000],
+  ["timeout", /timed out|timeout/i, 15_000],
+] as const) {
+  test(`training QA ${mode} mode stops before the success cell`, { skip: !image }, () => {
+    const result = executeNotebook(trainingQaNotebook(mode), timeoutMs);
+    assert.equal(result.ok, false);
+    assert.match(result.log, failure);
+    assert.ok(result.artifacts?.some((a) => a.name === "results/qa_bundle.zip"));
+    const cells = result.notebook!.cells as { id: string; outputs?: unknown[]; execution_count?: number | null }[];
+    assert.deepEqual(cells.find((cell) => cell.id === "success")!.outputs, []);
+    assert.equal(cells.find((cell) => cell.id === "success")!.execution_count, null);
+  });
+}

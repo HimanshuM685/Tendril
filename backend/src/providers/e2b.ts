@@ -9,12 +9,18 @@ export const id = "e2b" as const;
 
 const sandboxes = new Map<string, Sandbox>();
 
-// E2B's default code-interpreter template ships jupyter-server + ipykernel; the
-// shared runner also needs nbclient/nbformat, which come with it transitively.
-// Installed only if the import check fails, so the common case costs one process.
-const ENSURE_RUNNER_DEPS =
-  `python3 -c "import nbformat, nbclient, jupyter_client, IPython" 2>/dev/null || ` +
-  `pip install -q nbformat nbclient jupyter_client ipython`;
+// Everything the shared runner and its kernel import, plus tqdm (common in
+// notebooks, absent from E2B's default template). Installed with this same
+// interpreter's pip, and only the missing ones, so the common case is one process.
+const ENSURE_RUNNER_DEPS = `python3 - <<'PY'
+import importlib.util, subprocess, sys
+need = {"nbformat": "nbformat", "nbclient": "nbclient", "jupyter_client": "jupyter_client",
+        "IPython": "ipython", "ipykernel": "ipykernel", "matplotlib_inline": "matplotlib-inline",
+        "tqdm": "tqdm"}
+missing = [pip for mod, pip in need.items() if importlib.util.find_spec(mod) is None]
+if missing:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
+PY`;
 
 function apiKey(): string {
   if (!config.e2bApiKey) throw new Error("E2B_API_KEY is not set");
@@ -73,7 +79,10 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
     sandboxes.set(args.leaseId, sb);
     console.log(`[e2b] sandbox ${sb.sandboxId} for lease ${args.leaseId}`);
     await sb.commands.run("mkdir -p /work", { user: "root" });
-    await runText(sb, ENSURE_RUNNER_DEPS, config.e2bReadyTimeoutMs);
+    const deps = await runText(sb, ENSURE_RUNNER_DEPS, config.e2bReadyTimeoutMs);
+    if (deps.code !== 0) {
+      throw new Error(`could not prepare the E2B sandbox: ${deps.stderr.trim().slice(-500) || `exit ${deps.code}`}`);
+    }
     return {
       kind: "ssh",
       host: "e2b",

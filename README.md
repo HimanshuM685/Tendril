@@ -106,7 +106,11 @@ a read-only image, and bounded writable `/work`/`/tmp`. `%pip` installs into a d
 Registry and contributor agents must both be updated; bundled sandbox image tags include a content
 hash and rebuild after Dockerfile changes. Explicit custom images need rebuilding by their operator.
 
-Try [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb). Local execution tests:
+Try [the training QA notebook](example-buyer/notebooks/tendril_qa_training.ipynb) for offline training,
+checkpoint resume, plots, artifacts, and opt-in failure/limit cases. Its configuration cell selects the QA mode;
+the default `smoke` mode is upload-ready. The final Markdown cell includes an end-to-end QA checklist.
+For compute-focused checks, use [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb).
+Local execution tests:
 
 ```bash
 docker build -t tendril-notebook-test contributor/sandbox-ssh

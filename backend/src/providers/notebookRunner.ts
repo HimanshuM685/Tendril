@@ -9,7 +9,7 @@ const SENTINEL = "__TENDRIL_NB__";
 /** This code runs ONLY inside a disposable sandbox, never in the registry. */
 export function notebookToPayload(notebook: Record<string, unknown>, timeoutMs = 120_000): string {
   const encoded = Buffer.from(JSON.stringify(notebook), "utf8").toString("base64");
-  return `import asyncio, base64, json, os, sys, tempfile, time, stat, mimetypes
+  return `import asyncio, base64, json, os, subprocess, sys, tempfile, time, stat, mimetypes
 from pathlib import Path
 import nbformat
 from nbclient import NotebookClient
@@ -78,6 +78,19 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
         ok = True
     except Exception as exc:
         failure = str(exc)[-4000:]
+        if "Kernel died" in failure:
+            # nbclient only says the kernel died. Launch the same command by hand to
+            # surface the real startup error (missing ipykernel, bad interpreter, …).
+            try:
+                probe = subprocess.run(
+                    [sys.executable, "-m", "ipykernel_launcher", "--matplotlib=inline", "-f", str(Path(runtime) / "probe.json")],
+                    capture_output=True, text=True, timeout=8)
+                detail = (probe.stderr or probe.stdout or "").strip()[-1500:]
+                failure = (failure + " | kernel startup: " + detail)[-4000:]
+            except subprocess.TimeoutExpired:
+                failure += " | the kernel starts on its own; it died only under the runner."
+            except Exception:
+                pass
     finally:
         # A supplied KernelManager is caller-owned; always stop its processes.
         async def cleanup():

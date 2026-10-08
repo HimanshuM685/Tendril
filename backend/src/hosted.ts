@@ -51,9 +51,12 @@ export function isHosted(provider: ComputeProvider): boolean {
   return provider !== "contributor";
 }
 
-/** E2B bills per vCPU-second (memory is not a separate line). $0.000014/s per vCPU, 2 vCPU default. */
+/** E2B bills per second of uptime: $0.000014 per vCPU and $0.0000045 per GiB of RAM (storage is free). */
 export const E2B_USD_PER_VCPU_SECOND = 0.000014;
+export const E2B_USD_PER_GIB_SECOND = 0.0000045;
+/** E2B's default sandbox: 2 vCPU + 4 GiB = $0.000046/s = $0.1656/h before markup. */
 export const E2B_NOTEBOOK_VCPU = 2;
+export const E2B_NOTEBOOK_GIB = 4;
 export const E2B_NODE_ID = "hosted-e2b-cpu-2";
 
 /** Keep the markup inside 25–40% even if the env value is wild. */
@@ -83,13 +86,26 @@ export function hostedHourlyUsd(physicalCores: number, gib: number, markup: numb
   return price;
 }
 
-/** Customer USD/hour for an E2B sandbox: E2B's rate plus the same clamped markup, rounded up to the cent. */
-export function e2bHourlyUsd(vCpu: number, markup: number): number {
-  const e2b = vCpu * E2B_USD_PER_VCPU_SECOND * 3600;
-  const marked = e2b * (1 + clampMarkup(markup));
-  let price = Math.ceil(marked * 100) / 100;
-  const min = Math.ceil(e2b * 1.25 * 100) / 100;
-  const max = Math.floor(e2b * 1.4 * 100) / 100;
+/** E2B's own USD/hour for a sandbox of this size, before Tendril's markup. */
+export function e2bCostPerHour(vCpu: number, gib: number): number {
+  return (vCpu * E2B_USD_PER_VCPU_SECOND + gib * E2B_USD_PER_GIB_SECOND) * 3600;
+}
+
+/** E2B margin target: 20–30% over cost, whatever the env value says. */
+export function clampE2bMarkup(raw: number): number {
+  if (!Number.isFinite(raw)) return 0.25;
+  return Math.min(0.3, Math.max(0.2, raw));
+}
+
+/**
+ * Customer USD/hour for an E2B sandbox. Round up to the cent, then pull back
+ * into [1.20, 1.30] × E2B's cost so a cent of rounding cannot leave the band.
+ */
+export function e2bHourlyUsd(vCpu: number, gib: number, markup: number): number {
+  const cost = e2bCostPerHour(vCpu, gib);
+  let price = Math.ceil(cost * (1 + clampE2bMarkup(markup)) * 100) / 100;
+  const min = Math.ceil(cost * 1.2 * 100) / 100;
+  const max = Math.floor(cost * 1.3 * 100) / 100;
   if (price < min) price = min;
   if (price > max) price = max;
   return price;
@@ -97,7 +113,7 @@ export function e2bHourlyUsd(vCpu: number, markup: number): number {
 
 /** What an E2B notebook is billed at. */
 export function e2bUsdPerHour(): number {
-  return e2bHourlyUsd(E2B_NOTEBOOK_VCPU, config.hostedMarkup);
+  return e2bHourlyUsd(E2B_NOTEBOOK_VCPU, E2B_NOTEBOOK_GIB, config.e2bMarkup);
 }
 
 /** What a priority notebook is billed at: 2 vCPU (1 core) + 4 GiB, no GPU. */
@@ -114,10 +130,10 @@ export function hostedCatalog(now = Date.now()): ComputeNode[] {
     payoutBlocked: true,
     label: `Tendril E2B · ${E2B_NOTEBOOK_VCPU} vCPU`,
     cpuCores: E2B_NOTEBOOK_VCPU,
-    ramMb: 1024,
+    ramMb: E2B_NOTEBOOK_GIB * 1024,
     gpu: null,
     provider: "e2b",
-    pricePerHourUsd: e2bHourlyUsd(E2B_NOTEBOOK_VCPU, markup),
+    pricePerHourUsd: e2bUsdPerHour(),
     status: "online",
     lastHeartbeat: now,
     createdAt: 0,

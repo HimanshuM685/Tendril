@@ -481,7 +481,7 @@ export function NotebookSection({
               <span>E2B training</span>
               <small>
                 {e2bUsdPerHour != null ? `$${e2bUsdPerHour}/hr · ` : ""}
-                2 vCPU cloud sandbox. No GPU.
+                2 vCPU · 4 GiB cloud sandbox. No GPU.
               </small>
             </button>
           </div>

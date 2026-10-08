@@ -155,6 +155,8 @@ export const config = {
   // ─────────────────────────── E2B hosted CPU ───────────────────────────
   // Read only here, like the Modal credentials.
   e2bApiKey: (process.env.E2B_API_KEY ?? "").trim(),
+  /** Fraction added on top of E2B's sandbox rate. Clamped to 0.20–0.30. */
+  e2bMarkup: Number(process.env.E2B_MARKUP ?? 0.25),
   /** Empty = E2B's default code-interpreter template (jupyter + ipykernel + pandas…). */
   e2bTemplate: (process.env.E2B_TEMPLATE ?? "").trim(),
   /** How long sandbox create + dependency check may take before we 503. */
