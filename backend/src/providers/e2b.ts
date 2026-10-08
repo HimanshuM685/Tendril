@@ -9,14 +9,21 @@ export const id = "e2b" as const;
 
 const sandboxes = new Map<string, Sandbox>();
 
-// Everything the shared runner and its kernel import, plus tqdm (common in
-// notebooks, absent from E2B's default template). Installed with this same
-// interpreter's pip, and only the missing ones, so the common case is one process.
+// The core `e2b` SDK defaults to the bare "base" template (no matplotlib, so the
+// runner's `--matplotlib=inline` kernel dies on startup). code-interpreter-v1 is
+// E2B's data-science image: ipykernel, numpy, pandas, matplotlib, scipy, sklearn.
+const DEFAULT_TEMPLATE = "code-interpreter-v1";
+
+// The runner/kernel imports plus the same package set as the Modal image, so a
+// notebook behaves the same on both hosted lanes. Installed with this
+// interpreter's pip, only the missing ones (psutil, tqdm on code-interpreter-v1).
 const ENSURE_RUNNER_DEPS = `python3 - <<'PY'
 import importlib.util, subprocess, sys
 need = {"nbformat": "nbformat", "nbclient": "nbclient", "jupyter_client": "jupyter_client",
         "IPython": "ipython", "ipykernel": "ipykernel", "matplotlib_inline": "matplotlib-inline",
-        "tqdm": "tqdm"}
+        "numpy": "numpy", "pandas": "pandas", "matplotlib": "matplotlib", "scipy": "scipy",
+        "sklearn": "scikit-learn", "PIL": "pillow", "requests": "requests", "psutil": "psutil",
+        "joblib": "joblib", "tqdm": "tqdm"}
 missing = [pip for mod, pip in need.items() if importlib.util.find_spec(mod) is None]
 if missing:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
@@ -73,9 +80,7 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
       timeoutMs: Math.max(args.timeoutMs, config.e2bReadyTimeoutMs),
       requestTimeoutMs: config.e2bReadyTimeoutMs,
     };
-    sb = config.e2bTemplate
-      ? await Sandbox.create(config.e2bTemplate, opts)
-      : await Sandbox.create(opts);
+    sb = await Sandbox.create(config.e2bTemplate || DEFAULT_TEMPLATE, opts);
     sandboxes.set(args.leaseId, sb);
     console.log(`[e2b] sandbox ${sb.sandboxId} for lease ${args.leaseId}`);
     await sb.commands.run("mkdir -p /work", { user: "root" });
