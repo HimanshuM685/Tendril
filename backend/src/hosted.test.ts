@@ -10,7 +10,14 @@ import {
   E2B_NOTEBOOK_VCPU,
   E2B_USD_PER_GIB_SECOND,
   E2B_USD_PER_VCPU_SECOND,
+  E2B_GIB_OPTIONS,
+  E2B_PRESETS,
+  E2B_VCPU_OPTIONS,
   e2bCostPerHour,
+  e2bNode,
+  e2bPriceTable,
+  e2bSizeId,
+  isE2bSize,
   HOSTED_SKUS,
   e2bHourlyUsd,
   hostedCatalog,
@@ -66,6 +73,29 @@ assert.deepEqual(withHostedFallback([], ["hosted-cpu-2"]), ["hosted-cpu-2"]);
   }
 }
 assert.ok(isHosted("modal") && isHosted("e2b") && !isHosted("contributor"));
-assert.equal(hostedCatalog().find((n) => n.id === "hosted-e2b-cpu-2")?.provider, "e2b");
+assert.equal(hostedCatalog().find((n) => n.id === "hosted-e2b-c2-m4")?.provider, "e2b");
+
+// Every size on E2B's chart is priced 20–30% over its own cost — never at a loss.
+{
+  const table = e2bPriceTable();
+  assert.equal(Object.keys(table).length, E2B_VCPU_OPTIONS.length * E2B_GIB_OPTIONS.length);
+  for (const vCpu of E2B_VCPU_OPTIONS) {
+    for (const memGiB of E2B_GIB_OPTIONS) {
+      const cost = e2bCostPerHour(vCpu, memGiB);
+      const price = table[e2bSizeId({ vCpu, memGiB })];
+      assert.ok(price > cost, `c${vCpu}-m${memGiB} price ${price} not above cost ${cost}`);
+      const margin = price / cost;
+      assert.ok(margin >= 1.2 - 1e-9 && margin <= 1.3 + 1e-9, `c${vCpu}-m${memGiB} margin ${margin}`);
+    }
+  }
+  assert.equal(table["c2-m4"], 0.21);
+  for (const p of E2B_PRESETS) assert.ok(isE2bSize(p.vCpu, p.memGiB));
+  assert.ok(!isE2bSize(3, 4) && !isE2bSize(2, 16));
+  const node = e2bNode({ vCpu: 4, memGiB: 8 });
+  assert.equal(node.id, "hosted-e2b-c4-m8");
+  assert.equal(node.cpuCores, 4);
+  assert.equal(node.ramMb, 8192);
+  assert.equal(node.pricePerHourUsd, table["c4-m8"]);
+}
 
 console.log("hosted: ok");

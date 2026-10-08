@@ -57,7 +57,33 @@ export const E2B_USD_PER_GIB_SECOND = 0.0000045;
 /** E2B's default sandbox: 2 vCPU + 4 GiB = $0.000046/s = $0.1656/h before markup. */
 export const E2B_NOTEBOOK_VCPU = 2;
 export const E2B_NOTEBOOK_GIB = 4;
-export const E2B_NODE_ID = "hosted-e2b-cpu-2";
+
+/** Sizes on E2B's chart. CPU/RAM are fixed per template, so each pair is its own prebuilt template. */
+export const E2B_VCPU_OPTIONS = [1, 2, 4, 6, 8] as const;
+export const E2B_GIB_OPTIONS = [1, 2, 4, 8] as const;
+export interface E2bSize {
+  vCpu: number;
+  memGiB: number;
+}
+export const E2B_DEFAULT_SIZE: E2bSize = { vCpu: E2B_NOTEBOOK_VCPU, memGiB: E2B_NOTEBOOK_GIB };
+export const E2B_PRESETS: readonly E2bSize[] = [
+  { vCpu: 1, memGiB: 2 },
+  E2B_DEFAULT_SIZE,
+  { vCpu: 4, memGiB: 8 },
+  { vCpu: 8, memGiB: 8 },
+];
+
+export function isE2bSize(vCpu: unknown, memGiB: unknown): boolean {
+  return (
+    (E2B_VCPU_OPTIONS as readonly unknown[]).includes(vCpu) &&
+    (E2B_GIB_OPTIONS as readonly unknown[]).includes(memGiB)
+  );
+}
+
+/** `c2-m4` — the key shared by the price table, node id and template name. */
+export function e2bSizeId({ vCpu, memGiB }: E2bSize): string {
+  return `c${vCpu}-m${memGiB}`;
+}
 
 /** Keep the markup inside 25–40% even if the env value is wild. */
 export function clampMarkup(raw: number): number {
@@ -111,9 +137,37 @@ export function e2bHourlyUsd(vCpu: number, gib: number, markup: number): number 
   return price;
 }
 
-/** What an E2B notebook is billed at. */
-export function e2bUsdPerHour(): number {
-  return e2bHourlyUsd(E2B_NOTEBOOK_VCPU, E2B_NOTEBOOK_GIB, config.e2bMarkup);
+/** What an E2B notebook of this size is billed at (default size when omitted). */
+export function e2bUsdPerHour(size: E2bSize = E2B_DEFAULT_SIZE): number {
+  return e2bHourlyUsd(size.vCpu, size.memGiB, config.e2bMarkup);
+}
+
+/** USD/hour for every size on the chart, keyed by `e2bSizeId`. */
+export function e2bPriceTable(): Record<string, number> {
+  const table: Record<string, number> = {};
+  for (const vCpu of E2B_VCPU_OPTIONS) {
+    for (const memGiB of E2B_GIB_OPTIONS) table[e2bSizeId({ vCpu, memGiB })] = e2bUsdPerHour({ vCpu, memGiB });
+  }
+  return table;
+}
+
+/** The hosted node an E2B notebook of this size runs on. Its price is the lease rate. */
+export function e2bNode(size: E2bSize = E2B_DEFAULT_SIZE, now = Date.now()): ComputeNode {
+  return {
+    id: `hosted-e2b-${e2bSizeId(size)}`,
+    ownerAddr: "hosted",
+    payToAddr: "",
+    payoutBlocked: true,
+    label: `Tendril E2B · ${size.vCpu} vCPU · ${size.memGiB} GiB`,
+    cpuCores: size.vCpu,
+    ramMb: size.memGiB * 1024,
+    gpu: null,
+    provider: "e2b",
+    pricePerHourUsd: e2bUsdPerHour(size),
+    status: "online",
+    lastHeartbeat: now,
+    createdAt: 0,
+  };
 }
 
 /** What a priority notebook is billed at: 2 vCPU (1 core) + 4 GiB, no GPU. */
@@ -123,21 +177,7 @@ export function priorityHourlyUsd(): number {
 
 export function hostedCatalog(now = Date.now()): ComputeNode[] {
   const markup = clampMarkup(config.hostedMarkup);
-  const e2b: ComputeNode = {
-    id: E2B_NODE_ID,
-    ownerAddr: "hosted",
-    payToAddr: "",
-    payoutBlocked: true,
-    label: `Tendril E2B · ${E2B_NOTEBOOK_VCPU} vCPU`,
-    cpuCores: E2B_NOTEBOOK_VCPU,
-    ramMb: E2B_NOTEBOOK_GIB * 1024,
-    gpu: null,
-    provider: "e2b",
-    pricePerHourUsd: e2bUsdPerHour(),
-    status: "online",
-    lastHeartbeat: now,
-    createdAt: 0,
-  };
+  const e2b = e2bNode(E2B_DEFAULT_SIZE, now);
   return [...HOSTED_SKUS.map((sku) => ({
     id: sku.id,
     ownerAddr: "hosted",

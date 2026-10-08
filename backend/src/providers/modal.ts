@@ -231,7 +231,10 @@ async function runNotebook(sb: Sandbox, notebook: Record<string, unknown>, timeo
   const parsed = parseNotebookRun(ran.stdout);
   return {
     ok: ran.code === 0 && parsed.ok,
-    result: parsed.notebook ? parsed.log : `${parsed.log}\n${ran.stderr.slice(0, 4000)}`.trim(),
+    // A failed run keeps the stderr tail: kernel and import crashes only show there.
+    result: parsed.notebook && ran.code === 0 && parsed.ok
+      ? parsed.log
+      : `${parsed.log}\n${ran.stderr.slice(parsed.notebook ? -1500 : 0, parsed.notebook ? undefined : 4000)}`.trim(),
     notebook: parsed.notebook, artifacts: parsed.artifacts,
   };
 }

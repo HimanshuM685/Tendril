@@ -77,6 +77,21 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
+/** One E2B sandbox size. CPU and RAM come from E2B's chart. */
+export interface E2bSize {
+  vCpu: number;
+  memGiB: number;
+}
+
+export interface E2bPreset extends E2bSize {
+  usdPerHour: number;
+}
+
+/** Key into `e2bPrices`, matching the backend's `e2bSizeId`. */
+export function e2bSizeKey({ vCpu, memGiB }: E2bSize): string {
+  return `c${vCpu}-m${memGiB}`;
+}
+
 export async function fetchExplorer(): Promise<{
   nodes: ExplorerNode[];
   notebooks: boolean;
@@ -84,6 +99,9 @@ export async function fetchExplorer(): Promise<{
   priorityUsdPerHour: number | null;
   e2b: boolean;
   e2bUsdPerHour: number | null;
+  e2bPresets: E2bPreset[];
+  e2bOptions: { vCpu: number[]; memGiB: number[] };
+  e2bPrices: Record<string, number>;
 }> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
@@ -94,6 +112,9 @@ export async function fetchExplorer(): Promise<{
     priorityUsdPerHour?: number | null;
     e2b?: boolean;
     e2bUsdPerHour?: number | null;
+    e2bPresets?: E2bPreset[];
+    e2bOptions?: { vCpu?: number[]; memGiB?: number[] };
+    e2bPrices?: Record<string, number>;
   };
   return {
     nodes: body.nodes ?? [],
@@ -102,6 +123,9 @@ export async function fetchExplorer(): Promise<{
     priorityUsdPerHour: typeof body.priorityUsdPerHour === "number" ? body.priorityUsdPerHour : null,
     e2b: !!body.e2b,
     e2bUsdPerHour: typeof body.e2bUsdPerHour === "number" ? body.e2bUsdPerHour : null,
+    e2bPresets: Array.isArray(body.e2bPresets) ? body.e2bPresets : [],
+    e2bOptions: { vCpu: body.e2bOptions?.vCpu ?? [], memGiB: body.e2bOptions?.memGiB ?? [] },
+    e2bPrices: body.e2bPrices ?? {},
   };
 }
 
@@ -256,6 +280,7 @@ export async function runNotebook(
   notebook: Record<string, unknown>,
   lane: "contributor" | "priority" | "e2b",
   onStage?: (stage: PayStage) => void,
+  e2bSize?: E2bSize,
 ): Promise<RunJobResponse> {
   const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
     method: "POST",
@@ -263,7 +288,7 @@ export async function runNotebook(
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ notebook, lane }),
+    body: JSON.stringify({ notebook, lane, ...(lane === "e2b" && e2bSize ? { e2b: e2bSize } : {}) }),
   });
   if (!res.ok) throw await apiError(res, "run");
   return res.json();

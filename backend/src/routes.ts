@@ -95,9 +95,16 @@ import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
 import {
-  E2B_NODE_ID,
+  E2B_DEFAULT_SIZE,
+  E2B_GIB_OPTIONS,
+  E2B_PRESETS,
+  E2B_VCPU_OPTIONS,
   e2bConfigured,
+  e2bNode,
+  e2bPriceTable,
   e2bUsdPerHour,
+  isE2bSize,
+  type E2bSize,
   hostedCatalog,
   isHosted,
   modalConfigured,
@@ -105,6 +112,7 @@ import {
   sandboxLifetimeMs,
 } from "./hosted.js";
 import { providerFor } from "./providers/index.js";
+import { ensureTemplate } from "./providers/e2b.js";
 import { claimNotebookPayer, notebookPayerBusy, withRunDeadline } from "./runLimits.js";
 import {
   confirmCustodialSign,
@@ -393,6 +401,11 @@ router.get("/explorer", guard((_req, res) => {
     priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
     e2b,
     e2bUsdPerHour: e2b ? e2bUsdPerHour() : null,
+    // Size picker for the e2b lane: presets, the chart's options, and the
+    // authoritative price for every combination (keyed "c{vCpu}-m{memGiB}").
+    e2bPresets: e2b ? E2B_PRESETS.map((size) => ({ ...size, usdPerHour: e2bUsdPerHour(size) })) : [],
+    e2bOptions: { vCpu: E2B_VCPU_OPTIONS, memGiB: E2B_GIB_OPTIONS },
+    e2bPrices: e2b ? e2bPriceTable() : {},
   });
 }));
 
@@ -977,6 +990,8 @@ interface JobInput {
   notebook?: Record<string, unknown>;
   /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
   lane?: "contributor" | "priority" | "e2b";
+  /** e2b lane only: sandbox size. Defaults to E2B's 2 vCPU · 4 GiB. */
+  e2b?: E2bSize;
 }
 
 async function run(req: Request, res: Response): Promise<void> {
@@ -1118,7 +1133,9 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       return;
     }
     const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
-    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer) : pickNotebookHost(lane === "e2b" ? E2B_NODE_ID : "hosted-cpu-2");
+    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer)
+      : lane === "e2b" ? freeE2bNode(job.e2b ?? E2B_DEFAULT_SIZE)
+      : pickNotebookHost("hosted-cpu-2");
     if (!node) {
       res.status(503).json({
         error: "no_node_available",
@@ -1280,6 +1297,15 @@ async function runNotebookJob(
   // same bounded provisioning window as the hosted notebook image.
   const readyTimeoutMs = boundedRunTimeoutMs(Math.max(config.sandboxReadyTimeoutMs, hostedReadyMs(node.provider)));
   try {
+    // A first run of a new E2B size builds its template (minutes, once per size).
+    // That gets its own budget so the sandbox-ready deadline below stays tight.
+    if (node.provider === "e2b" && !config.e2bTemplate) {
+      await withRunDeadline(
+        ensureTemplate({ vCpu: node.cpuCores, memGiB: Math.round(node.ramMb / 1024) }),
+        config.e2bTemplateBuildTimeoutMs,
+        "E2B template build timed out; nothing was billed.",
+      );
+    }
     const starting = provider.start({
       leaseId,
       node,
@@ -1399,6 +1425,12 @@ function hostedReadyMs(provider: ComputeNode["provider"]): number {
   return provider === "e2b" ? config.e2bReadyTimeoutMs : config.modalReadyTimeoutMs;
 }
 
+/** The E2B node for this size, unless a run of that size is already in flight. */
+function freeE2bNode(size: E2bSize): ComputeNode | null {
+  const node = e2bNode(size);
+  return nodeBusy(node.id) ? null : node;
+}
+
 /** A hosted notebook SKU by id (Modal `hosted-cpu-2`, or E2B). Not a pool node — only notebook upload uses it. */
 function pickNotebookHost(id: string): ComputeNode | null {
   const node = hostedCatalog().find((n) => n.id === id);
@@ -1424,7 +1456,11 @@ function readJob(body: unknown): JobInput | null {
     if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return null;
     const laneRaw = (b as { lane?: unknown }).lane;
     const lane = laneRaw === "contributor" || laneRaw === "priority" || laneRaw === "e2b" ? laneRaw : undefined;
-    return { notebook: notebook as Record<string, unknown>, lane };
+    const sizeRaw = (b as { e2b?: { vCpu?: unknown; memGiB?: unknown } }).e2b;
+    const e2b = sizeRaw && isE2bSize(sizeRaw.vCpu, sizeRaw.memGiB)
+      ? { vCpu: sizeRaw.vCpu as number, memGiB: sizeRaw.memGiB as number }
+      : undefined;
+    return { notebook: notebook as Record<string, unknown>, lane, ...(e2b ? { e2b } : {}) };
   }
   return { payload: b?.payload as string };
 }

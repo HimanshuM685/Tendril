@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
 import { formatUsdc, NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
-import { pollRunJob, runNotebook } from "../api";
+import { e2bSizeKey, pollRunJob, runNotebook, type E2bPreset, type E2bSize } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
@@ -10,6 +10,17 @@ import { isCustodialSession } from "../lib/session";
 const OUTPUT_TEXT_CAP = 12_000;
 
 type TrainLane = "contributor" | "priority" | "e2b";
+
+/** The E2B size picker's data, straight from `GET /explorer`. Prices are authoritative. */
+export interface E2bSizes {
+  presets: E2bPreset[];
+  options: { vCpu: number[]; memGiB: number[] };
+  prices: Record<string, number>;
+}
+
+export const NO_E2B_SIZES: E2bSizes = { presets: [], options: { vCpu: [], memGiB: [] }, prices: {} };
+
+const DEFAULT_E2B_SIZE: E2bSize = { vCpu: 2, memGiB: 4 };
 
 interface Props {
   session: Session | null;
@@ -23,8 +34,10 @@ interface Props {
   priorityUsdPerHour: number | null;
   /** E2B lane. An isolated E2B cloud sandbox with the code-interpreter stack. */
   e2b: boolean;
-  /** Customer USD/hour for the E2B sandbox (2 vCPU). */
+  /** Customer USD/hour for the default E2B sandbox (2 vCPU · 4 GiB). */
   e2bUsdPerHour: number | null;
+  /** E2B sizes the user can pick, with a price for each. */
+  e2bSizes: E2bSizes;
   /** Contributor lane. Uses a live peer and that node's own Python image. */
   peers: boolean;
   checking: boolean;
@@ -188,6 +201,7 @@ export function NotebookSection({
   priorityUsdPerHour,
   e2b,
   e2bUsdPerHour,
+  e2bSizes,
   peers,
   checking,
   onOpenConnectWallet,
@@ -204,6 +218,9 @@ export function NotebookSection({
   const [job, setJob] = useState<{ jobId: string; jobToken: string } | null>(null);
   const [jobStatus, setJobStatus] = useState<LeaseStatus | null>(null);
   const [lane, setLane] = useState<TrainLane>("contributor");
+  const [e2bSize, setE2bSize] = useState<E2bSize>(DEFAULT_E2B_SIZE);
+  const [e2bCustom, setE2bCustom] = useState(false);
+  const e2bPrice = e2bSizes.prices[e2bSizeKey(e2bSize)] ?? e2bUsdPerHour;
   const laneOpen: Record<TrainLane, boolean> = { contributor: peers, priority, e2b };
   useEffect(() => {
     if (laneOpen[lane]) return;
@@ -262,6 +279,7 @@ export function NotebookSection({
           action: "run",
           notebook: pending.notebook,
           lane,
+          ...(lane === "e2b" ? { e2b: e2bSize } : {}),
         })) as RunJobResponse;
       } else {
         res = await runNotebook(
@@ -271,6 +289,7 @@ export function NotebookSection({
           pending.notebook,
           lane,
           setStage,
+          lane === "e2b" ? e2bSize : undefined,
         );
       }
       // Payment is settled; the job itself can still take minutes (cold Modal
@@ -362,7 +381,7 @@ export function NotebookSection({
     : lane === "priority"
       ? "Run priority"
       : lane === "e2b"
-        ? "Run on E2B"
+        ? `Run on E2B · ${e2bSize.vCpu} vCPU · ${e2bSize.memGiB} GiB`
         : "Run on contributor";
 
   const costLabel =
@@ -480,11 +499,84 @@ export function NotebookSection({
             >
               <span>E2B training</span>
               <small>
-                {e2bUsdPerHour != null ? `$${e2bUsdPerHour}/hr · ` : ""}
-                2 vCPU · 4 GiB cloud sandbox. No GPU.
+                {e2bPrice != null ? `$${e2bPrice}/hr · ` : ""}
+                {e2bSize.vCpu} vCPU · {e2bSize.memGiB} GiB cloud sandbox. No GPU.
               </small>
             </button>
           </div>
+
+          {lane === "e2b" && e2b && e2bSizes.presets.length > 0 && (
+            <div className="notebook-sizes" role="radiogroup" aria-label="E2B compute size">
+              {e2bSizes.presets.map((p) => {
+                const on = !e2bCustom && p.vCpu === e2bSize.vCpu && p.memGiB === e2bSize.memGiB;
+                return (
+                  <button
+                    key={e2bSizeKey(p)}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    className={`notebook-lane${on ? " is-on" : ""}`}
+                    disabled={uploading}
+                    onClick={() => {
+                      setE2bCustom(false);
+                      setE2bSize({ vCpu: p.vCpu, memGiB: p.memGiB });
+                    }}
+                  >
+                    <span>
+                      {p.vCpu} vCPU · {p.memGiB} GiB
+                    </span>
+                    <small>${p.usdPerHour}/hr</small>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={e2bCustom}
+                className={`notebook-lane${e2bCustom ? " is-on" : ""}`}
+                disabled={uploading}
+                onClick={() => setE2bCustom(true)}
+              >
+                <span>Custom</span>
+                <small>{e2bCustom && e2bPrice != null ? `$${e2bPrice}/hr` : "Pick vCPU and RAM"}</small>
+              </button>
+              {e2bCustom && (
+                <div className="notebook-size-custom">
+                  <label>
+                    vCPU
+                    <select
+                      value={e2bSize.vCpu}
+                      disabled={uploading}
+                      onChange={(e) => setE2bSize({ ...e2bSize, vCpu: Number(e.target.value) })}
+                    >
+                      {e2bSizes.options.vCpu.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    RAM (GiB)
+                    <select
+                      value={e2bSize.memGiB}
+                      disabled={uploading}
+                      onChange={(e) => setE2bSize({ ...e2bSize, memGiB: Number(e.target.value) })}
+                    >
+                      {e2bSizes.options.memGiB.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="notebook-size-price">
+                    {e2bPrice != null ? `$${e2bPrice}/hr` : "—"}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             type="button"

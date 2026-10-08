@@ -779,6 +779,41 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 8px;
 }
 
+.notebook-sizes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.notebook-size-custom {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.notebook-size-custom label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notebook-size-custom select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+}
+
+.notebook-size-price {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .notebook-lane {
   display: flex;
   flex-direction: column;

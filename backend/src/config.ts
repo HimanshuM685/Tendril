@@ -161,6 +161,8 @@ export const config = {
   e2bTemplate: (process.env.E2B_TEMPLATE ?? "").trim(),
   /** How long sandbox create + dependency check may take before we 503. */
   e2bReadyTimeoutMs: Number(process.env.E2B_SANDBOX_READY_TIMEOUT_MS ?? 60_000),
+  /** First run of a new size builds its template; that can take minutes, once per size. */
+  e2bTemplateBuildTimeoutMs: Number(process.env.E2B_TEMPLATE_BUILD_TIMEOUT_MS ?? 900_000),
 
   // ─────────────────────── Google OAuth custodial login ───────────────────────
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",

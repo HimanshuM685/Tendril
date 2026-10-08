@@ -53,7 +53,11 @@ export async function run(payload: string, leaseToken?: string): Promise<RunResp
 }
 
 /** Start an asynchronous notebook job. Poll with its returned jobToken. */
-export async function runNotebook(notebook: Record<string, unknown>, lane?: "contributor" | "priority" | "e2b"): Promise<RunJobResponse> {
+export async function runNotebook(
+  notebook: Record<string, unknown>,
+  lane?: "contributor" | "priority" | "e2b",
+  e2b?: { vCpu: number; memGiB: number },
+): Promise<RunJobResponse> {
   const invalid = notebookError(notebook);
   if (invalid) throw new Error(invalid);
   if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) {
@@ -62,7 +66,7 @@ export async function runNotebook(notebook: Record<string, unknown>, lane?: "con
   return (await paidJson(`${api()}/x402/run`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ notebook, lane }),
+    body: JSON.stringify({ notebook, lane, ...(e2b ? { e2b } : {}) }),
   })) as RunJobResponse;
 }
 
