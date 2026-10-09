@@ -154,11 +154,13 @@ export function Contribute({
   const earnings = wallet?.earningsAtomic ?? 0;
   const canWithdraw = earnings >= minWithdraw;
 
-  const keyForEnv = newSecret ?? "YOUR_API_KEY";
-  const envCmd = `TENDRIL_API_KEY=${keyForEnv}\nNODE_LABEL=my-rig\nPRICE_PER_HOUR_USD=0.25\nTENDRIL_RUNTIME=firecracker`;
-  const runCmd = `# Native Linux/KVM setup: docs/runtime.md in the repository
-# Configure guest kernel, jailer IDs and delegated cgroups first.
-sudo systemctl enable --now tendril-contributor`;
+  const keyForEnv = newSecret ?? keys[0]?.preview ?? "YOUR_API_KEY";
+  const envCmd = `TENDRIL_API_KEY=${keyForEnv}\nTENDRIL_LABEL=my-rig\nTENDRIL_PRICE_PER_HOUR=0.25`;
+  const runCmd = `docker run -d --name tendril-agent \\
+  --restart unless-stopped \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  --env-file .env \\
+  ghcr.io/tendril/agent:latest`;
 
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -366,7 +368,7 @@ sudo systemctl enable --now tendril-contributor`;
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">2. Bring Up The Daemon</h3>
-              <p className="card-head-sub">Native Linux/KVM microVMs; legacy Docker supports SSH/Python</p>
+              <p className="card-head-sub">Runs each sandbox as a sibling Docker container</p>
             </div>
           </div>
 
@@ -406,7 +408,7 @@ sudo systemctl enable --now tendril-contributor`;
           <div className="explore-card-head">
             <div>
               <h3 className="card-head-title">Earnings &amp; Payouts</h3>
-              <p className="card-head-sub">Earnings accrue per lease; Withdraw pays your wallet on-chain</p>
+              <p className="card-head-sub">Direct on-chain payout to your connected wallet</p>
             </div>
           </div>
 

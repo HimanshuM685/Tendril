@@ -10,51 +10,6 @@ export type NodeStatus = "online" | "offline";
 /** Who actually runs the sandbox. Contributor machines stay on the socket path. */
 export type ComputeProvider = "contributor" | "modal" | "e2b";
 
-/**
- * How a contributor isolates a lease. gVisor is a published value only — this
- * tree ships Docker (legacy) and Firecracker drivers, not a gVisor one.
- */
-export type SandboxRuntime = "docker" | "gvisor" | "microvm";
-
-export type SandboxCapability = "ssh" | "python" | "notebook" | "jupyter";
-export type SandboxCapabilities = Record<SandboxCapability, boolean>;
-export const LEGACY_CAPABILITIES: SandboxCapabilities = { ssh: true, python: true, notebook: false, jupyter: false };
-
-/** Absent maps identify older agents; absent fields in a modern map are false. */
-export function capabilities(raw?: Partial<SandboxCapabilities> | null): SandboxCapabilities {
-  if (!raw) return { ...LEGACY_CAPABILITIES };
-  return { ssh: raw.ssh === true, python: raw.python === true, notebook: raw.notebook === true, jupyter: raw.jupyter === true };
-}
-
-export function runtimeAdvertisement(raw: { runtime?: unknown; kvm?: unknown; capabilities?: Partial<SandboxCapabilities> | null }) {
-  const runtime: SandboxRuntime = raw.runtime === "microvm" || raw.runtime === "gvisor" ? raw.runtime : "docker";
-  return { runtime, kvm: raw.kvm === true, capabilities: capabilities(raw.capabilities) };
-}
-
-export type SandboxSurface = "ssh" | "jupyter" | "exec";
-
-/** Per-lease relay credentials. Never part of a public node or billing record. */
-export interface RelayTunnel {
-  controlHost: string;
-  controlPort: number;
-  secret: string;
-  remotePort: number;
-  publicHost: string;
-  publicPort: number;
-}
-export interface LeaseRelay {
-  ssh?: RelayTunnel;
-  notebook?: RelayTunnel;
-}
-
-/** Default Explore pool: a public microVM. No KVM means it is not public. */
-export function listedOnDefaultExplore(node: {
-  runtime?: SandboxRuntime | null;
-  kvm?: boolean | null;
-}): boolean {
-  return node.runtime === "microvm" && node.kvm === true;
-}
-
 /** A compute node advertised by a contributor, or a hosted CPU row. */
 export interface ComputeNode {
   id: string;
@@ -64,8 +19,8 @@ export interface ComputeNode {
   payToAddr: string;
   /**
    * True when `payToAddr` has not opted into the payment ASA, so on-chain
-   * payouts for this node cannot land. The node still runs and charges renters,
-   * but its leases skip contributor earnings credit.
+   * payouts for this node cannot land. The node still runs and still earns —
+   * payouts are recorded unpaid until the address opts in.
    */
   payoutBlocked: boolean;
   label: string;
@@ -75,11 +30,6 @@ export interface ComputeNode {
   gpu: string | null;
   /** `"modal"` / `"e2b"` are hosted CPU rows. Everything a contributor registers is `"contributor"`. */
   provider: ComputeProvider;
-  /** Isolation the agent last advertised. Hosted rows are not microVMs. */
-  runtime: SandboxRuntime;
-  /** True only when the agent can see `/dev/kvm`. */
-  kvm: boolean;
-  capabilities?: SandboxCapabilities;
   /** Advertised price per hour, in USD (industry-standard hourly billing). */
   pricePerHourUsd: number;
   status: NodeStatus;
@@ -99,15 +49,12 @@ export type ExplorerNode = Pick<
   | "ramMb"
   | "gpu"
   | "provider"
-  | "runtime"
-  | "kvm"
-  | "capabilities"
   | "pricePerHourUsd"
   | "status"
   | "payoutBlocked"
 >;
 
-export type LeaseStatus = "starting" | "active" | "stopping" | "ended" | "failed";
+export type LeaseStatus = "starting" | "active" | "ended" | "failed";
 
 /** SSH into a contributor sandbox. */
 export interface SshAccess {
@@ -117,18 +64,19 @@ export interface SshAccess {
   port: number;
   username: string;
   /**
-   * `"publickey"` when the renter supplied an `sshPubKey`. Otherwise `"password"`
-   * uses the verified payer address; neither requires a sign-in session.
+   * `"publickey"` when the renter supplied an `sshPubKey` — the only option
+   * that works without a session, since there is no address to use as a
+   * password. `"password"` is the signed-in web flow.
    */
   authMethod: "password" | "publickey";
   /** SSH password (the renter's address), or null under `"publickey"`. */
   password: string | null;
-   /** Ready-to-copy connect command, e.g. "ssh root@lease.ssh.example.com -p 20000". */
+  /** Ready-to-copy connect command, e.g. "ssh root@bore.pub -p 12345". */
   command: string;
 }
 
 /**
- * JupyterLab on a capable contributor or hosted sandbox. `token` is a per-lease secret for the lab,
+ * JupyterLab on a hosted sandbox. `token` is a per-lease secret for the lab,
  * never the renter's wallet address and never the billing lease JWT.
  */
 export interface JupyterAccess {
@@ -164,7 +112,7 @@ export interface Lease {
    * payment, which is the only identity we trust for this.
    */
   payerAddr: string;
-  /** Algorand address credited with eligible contributor earnings on lease end. */
+  /** Algorand address the contributor is paid out to on lease end. */
   payToAddr: string;
   /** SSH access details, once the container is ready. */
   access: SandboxAccess | null;
@@ -179,10 +127,6 @@ export interface Lease {
   paymentTxid: string | null;
   /** Unix ms the sandbox went active (start of the billable window). */
   startedAt: number;
-  /** First close signal. Immutable across teardown and billing retries. */
-  endedAt?: number | null;
-  payoutBlocked?: boolean;
-  capabilities?: SandboxCapabilities;
   /**
    * Unix ms the renter's credit runs dry at `rateAtomicPerHour`, projected at
    * lease start. The watchdog stops the sandbox here so usage can never exceed
@@ -419,13 +363,6 @@ export interface HelloAckMsg {
 /** agent -> registry: periodic liveness ping. */
 export interface HeartbeatMsg {
   nodeId: string;
-  /** Isolation this agent will actually start. Omit on older agents. */
-  runtime?: SandboxRuntime;
-  /** Whether `/dev/kvm` exists on the contributor host. */
-  kvm?: boolean;
-  capabilities?: Partial<SandboxCapabilities>;
-  /** Successful local cleanup, replayed after reconnect until acknowledged. */
-  destroyed?: string[];
 }
 
 /** registry -> agent: spin up a sandbox for a paid lease. */
@@ -441,12 +378,8 @@ export interface StartContainerMsg {
    * renter with no session (nothing to use as a password).
    */
   sshPubKey: string | null;
-  /** `exec` = one-shot job: no SSH server or public tunnel. Old agents default to SSH. */
-  surface?: SandboxSurface;
-  notebook?: boolean;
-  deadline?: number;
-  relay?: LeaseRelay;
-  jupyterToken?: string;
+  /** One-shot jobs have no SSH server or bore tunnel. Old agents default to SSH. */
+  surface?: "ssh" | "exec";
   /** Maximum lifetime of an exec sandbox, including readiness and execution. */
   lifetimeMs?: number;
 }
@@ -458,7 +391,6 @@ export interface ContainerReadyMsg {
   host: string;
   /** SSH port. */
   port: number;
-  access?: SandboxAccess | null;
 }
 
 /** agent -> registry: the sandbox failed to start. */
@@ -472,21 +404,12 @@ export interface DestroyContainerMsg {
   leaseId: string;
 }
 
-export interface ContainerDestroyedMsg {
-  leaseId: string;
-  ok: boolean;
-  error?: string;
-}
-
 /** registry -> agent: run a job inside an existing lease's sandbox. */
 export interface RunJobMsg {
   leaseId: string;
   jobId: string;
   payload: string;
-  /** Only a reference: notebook bytes use the private Jupyter HTTP endpoint. */
-  notebookJob?: boolean;
-  deadline?: number;
-  /** Enforced inside the sandbox, not only by the registry's wait timer. */
+  /** Enforced inside the container, not only by the registry's wait timer. */
   timeoutMs?: number;
 }
 
@@ -505,7 +428,6 @@ export const WS = {
   startContainer: "start-container",
   containerReady: "container-ready",
   containerFailed: "container-failed",
-  containerDestroyed: "container-destroyed",
   destroyContainer: "destroy-container",
   runJob: "run-job",
   jobResult: "job-result",
@@ -523,10 +445,6 @@ export interface RegisterNodeRequest {
   ramMb: number;
   gpu: string | null;
   pricePerHourUsd: number;
-  /** Set by the agent from the driver it selected. Defaults to docker. */
-  runtime?: SandboxRuntime;
-  kvm?: boolean;
-  capabilities?: Partial<SandboxCapabilities>;
 }
 
 /** A file the notebook wrote under its work directory. */

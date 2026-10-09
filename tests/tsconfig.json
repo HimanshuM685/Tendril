@@ -1,6 +1,0 @@
-{
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": { "rootDir": ".", "outDir": "dist", "types": ["node"] },
-  "references": [{ "path": "../shared" }, { "path": "../backend" }, { "path": "../contributor" }],
-  "include": ["*.ts"]
-}
