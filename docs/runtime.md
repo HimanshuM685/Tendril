@@ -97,6 +97,30 @@ OCI image tag also hashes guest scripts. Restart picks up image/script changes.
 Explicit custom `SANDBOX_IMAGE` must already contain guest init, Jupyter and runner.
 An unprepared image requested during a paid lease fails rather than exporting.
 
+## Compose (containerized Firecracker)
+
+Alternative to the systemd unit on the same Linux/KVM host prerequisites (kernel at
+`/opt/tendril-kernel/vmlinux`, `ip_forward=1`, `tendril-vmm` IDs in `.env`, root-owned
+mode-0700 `/var/lib/tendril`). The image bundles checksum-pinned Firecracker/jailer
+v1.12.1 and every preflight tool.
+
+```sh
+docker compose up -d --build contributor   # preflight, reconcile, template, register
+docker compose logs -f contributor         # runtime=microvm kvm=true
+docker compose stop contributor            # SIGTERM destroys guests first
+```
+
+Service runs `privileged`, `network_mode: host`, `cgroup: private`, with `/dev/kvm` and
+`/dev/net/tun`. `contributor/docker-entrypoint.sh` moves container processes to
+`/agent`, enables cpu/memory/pids for children and sets `TENDRIL_CGROUP_PARENT=vms`, the
+same split as `DelegateSubgroup=agent`. VMMs therefore die with the container on stop,
+kill or crash. Netns live in the container mount namespace; leftover host NAT/forward
+rules and jail dirs are removed by reconcile on next start. Entrypoint selects
+iptables-legacy when Docker's `DOCKER-USER` chain lives there.
+
+Standalone contributor repo (TendrilContributor) ships the same runtime, entrypoint
+and compose file.
+
 ## Platform bore/TLS relay
 
 Run relay manager as a separate native service beside backend. Backend controls it
@@ -124,8 +148,7 @@ after certificate renewal, which reconciles old allocations.
 
 Backend must share the relay host's network namespace to reach private notebook
 listeners. Stock Compose/PaaS backend examples do not configure this topology.
-The contributor container includes Docker CLI and OpenSSH client, but remains legacy
-Docker; deploy the native contributor service for Firecracker.
+The contributor container can run either runtime; see Compose below.
 
 Both SSH and Jupyter run inside guest. SSH commands retain host-key checking.
 Interactive Jupyter uses an explicit Open notebook click after renting. Notebook
