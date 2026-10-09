@@ -1,0 +1,26 @@
+[Unit]
+Description=Tendril Linux microVM contributor
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tendril
+EnvironmentFile=/etc/tendril/contributor.env
+Environment=TENDRIL_STATE_DIR=/var/lib/tendril
+Environment=TENDRIL_CGROUP_PARENT=system.slice/tendril-contributor.service/vms
+StateDirectory=tendril
+StateDirectoryMode=0700
+# systemd >=254: daemon in /agent, VMMs in /vms, no internal-process constraint.
+Delegate=yes
+DelegateSubgroup=agent
+ExecStart=/usr/bin/npm run start -w contributor
+Restart=on-failure
+KillMode=control-group
+TimeoutStopSec=60
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

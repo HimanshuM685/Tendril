@@ -4,6 +4,7 @@ import {
   atomicPerHour,
   formatUsdc,
   fundedSeconds,
+  capabilities,
   NOTEBOOK_MAX_BYTES,
   boundedRunTimeoutMs,
   notebookError,
@@ -73,11 +74,12 @@ import {
   walletSummary,
 } from "./db.js";
 import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
-import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode } from "./registry.js";
+import { getNode, listNodesByOwner, listOnlineNodes, pickBestValueNode, notebooksAvailable } from "./registry.js";
 import {
   abandonLease,
   activateLease,
   closeLease,
+  confirmLeasePayment,
   createLease,
   failLease,
   getLease,
@@ -132,6 +134,8 @@ import { emailEnabled, emailLogin, emailRegister } from "./emailAuth.js";
 import { syncGasGrantEligibility, syncWalletGasGrantEligibility } from "./gasGrant.js";
 
 export const router = Router();
+/** Effects used by the automatic-placement HTTP integration fixture. */
+export const runEffects = { payment: requirePayment, balance: creditBalance, connected: isNodeConnected };
 
 /**
  * Express 4 does not catch a rejected promise from an async handler: the request
@@ -396,7 +400,7 @@ router.get("/explorer", guard((_req, res) => {
   const e2b = e2bConfigured();
   res.json({
     nodes,
-    notebooks: priority || e2b || nodes.length > 0,
+    notebooks: priority || e2b || notebooksAvailable(),
     priority,
     priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
     e2b,
@@ -690,7 +694,7 @@ async function rent(req: Request, res: Response) {
       `Gate fee ${formatUsdc(gateFee)}; time then bills from credit.`;
 
   // 402 first so a Bazaar/agent probe of the catalog URL still gets tags + discovery.
-  const paid = await requirePayment(
+  const paid = await runEffects.payment(
     req,
     res,
     "rent",
@@ -720,10 +724,15 @@ async function rent(req: Request, res: Response) {
   if (!surface) {
     return res.status(400).json({ error: "invalid_surface", detail: "surface must be ssh or jupyter" });
   }
-  if (isHosted(node.provider) || surface === "jupyter") {
+  if (isHosted(node.provider)) {
     return res.status(400).json({
       error: "surface_unsupported",
       detail: "hosted CPU is not a rentable node; upload a notebook",
+    });
+  } else if (!capabilities(node.capabilities)[surface]) {
+    return res.status(400).json({
+      error: "surface_unsupported",
+      detail: "node did not advertise the requested surface",
     });
   } else if (node.status !== "online" || !isNodeConnected(node.id)) {
     return res.status(409).json({
@@ -768,7 +777,7 @@ async function rent(req: Request, res: Response) {
   // Checked here, after verify but BEFORE settle: an address with no credit
   // cannot fund a single minute, and taking a gate fee for a session that would
   // be killed on the next watchdog tick is just theft with extra steps.
-  const credit = await creditBalance(renter);
+  const credit = await runEffects.balance(renter);
   // A negative balance is a debt from a `/x402/run` that overdrew. No new
   // machine until it is cleared — otherwise the hole just gets deeper.
   if (credit < 0) {
@@ -858,12 +867,14 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
     fundingAtomic,
     paymentTxid: paid?.facts.txid ?? null,
     provider: node.provider,
+    payoutBlocked: node.payoutBlocked,
+    capabilities: capabilities(node.capabilities),
   });
 
   const limits: SandboxLimits = {
     memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
     cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
-    gpus: node.gpu ? "all" : "",
+    gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
   };
 
   let access;
@@ -884,9 +895,10 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
       sshPassword: isHosted(node.provider) || sshPubKey ? null : renterAddr,
       sshPubKey: isHosted(node.provider) ? null : sshPubKey,
     });
-    if (isHosted(node.provider)) activateLease(lease.id, access);
+    if (!access) throw new Error("renter access missing after readiness");
+    if (!activateLease(lease.id, access)) throw new Error("lease stopped during provisioning");
   } catch (err) {
-    await abandonLease(lease.id);
+    await abandonLease(lease.id).catch(() => undefined);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
     return;
   }
@@ -896,9 +908,11 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
   // the node. Abandon rather than close — a close would refund a payment that
   // never happened.
   if (paid && !(await paid.settle(res))) {
-    await abandonLease(lease.id);
+    await abandonLease(lease.id).catch(() => undefined);
     return;
   }
+  try { confirmLeasePayment(lease.id); }
+  catch { res.status(503).json({ error: "lease_stopped_during_settlement" }); return; }
 
   // Nothing is debited here. The session has only just started; what it costs
   // is not known until it ends, and that is the one place it is billed.
@@ -947,13 +961,15 @@ function toRentResponse(
 async function releaseLease(req: Request, res: Response): Promise<void> {
   const lease = requireLease(req, res);
   if (!lease) return;
-  const settled = await closeLease(lease.id, "released");
+  let settled;
+  try { settled = await closeLease(lease.id, "released"); }
+  catch { res.status(503).json({ error: "cleanup_pending", detail: "guest or relay cleanup is pending; retry Release" }); return; }
   const body: LeaseCloseResponse = {
     leaseId: lease.id,
     usedSeconds: settled?.usedSeconds ?? 0,
     usedAtomic: String(settled?.usedAtomic ?? 0),
     chargedAtomic: String(settled?.chargedAtomic ?? 0),
-    balance: String(settled?.balance ?? (await creditBalance(lease.payerAddr))),
+    balance: String(settled?.balance ?? (await runEffects.balance(lease.payerAddr))),
     asset,
   };
   res.json(body);
@@ -1025,15 +1041,15 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     res.status(409).json({ error: "lease not active" });
     return;
   }
-  if (job.notebook && !isHosted(lease.provider)) {
+  if (job.notebook && !isHosted(lease.provider) && !capabilities(lease.capabilities).notebook) {
     res.status(400).json({
       error: "notebook_unsupported",
-      detail: "contributor sandboxes run Python source; notebooks run on hosted CPU",
+      detail: "lease did not advertise notebook capability",
     });
     return;
   }
 
-  const paid = await requirePayment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
+  const paid = await runEffects.payment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
   if (!paid) return;
 
   const jobId = nanoid(10);
@@ -1085,7 +1101,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
   // The 402 comes first, before any check that could fail for reasons the caller
   // cannot see: an agent that has never called this endpoint must always be able
   // to ask what it costs, even at a moment when every machine happens to be busy.
-  const paid = await requirePayment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
+  const paid = await runEffects.payment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
   if (!paid) return;
 
   // Everything below is after verify and before settle, so each of these bails
@@ -1102,7 +1118,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       res.status(409).json({ error: "payer_busy", detail: "Release your existing session before starting a notebook." });
       return;
     }
-    const credit = await creditBalance(payer);
+    const credit = await runEffects.balance(payer);
     if (credit <= 0) {
       res.status(402).json({
         error: "insufficient_credit",
@@ -1132,8 +1148,8 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       });
       return;
     }
-    const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
-    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer)
+    const freePeer = (id: string) => runEffects.connected(id) && !nodeBusy(id);
+    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer, job.notebook ? "notebook" : "python")
       : lane === "e2b" ? freeE2bNode(job.e2b ?? E2B_DEFAULT_SIZE)
       : pickNotebookHost("hosted-cpu-2");
     if (!node) {
@@ -1181,14 +1197,17 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       paymentTxid: paid.facts.txid,
       allowOverdraft: !job.notebook,
       provider: node.provider,
+      payoutBlocked: node.payoutBlocked,
+      capabilities: capabilities(node.capabilities),
     });
     try {
       if (!(await paid.settle(res))) {
-        await abandonLease(lease.id);
+        await abandonLease(lease.id).catch(() => undefined);
         return;
       }
+      confirmLeasePayment(lease.id);
     } catch (err) {
-      await abandonLease(lease.id);
+      await abandonLease(lease.id).catch(() => undefined);
       throw err;
     }
 
@@ -1215,7 +1234,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         limits: {
           memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
           cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
-          gpus: node.gpu ? "all" : "",
+          gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
         },
         timeoutMs: hostedReadyMs(node.provider) + budgetMs,
         // One-shot sandboxes are not logged into. Never the wallet address.
@@ -1228,7 +1247,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         return;
       }
     } catch (err) {
-      await abandonLease(lease.id);
+      await abandonLease(lease.id).catch(() => undefined);
       res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
       return;
     }
@@ -1310,11 +1329,12 @@ async function runNotebookJob(
       leaseId,
       node,
       surface: "exec",
+      notebook: true,
       image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits: {
         memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
         cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
-        gpus: node.gpu ? "all" : "",
+        gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
       },
       timeoutMs: readyTimeoutMs + budgetMs,
       sshPassword: isHosted(node.provider) ? null : nanoid(32),

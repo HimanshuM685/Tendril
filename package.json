@@ -26,8 +26,11 @@
     "client": "npm run start -w example-buyer",
     "mcp": "npm run mcp -w @tendril/mcp-server",
     "keygen": "npm run keygen -w contributor",
-    "typecheck": "tsc -b shared backend contributor example-buyer mcp && npm run typecheck -w web && npm run typecheck -w docs-web && npm run typecheck -w admin",
-    "build:shared": "tsc -b shared"
+    "typecheck": "tsc -b shared backend contributor example-buyer mcp tests && npm run typecheck -w web && npm run typecheck -w docs-web && npm run typecheck -w admin",
+    "build:shared": "tsc -b shared",
+    "test:p1": "tsx shared/src/runtime.test.ts && tsx contributor/src/runtime/firecracker.test.ts && tsx contributor/src/runtime/docker.test.ts && tsx contributor/src/runtime/select.test.ts && tsx contributor/src/runtime/rootfs.test.ts && tsx backend/src/registry.test.ts && tsx backend/src/hosted.test.ts && tsx backend/src/leaseLifecycle.test.ts && tsx backend/src/ws.test.ts && tsx backend/src/placement.test.ts && tsx backend/src/relay/manager.test.ts && tsx backend/src/providers/jupyter.test.ts",
+    "test:p1:kvm": "tsx tests/p1-kvm.ts",
+    "relay": "npm run relay -w backend"
   },
   "engines": {
     "node": ">=20"

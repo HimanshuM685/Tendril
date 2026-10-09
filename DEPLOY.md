@@ -1,348 +1,525 @@
-# Tendril — Setup & Deployment
+# Deploying Tendril
 
-This covers full local setup, Algorand testnet account prep, and production deployment of each
-component. For the project overview and the demo script, see [README.md](./README.md).
+This guide walks you through running Tendril locally and putting it into production. For what
+Tendril is and how to demo it, see [README.md](./README.md).
 
 ---
 
-## 1. Prerequisites
+## The big picture
 
-| Tool | Why | Install |
+Tendril has six pieces. Only two of them live on your server.
+
+| Piece | Where it runs | What it does |
 |---|---|---|
-| Node 20+ & npm | runs everything | https://nodejs.org |
-| **Neon** Postgres | stores wallets, top-ups, charges, earnings, withdrawals, API keys (`DATABASE_URL`) — *not* nodes/leases | https://neon.tech (free tier) |
-| Docker (daemon running) | the contributor agent's SSH sandboxes | https://docs.docker.com |
-| SSH client | renters connect to a rented box (public exposure uses an in-container **bore** tunnel — nothing to install on the contributor) | built into macOS/Linux/Windows |
-| Algorand **testnet** accounts | platform (receives top-ups **+ pays contributors**), contributor, consumer (pays) | see below |
+| **Backend** (registry) | Your Linux server | The API. Handles sign-in, payments, billing, and keeps track of every contributor machine. |
+| **Relay** | Same Linux server as the backend | Gives each rental its own public SSH address (and Jupyter URL), so renters can reach a contributor's machine without that machine opening any ports. |
+| **Web app** | Vercel or any Node host | The website people use to rent and contribute (Next.js). |
+| **Docs site** | Vercel or any Node host | Public documentation at docs.tendrilhq.com (Next.js). |
+| **Admin app** | Vercel or any Node host | Small internal dashboard for approving gas grants (Next.js). |
+| **Contributor agent** | Each contributor's own Linux machine | Boots a fresh Firecracker microVM for every rental and tears it down afterwards. |
 
-### Algorand testnet account prep
+How a rental reaches the renter:
 
-Payments are **native ALGO**, so there's no USDC and no ASA opt-in. Users **top up** a prepaid
-balance by sending ALGO to the **platform custodial address** (`PLATFORM_PAYTO`); the registry
-confirms each deposit on-chain and credits an off-chain ledger in Neon. On lease end it bills the
-usage once and **credits the contributor's earnings balance**, which they withdraw on-chain from the
-platform account (minimum `MIN_WITHDRAW_ATOMIC`, default 5 USDC).
+```
+ renter ── ssh ──▶ relay (your server) ◀── outbound tunnel ── microVM on contributor's machine
+                     ▲
+                     │ Unix socket: "open a tunnel for lease X" / "close it"
+                   backend
+```
 
-- **Platform account (`PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY`):** generate a key with
-  `npm run keygen`; use its **Address** as `PLATFORM_PAYTO` and the key it prints as
-  `PLATFORM_PRIVATE_KEY` (the registry signs contributor withdrawals with it). Fund it with enough
-  ALGO to cover withdrawals + txn fees — it's the pool that holds every user's prepaid balance.
-- **Consumer accounts:** funded with ALGO to cover top-ups + the ~0.001 ALGO deposit txn fee.
+The contributor's microVM always dials **out** to the relay, and the renter connects to the relay.
+Nobody has to open inbound ports on a contributor's machine.
 
-1. **Generate the platform key** (prints `Address` + `PLATFORM_PRIVATE_KEY`):
+> **Why the backend and relay share a server:** they talk over a local Unix socket, and the backend
+> reaches each notebook through a private network address that only exists on that host. If you run
+> the backend on a PaaS or in a stock Docker container, everything still works *except* contributor
+> SSH and notebooks.
+
+---
+
+## 1. What you need
+
+| Thing | Why |
+|---|---|
+| Node 20+ and npm | Runs the backend, relay, and agents |
+| A [Neon](https://neon.tech) Postgres database | Stores wallets, top-ups, charges, earnings, withdrawals, and API keys. Nodes and leases live in memory. |
+| A Linux server (Ubuntu/Debian is easiest) | Hosts the backend and relay |
+| A domain where you control DNS | The relay needs three wildcard subdomains (details below) |
+| Algorand **testnet** accounts | One for the platform, plus test buyers and contributors |
+| Docker | Builds the guest image on contributor machines |
+
+### Algorand accounts
+
+Payments are **USDC on Algorand** (testnet asset `10458941`).
+
+How the money moves:
+
+- Users top up over x402. The money lands in the platform account (`PLATFORM_PAYTO`), and the
+  backend records the balance in Neon.
+- When a rental ends, the backend charges the renter once for the time used. It credits the
+  contributor's earnings minus the platform fee.
+- Contributors withdraw their earnings on-chain. The minimum is 5 USDC by default
+  (`MIN_WITHDRAW_ATOMIC`).
+
+**Set up the platform account:**
+
+1. Generate a key:
    ```bash
    npm run keygen
    ```
-2. **Fund with testnet ALGO:** https://bank.testnet.algorand.network/ (paste the address).
-3. Keep every private key secret. The base64 value is a 64-byte key (seed + public key).
+   It prints an **Address** and a **private key**. Use the address as `PLATFORM_PAYTO` and the key as
+   `PLATFORM_PRIVATE_KEY`. The backend uses this key to sign contributor withdrawals.
+2. Get testnet ALGO for transaction fees: https://bank.testnet.algorand.network/
+3. Opt the account into asset `10458941`, then get testnet USDC from
+   https://asset-dispenser.testnet.algorand.network/
+
+**Buyers:** opt into USDC and hold some testnet USDC. The facilitator pays the network fees, so a
+buyer only needs a little ALGO for the opt-in.
+
+**Contributors:** opt into USDC to receive earnings. Without the opt-in, rentals still work, but the
+contributor isn't credited.
+
+Keep every private key secret. The platform key holds everyone's top-ups and signs every payout.
 
 ---
 
-## 2. Local setup
+## 2. Run it locally
 
 ```bash
 git clone <repo> tendril && cd tendril
 npm install
-cp .env.example .env          # edit values; root .env is picked up by all Node apps
+cp .env.example .env      # fill in DATABASE_URL, PLATFORM_PAYTO, PLATFORM_PRIVATE_KEY
 ```
 
-`.env` is read by the backend, contributor, and example-buyer (each app's own `.env` overrides the
-root one; inline `FOO=bar npm run ...` overrides both). Browser apps read public `NEXT_PUBLIC_*`
-values from their own `.env.local` files.
+The root `.env` is shared by the backend, contributor, and example buyer. An app's own `.env`
+overrides it, and `FOO=bar npm run ...` overrides both. The browser apps (web, docs, admin) read
+public `NEXT_PUBLIC_*` values from their own `.env.local` files.
 
-Run each piece in its own terminal:
+Start each piece in its own terminal:
 
 ```bash
-npm run backend       # http://localhost:4000  (needs DATABASE_URL + PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY)
-npm run contributor   # contributor daemon (needs TENDRIL_API_KEY + Docker running)
-npm run web           # http://localhost:5173
-npm run docs          # http://localhost:5175 (standalone documentation)
-npm run admin         # http://localhost:5174  (admin portal; needs ADMIN_EMAILS on backend)
-npm run client        # the autonomous consumer agent (needs its own funded AVM_PRIVATE_KEY)
+npm run backend       # API on http://localhost:4000
+npm run web           # website on http://localhost:5173
+npm run docs          # documentation on http://localhost:5175
+npm run admin         # admin dashboard on http://localhost:5174 (needs ADMIN_EMAILS)
+npm run contributor   # contributor agent (needs TENDRIL_API_KEY)
+npm run client        # autonomous buyer (needs its own funded AVM_PRIVATE_KEY)
 ```
 
-Tips:
-- The SSH sandbox image builds locally on the first rent (from `contributor/sandbox-ssh`) and is
-  cached after — the first rent waits on that one-time build.
-- Running the agent on the **same machine** as the consumer? Set `TUNNEL_MODE=local` to skip bore and
-  SSH to `127.0.0.1:<port>` instead.
-- Useful checks: `curl localhost:4000/health`, `curl localhost:4000/explorer`.
+Quick checks: `curl localhost:4000/health` and `curl localhost:4000/explorer`.
+
+You can browse, top up, and run the hosted CPU locally. Renting a **contributor** machine over SSH
+also needs the relay, which only runs on Linux (section 3b).
 
 ---
 
-## 3. Production deployment
+## 3. Production
 
-Independently deployable pieces: **backend** (central registry service), **web** (main Next.js
-site), **docs-web** (documentation Next.js site), **admin**, and **contributor** (runs on each
-contributor's own machine). The autonomous client runs anywhere.
+### 3a. Backend
 
-### 3a. Backend / registry (central API)
+The recommended setup is a plain Linux server running the backend under systemd, with nginx in
+front for HTTPS. This is the only setup that supports the relay.
 
-Requirements: a long-running Node host with **WebSocket** support, a **Neon** Postgres database
-(`DATABASE_URL`), outbound HTTPS to an **Algod** endpoint (to confirm top-ups **and send withdrawals**),
-and (if the web app is HTTPS) **TLS**. No local disk/volume — only money state lives in Neon; nodes
-and leases are in-memory.
+**1. Install the code and create the service account.**
 
-**Option A — Docker (provided):**
 ```bash
-# build from the repo root
+sudo useradd --system --create-home --home-dir /var/lib/tendril-backend --shell /usr/sbin/nologin tendril
+sudo git clone <repo> /opt/tendril
+cd /opt/tendril && sudo npm ci --omit=dev
+```
+
+**2. Write the config** to `/etc/tendril/backend.env`, readable only by root. The variables are
+listed in [section 4](#4-backend-settings). The essentials:
+
+```dotenv
+DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
+PLATFORM_PAYTO=<platform address>
+PLATFORM_PRIVATE_KEY=<platform key>
+JWT_SECRET=<output of: openssl rand -hex 32>
+CORS_ORIGIN=https://tendril.example.com,https://admin.example.com
+RELAY_SOCKET=/run/tendril-relay/control.sock
+```
+
+```bash
+sudo install -d -m 0755 /etc/tendril
+sudo chmod 600 /etc/tendril/backend.env
+```
+
+**3. Create the systemd service** at `/etc/systemd/system/tendril-backend.service`:
+
+```ini
+[Unit]
+Description=Tendril backend
+After=network-online.target tendril-relay.service
+Wants=network-online.target tendril-relay.service
+
+[Service]
+User=tendril
+WorkingDirectory=/opt/tendril
+EnvironmentFile=/etc/tendril/backend.env
+ExecStart=/usr/bin/npm run start -w backend
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Don't start it yet. Set up the relay first (next section), so the backend finds the relay socket
+when it boots.
+
+**4. Put nginx in front** for HTTPS on `api.example.com`, and make sure WebSocket upgrades get
+through:
+
+```nginx
+server {
+    server_name api.example.com;
+    listen 443 ssl;
+    # ssl_certificate / ssl_certificate_key from certbot
+
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+}
+```
+
+<details>
+<summary>Alternatives: Docker or PaaS (no contributor SSH)</summary>
+
+These are fine if you only need the hosted CPU and payments. Neither can run the relay, so
+contributor SSH and notebooks won't work.
+
+**Docker:**
+```bash
 docker build -f backend/Dockerfile -t tendril-backend .
-docker run -d --name tendril-backend \
-  -p 4000:4000 \
-  -e DATABASE_URL="postgresql://...neon.tech/neondb?sslmode=require" \
-  -e PLATFORM_PAYTO=<your-platform-algorand-address> \
-  -e PLATFORM_PRIVATE_KEY=<base64-64-byte-key-for-that-address> \
-  -e PLATFORM_FEE_PCT=10 \
-  -e JWT_SECRET=$(openssl rand -hex 32) \
-  -e CORS_ORIGIN=https://tendril.your-domain.com \
-  tendril-backend
+docker run -d --name tendril-backend -p 4000:4000 --env-file backend.env tendril-backend
 ```
 
-**Option B — PaaS (Railway / Render / Fly.io):**
-- Start command: `npm run start -w backend` (no build step — `tsx` runs the TS directly).
-- Set env vars (below). No volume needed — point `DATABASE_URL` at Neon.
-- Ensure WebSockets are enabled (Render/Railway: on by default; Fly: TCP/HTTP service is fine).
+**Railway / Render / Fly.io:** start command `npm run start -w backend` (no build step). Set the
+env vars and make sure WebSockets are enabled.
 
-**Option C — bare VPS + systemd + nginx:**
-- `npm ci --omit=dev` on the box, run `npm run start -w backend` under systemd (or pm2).
-- Put nginx/Caddy in front for TLS, and **proxy WebSocket upgrades**:
-  ```nginx
-  location / {
-      proxy_pass http://127.0.0.1:4000;
-      proxy_http_version 1.1;
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
-      proxy_set_header Host $host;
-  }
-  ```
+</details>
 
-Registry env vars:
+### 3b. Relay
 
-| Var | Default | Notes |
-|---|---|---|
-| `REGISTRY_PORT` | `4000` | |
-| `DATABASE_URL` | — | **required** — Neon Postgres connection string (keep `?sslmode=require`) |
-| `PLATFORM_PAYTO` | — | **required** — custodial Algorand address that receives top-ups |
-| `PLATFORM_PRIVATE_KEY` | — | **required for withdrawals** — base64 64-byte key for `PLATFORM_PAYTO`; signs contributor withdrawals. If unset, earnings still accrue but `POST /withdraw` returns 503 |
-| `PLATFORM_FEE_PCT` | `10` | platform's % cut of each charge; the rest is paid to the contributor |
-| `JWT_SECRET` | dev value | **set a strong secret in prod** (signs wallet-session + lease tokens) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | optional — enable Google OAuth custodial login |
-| `GOOGLE_REDIRECT_URI` | — | backend callback, e.g. `https://api.your-domain.com/auth/google/callback` |
-| `WEB_ORIGIN` | first `CORS_ORIGIN` | where to redirect after Google login, e.g. `https://tendril.your-domain.com` |
-| `WALLET_ENCRYPTION_KEY` | — | **required when Google auth enabled** — `openssl rand -base64 32` |
-| `ADMIN_EMAILS` | — | optional — comma-separated Google emails allowed into admin portal |
-| `ADMIN_WEB_ORIGIN` | `http://localhost:5174` | admin app origin (OAuth handoff + CORS) |
-| `ADMIN_GOOGLE_REDIRECT_URI` | — | admin OAuth callback, e.g. `https://api.your-domain.com/admin/auth/google/callback` |
-| `GAS_GRANT_MICRO_ALGOS` | `260000` | ALGO (microAlgos) sent per accepted gas request (0.26 ALGO) |
-| `CORS_ORIGIN` | `*` | set to your web origin(s), comma-separated; include admin origin |
-| `HEARTBEAT_TIMEOUT_MS` | `30000` | node considered offline after this gap |
-| `X402_NETWORK` | testnet CAIP-2 | Network every payment must be on; must match the facilitator's `/supported` exactly |
-| `X402_ASSET_ID` | `10458941` | ASA every price is denominated in (testnet USDC; mainnet `31566704`) |
-| `X402_FACILITATOR_URL` | `https://facilitator.goplausible.xyz` | Verifies + settles payments and sponsors the network fee |
-| `MIN_TOPUP_ATOMIC` / `MAX_TOPUP_ATOMIC` | `100000` / `1000000000` | Top-up bounds, in atomic units |
-| `MIN_PAYABLE_ATOMIC` | `10000` | Floor an **unauthenticated** rent must pay on-chain, whatever credit `?payer=` holds |
-| `MIN_LEASE_SECONDS` / `MAX_LEASE_SECONDS` / `LEASE_SECONDS_GRANULARITY` | `60` / `14400` / `60` | Bounds on a prepaid block |
-| `SANDBOX_READY_TIMEOUT_MS` | `45000` | How long to wait for a sandbox before 503 — nothing is settled if it elapses |
-| `METER_INTERVAL_MS` | `10000` | how often the **watchdog** checks active leases for balance exhaustion (no per-tick billing) |
-| `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algod used to confirm top-ups + send withdrawals |
+#### What it does
 
-### 3b. Web app (Next.js)
+When someone rents a contributor's machine, the backend asks the relay for a tunnel. The relay
+then:
 
-The main app at **https://tendrilhq.com** is a Next.js app. Set public browser configuration
-(`NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_ALGORAND_NETWORK`, and optional overrides) **at build time**.
-Documentation is built and deployed separately from
-`docs-web/`, not rendered by this app.
+1. starts a private [bore](https://github.com/ekzhang/bore) tunnel server just for that rental, in
+   its own network namespace, with its own secret;
+2. hands back a public address like `ssh root@a1b2c3.ssh.example.com -p 20417`;
+3. tears it all down the moment the rental ends.
 
-```bash
-NEXT_PUBLIC_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w web
-# output: web/.next  → deploy with `npm run start -w web` or Vercel
-```
+The contributor's microVM connects out to the relay over TLS (port 9443). The relay checks which
+rental the connection belongs to from its hostname, and joins it to the renter's side. Jupyter
+works the same way, over HTTPS at `https://<id>.lab.example.com`.
 
-**Vercel / Node host:**
-- Build command: `npm install && npm run build -w web`
-- Framework preset: Next.js
-- Env var: `NEXT_PUBLIC_REGISTRY_URL = https://api.your-tendril-domain.com`
-- Start command on a Node host: `npm run start -w web`
+#### Step 1: DNS
 
-For Vercel projects with **Root Directory = `web`**, use `npm run build` and deploy the Next.js
-output. Enable **Include source files outside of the Root Directory** for the shared workspace.
-`web/next.config.ts` owns the `/x402` API proxy and permanent redirects. `web/vercel.json`
-pins Vercel to Next.js output (`.next`) so an old Vite `dist` setting cannot be reused:
+Point three wildcard records at your server's public IP:
 
-- `/docs` and `/docs/` → `https://docs.tendrilhq.com`
-- `/docs/<path>` → `https://docs.tendrilhq.com/docs/<path>`
-- `/api` → `https://docs.tendrilhq.com/docs/api`
-
-Queries pass through those redirects; browsers preserve URL fragments. A client-side redirect also
-handles legacy Docs paths. All documentation links in the main app point to `docs.tendrilhq.com`.
-
-> **Mixed content:** if the site is served over HTTPS, the registry **must** also be HTTPS/WSS,
-> or browsers will block the API + socket calls.
-
-### 3b1. Documentation app (separate Next.js app)
-
-Create a **second hosting project** from this repository for **https://docs.tendrilhq.com**.
-Do not attach that domain to the main app's deployment.
-
-```bash
-npm install
-npm run build -w docs-web
-# output: docs-web/.next
-```
-
-Docs is an independent Next.js + React app. It imports repository Markdown from `docs/`, including
-the existing API and MCP references. It has no wallet provider, payment client, registry polling,
-or backend requirement. `NEXT_PUBLIC_REGISTRY_URL` is optional and only changes the base URL displayed
-in examples (default `https://tendrilregister.007575.xyz`).
-
-**Vercel settings for the Docs project:**
-
-| Setting | Value |
+| Record | Used for |
 |---|---|
-| Root Directory | `docs-web` |
-| Include source files outside of the Root Directory | **Enabled** — Markdown lives in sibling `docs/` |
-| Framework | Next.js |
-| Install command | `npm install` (npm workspaces) |
-| Build command | `npm run build` |
-| Output Directory | Next.js default (`.next`) |
-| Custom domain | `docs.tendrilhq.com` |
+| `*.control.example.com` | Tunnels coming in from contributor microVMs (TLS, port 9443) |
+| `*.ssh.example.com` | Renters connecting over SSH (ports 20000–24999) |
+| `*.lab.example.com` | Renters opening Jupyter in the browser (HTTPS) |
 
-Next.js serves deep links and metadata directly. Use a Node/Next host or Vercel; do not apply a
-static SPA rewrite to `index.html`. `docs-web/vercel.json` pins Vercel output to `.next`.
+#### Step 2: TLS certificate
 
-The Docs homepage lives at `https://docs.tendrilhq.com/`; `/docs` is a compatibility redirect
-to that homepage. Dedicated section routes retain the `/docs` prefix, for example:
-
-- `https://docs.tendrilhq.com/docs/start/architecture-flow#request-flow`
-- `https://docs.tendrilhq.com/docs/build`
-- `https://docs.tendrilhq.com/docs/api`
-
-Old query links such as `/docs?tab=build` and `/docs?doc=x402`, plus legacy section fragments,
-resolve to the corresponding dedicated pages. Docs **Launch App** links to
-`https://tendrilhq.com/explore`; the Docs brand links to `https://tendrilhq.com`.
-
-Deploy the Docs project and attach its domain before publishing the main app's Docs redirects.
-Domain DNS and TLS are configured in the respective hosting projects.
-
-**Local development and checks:**
+You need one certificate that covers `*.control.example.com` and `*.lab.example.com`. SSH needs
+no certificate. Wildcards need a DNS challenge, so use the certbot plugin for your DNS provider.
+Cloudflare example:
 
 ```bash
-npm run docs                       # http://localhost:5175/
-npm run typecheck -w docs-web
-npm exec -w docs-web -- playwright install chromium
-npm run test -w docs-web           # starts Docs and main-app dev servers
+sudo certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/cloudflare.ini \
+  -d '*.control.example.com' -d '*.lab.example.com' --cert-name relay \
+  --deploy-hook 'systemctl restart tendril-relay'
 ```
 
-### 3b2. Admin app (Next.js)
+This writes `/etc/letsencrypt/live/relay/fullchain.pem` and `privkey.pem`. The deploy hook restarts
+the relay on renewal so it picks up the new certificate. A restart drops tunnels that are open at
+that moment, so live rentals lose their connection briefly.
 
-Separate Next.js app for `admin.tendrilhq.com` — Google sign-in with an email allowlist (`ADMIN_EMAILS`).
-Admins review one-time ALGO gas grants for Google custodial users.
+#### Step 3: Install bore and the system tools
 
 ```bash
-NEXT_PUBLIC_REGISTRY_URL=https://api.your-tendril-domain.com npm run build -w admin
-# output: admin/.next  → deploy with `npm run start -w admin` or Vercel
+sudo apt-get install -y iproute2 util-linux cargo
+sudo cargo install bore-cli --version 0.5.1 --locked --root /usr/local   # → /usr/local/bin/bore
 ```
 
-**Google Cloud Console:** register a second OAuth redirect URI:
-`https://api.your-tendril-domain.com/admin/auth/google/callback`
+#### Step 4: Create the bore account
 
-Backend env (in addition to Google OAuth vars):
+The relay itself runs as root, because it creates network namespaces. Each tunnel server, though,
+runs as a separate unprivileged account:
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin tendril-bore
+id -u tendril-bore; id -g tendril-bore        # → RELAY_UID / RELAY_GID
+getent group tendril | cut -d: -f3            # → RELAY_BACKEND_GID (the backend's group)
+```
+
+#### Step 5: Configure
+
+```bash
+sudo cp deploy/bore-relay/relay.env.example /etc/tendril/relay.env
+sudo chmod 600 /etc/tendril/relay.env
+sudo nano /etc/tendril/relay.env
+```
+
+Fill in your domains, the certificate paths, and the three IDs from step 4:
+
+```dotenv
+RELAY_SOCKET=/run/tendril-relay/control.sock
+RELAY_STATE_DIR=/var/lib/tendril-relay
+RELAY_CONTROL_DOMAIN=control.example.com
+RELAY_SSH_DOMAIN=ssh.example.com
+RELAY_NOTEBOOK_DOMAIN=lab.example.com
+RELAY_CONTROL_PORT=9443
+RELAY_HTTPS_PORT=8443          # see note below
+RELAY_TLS_CERT=/etc/letsencrypt/live/relay/fullchain.pem
+RELAY_TLS_KEY=/etc/letsencrypt/live/relay/privkey.pem
+RELAY_UID=<id -u tendril-bore>
+RELAY_GID=<id -g tendril-bore>
+RELAY_BACKEND_GID=<gid of the tendril group>
+RELAY_BORE_BIN=/usr/local/bin/bore
+RELAY_BIND=0.0.0.0
+```
+
+> **Port 443 note:** the relay serves Jupyter on `RELAY_HTTPS_PORT`, which defaults to 443. If
+> nginx already uses 443 for the API on the same IP, set it to `8443`; notebook links then include
+> `:8443`. If the relay gets its own IP address, you can leave it at 443.
+
+#### Step 6: Start the relay, then the backend
+
+```bash
+sudo cp deploy/bore-relay/tendril-relay.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now tendril-relay
+sudo systemctl enable --now tendril-backend
+```
+
+The relay creates `/run/tendril-relay/control.sock` and lets only root and the backend's group
+use it. That socket is how the backend opens and closes tunnels. It's never exposed over the
+network.
+
+#### Step 7: Open the firewall
+
+```bash
+sudo ufw allow 443/tcp              # API (nginx)
+sudo ufw allow 9443/tcp             # tunnels from contributor microVMs
+sudo ufw allow 8443/tcp             # Jupyter (skip if RELAY_HTTPS_PORT=443)
+sudo ufw allow 20000:24999/tcp      # renter SSH
+```
+
+Ports 25000–29999 are used for notebooks too, but only inside private namespaces on this host. Keep
+them closed.
+
+#### Step 8: Check it works
+
+```bash
+journalctl -u tendril-relay -n 20
+# → [relay] ready (Unix IPC, TLS transport and Jupyter proxy)
+
+echo '{"op":"inspect","leaseId":"test"}' | sudo -u tendril nc -U /run/tendril-relay/control.sock
+# → {"ok":true,"value":{"exists":false}}     (proves the backend account can reach the relay)
+
+curl https://api.example.com/health
+```
+
+Then rent a contributor machine from the website. You should get an
+`ssh root@<id>.ssh.example.com -p <port>` command that connects. After you release the rental,
+`ip netns` on the server shows no leftover `tnd-…` entries.
+
+#### Day-to-day
+
+- **Logs:** `journalctl -u tendril-relay -f` and `journalctl -u tendril-backend -f`
+- **Restarting the relay** closes every open tunnel. On startup it cleans up anything left from
+  before, so no stale tunnels pile up.
+- **If the relay is down,** new rentals fail cleanly before anyone is charged. Rentals that are
+  ending wait in `stopping` until the relay confirms cleanup, and billing stops at the moment of
+  release either way.
+- Deeper technical details are in [docs/runtime.md](docs/runtime.md#platform-boretls-relay).
+
+### 3c. Web app
+
+The website is a Next.js app. Set the API address **at build time**:
+
+```bash
+NEXT_PUBLIC_REGISTRY_URL=https://api.example.com npm run build -w web
+npm run start -w web      # on a Node host; or deploy to Vercel
+```
+
+On Vercel:
+
+- **Root Directory:** `web`, with **Include source files outside of the Root Directory** turned on
+  (the app uses the shared workspace)
+- **Framework:** Next.js, **build command** `npm run build`
+- **Env vars:** `NEXT_PUBLIC_REGISTRY_URL=https://api.example.com` and
+  `NEXT_PUBLIC_ALGORAND_NETWORK`
+
+`web/next.config.ts` proxies `/x402` to the API and redirects `/docs/...` and `/api` to the docs
+site. If the site uses HTTPS, the API must too. Otherwise browsers block the calls.
+
+### 3c2. Docs site
+
+The docs are a separate Next.js app, deployed as a **second project** on its own domain
+(`docs.tendrilhq.com`). It reads the Markdown in `docs/` and needs no backend.
+
+```bash
+npm run build -w docs-web
+```
+
+On Vercel: Root Directory `docs-web`, **Include source files outside of the Root Directory** on
+(the Markdown lives in `docs/`), framework Next.js, build command `npm run build`. Deploy it and
+attach its domain before publishing the web app, since the web app redirects its old docs links
+there. `NEXT_PUBLIC_REGISTRY_URL` is optional and only changes the API address shown in examples.
+
+### 3d. Admin app
+
+This is a separate Next.js app where admins approve one-time ALGO gas grants for Google sign-in
+users. Access is limited to the emails in `ADMIN_EMAILS`.
+
+```bash
+NEXT_PUBLIC_REGISTRY_URL=https://api.example.com npm run build -w admin
+npm run start -w admin    # on a Node host; or deploy to Vercel with Root Directory `admin`
+```
+
+In Google Cloud Console, add a second OAuth redirect URI:
+`https://api.example.com/admin/auth/google/callback`
+
+Backend settings for the admin app:
 
 | Var | Example |
 |---|---|
-| `ADMIN_EMAILS` | `you@tendrilhq.com` |
-| `ADMIN_WEB_ORIGIN` | `https://admin.tendrilhq.com` |
-| `ADMIN_GOOGLE_REDIRECT_URI` | `https://api…/admin/auth/google/callback` |
-| `GAS_GRANT_MICRO_ALGOS` | `260000` (0.26 ALGO) |
-| `CORS_ORIGIN` | `https://tendrilhq.com,https://admin.tendrilhq.com` |
+| `ADMIN_EMAILS` | `you@example.com` |
+| `ADMIN_WEB_ORIGIN` | `https://admin.example.com` |
+| `ADMIN_GOOGLE_REDIRECT_URI` | `https://api.example.com/admin/auth/google/callback` |
+| `GAS_GRANT_MICRO_ALGOS` | `260000` (0.26 ALGO per grant) |
+| `CORS_ORIGIN` | must include the admin origin |
 
-`PLATFORM_PRIVATE_KEY` must hold enough ALGO for gas grants (plus txn fees) in addition to USDC for withdrawals.
+The platform account also needs ALGO to cover these grants.
 
-**Vercel / Node host:**
-- Build command: `npm install && npm run build -w admin`
-- Framework preset: Next.js
-- Env var: `NEXT_PUBLIC_REGISTRY_URL = https://api.your-tendril-domain.com`
-- Start command on a Node host: `npm run start -w admin`
+### 3e. Contributor agent
 
-`admin/vercel.json` pins Vercel output to `.next`.
+Contributors run the agent on their own Linux machine with KVM. They don't need an Algorand key.
+They sign in on the website, open **Contribute**, and mint an API key. That key identifies the
+machine and says which wallet gets paid.
 
-### 3c. Contributor agent (on each contributor's machine)
-
-The agent is *not* centrally deployed — each contributor runs it on the machine whose compute they
-share. It needs Docker locally; SSH is exposed by a **bore** tunnel that runs *inside* each sandbox
-(it dials out), so there's nothing extra to install or open.
-
-A contributor needs **no Algorand key**. They connect their wallet in the web app, sign in, open
-**CONTRIBUTE** and mint an API key — that key identifies the node and names the wallet its earnings
-go to. Contributors can clone the standalone
-[TendrilContributor](https://github.com/) repo instead of the monorepo; it's the agent alone.
+The easiest route is the standalone **TendrilContributor** repo. It's just the agent, run with
+Docker Compose:
 
 ```bash
-# on the contributor's machine
-git clone <repo> tendril && cd tendril && npm install
-TENDRIL_API_KEY=<key from the web app> \
-REGISTRY_URL=https://api.your-tendril-domain.com \
-NODE_LABEL="ryzen-3090-box" PRICE_PER_HOUR_USD=2.0 SANDBOX_GPUS=all \
-  npm run contributor
+git clone <TendrilContributor repo> && cd TendrilContributor
+# one-time host prep (KVM, guest kernel, ip_forward): see its README
+cp .env.example .env               # TENDRIL_API_KEY, NODE_LABEL, PRICE_PER_HOUR_USD
+docker compose up -d --build
+docker compose logs -f             # look for: runtime=microvm kvm=true
 ```
 
-Keep it alive with **pm2** (`pm2 start "npm run contributor" --name tendril-contributor`) or a systemd unit.
-The renter gets an `ssh root@<bore-host> -p <port>` command (password = the renter's wallet address).
+The agent stays online and runs no VMs while idle. Each rental boots one microVM, which is
+destroyed when the rental ends. `docker compose down` stops everything cleanly.
 
-Agent env vars: `TENDRIL_API_KEY` (required), `NODE_LABEL`, `PRICE_PER_HOUR_USD`, `SANDBOX_IMAGE`
-(defaults to the locally-built `tendril-ssh-sandbox`), `SANDBOX_MEMORY`, `SANDBOX_CPUS`,
-`SANDBOX_GPUS` (`all` to pass GPUs), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
-backend isn't the hosted one). `BORE_SERVER`/`BORE_SECRET` are set on the **backend** and pushed to
-every agent, so a self-hosted bore server is one change in one place.
+You can run the same thing from this monorepo with `docker compose up -d contributor`. For a
+systemd service instead of Compose, use `deploy/contributor/tendril-contributor.service`. Both are
+covered in [docs/runtime.md](docs/runtime.md).
 
-### 3d. Autonomous consumer agent
+Common settings: `TENDRIL_API_KEY` (required), `NODE_LABEL`, `PRICE_PER_HOUR_USD`,
+`SANDBOX_MEMORY`, `SANDBOX_CPUS`, `TENDRIL_RUNTIME`, `GUEST_KERNEL`, `JAILER_UID`, and `JAILER_GID`.
+Tunnel addresses come from your backend and relay automatically. Contributors don't configure them.
 
-Runs anywhere (CI, a laptop, a server) with a funded key:
+### 3f. Autonomous buyer
+
+The buyer runs anywhere with a funded key:
 
 ```bash
-AVM_PRIVATE_KEY=<buyer-key> REGISTRY_URL=https://api.your-tendril-domain.com \
+AVM_PRIVATE_KEY=<buyer key> REGISTRY_URL=https://api.example.com \
 AGENT_MIN_RAM_MB=2048 AGENT_TOPUP_ATOMIC=500000 npm run client
 ```
 
-It tops up `AGENT_TOPUP_ATOMIC` over x402 (no sign-in), rents the cheapest
-matching node, runs its job, and releases — reporting how much balance it drew down.
+It tops up over x402, rents the cheapest matching machine, runs its job, releases it, and reports
+what it spent.
 
 ---
 
-## 4. Production checklist
+## 4. Backend settings
 
-- [ ] Strong `JWT_SECRET` on the registry.
-- [ ] `DATABASE_URL` points at Neon; `PLATFORM_PAYTO` + `PLATFORM_PRIVATE_KEY` set to an account you
-      control and **funded** (it pays out every contributor); `PLATFORM_FEE_PCT` reviewed.
-- [ ] `CORS_ORIGIN` locked to your web origin.
-- [ ] Google OAuth (if enabled): `GOOGLE_*` + `WALLET_ENCRYPTION_KEY` set; redirect URI registered in Google Cloud Console (user **and** admin callback if using admin portal).
-- [ ] Admin portal (if enabled): `ADMIN_EMAILS`, `ADMIN_WEB_ORIGIN`, `ADMIN_GOOGLE_REDIRECT_URI`; `CORS_ORIGIN` includes admin origin; platform wallet funded with ALGO for gas grants.
-- [ ] Registry + web both HTTPS (avoid mixed-content blocking); WebSocket upgrades proxied.
-- [ ] Algod (`ALGOD_TESTNET_URL`) reachable from the registry host (top-ups + withdrawals) and clients.
-- [ ] `PLATFORM_PAYTO` **opted into** `X402_ASSET_ID` — payments to an address that has not opted in fail.
-- [ ] `X402_NETWORK` matches the facilitator's `/supported` byte for byte; `METER_INTERVAL_MS` reviewed.
-- [ ] `NEXT_PUBLIC_REGISTRY_URL` + `NEXT_PUBLIC_ALGOD_URL` baked into the web build.
-- [ ] Contributors pre-build `SANDBOX_IMAGE` (`docker build -t tendril-ssh-sandbox contributor/sandbox-ssh`);
-      agents kept alive (pm2/systemd) with Docker running + outbound network for bore.
-- [ ] Consumer accounts hold **ALGO** for top-ups (+ txn fees). No USDC / ASA opt-in needed.
-- [ ] Safeguard `PLATFORM_PRIVATE_KEY` — it custodies user top-ups *and* signs every withdrawal.
+| Var | Default | What it's for |
+|---|---|---|
+| `REGISTRY_PORT` | `4000` | Port the API listens on |
+| `DATABASE_URL` | — | **Required.** Neon connection string (keep `?sslmode=require`) |
+| `PLATFORM_PAYTO` | — | **Required.** Platform address that receives top-ups |
+| `PLATFORM_PRIVATE_KEY` | — | Key for `PLATFORM_PAYTO`. Signs withdrawals. Without it, earnings still add up but withdrawals return 503. |
+| `PLATFORM_FEE_PCT` | `10` | Platform's cut of each charge |
+| `JWT_SECRET` | dev value | **Set a strong one in production** |
+| `CORS_ORIGIN` | `*` | Your web and admin origins, comma-separated |
+| `RELAY_SOCKET` | `/run/tendril-relay/control.sock` | Where to find the relay |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Turn on Google sign-in |
+| `GOOGLE_REDIRECT_URI` | — | e.g. `https://api.example.com/auth/google/callback` |
+| `WEB_ORIGIN` | first `CORS_ORIGIN` | Where to send users after Google sign-in |
+| `WALLET_ENCRYPTION_KEY` | — | **Required with Google sign-in.** `openssl rand -base64 32` |
+| `ADMIN_EMAILS` | — | Who can use the admin app |
+| `ADMIN_WEB_ORIGIN` | `http://localhost:5174` | Admin app address |
+| `ADMIN_GOOGLE_REDIRECT_URI` | — | Admin Google callback |
+| `GAS_GRANT_MICRO_ALGOS` | `260000` | ALGO sent per approved gas grant |
+| `HEARTBEAT_TIMEOUT_MS` | `30000` | How long before a silent machine counts as offline |
+| `X402_NETWORK` | testnet | Payment network. Must match the facilitator's `/supported` exactly. |
+| `X402_ASSET_ID` | `10458941` | Payment asset (testnet USDC; mainnet is `31566704`) |
+| `X402_FACILITATOR_URL` | `https://facilitator.goplausible.xyz` | Verifies and settles payments |
+| `MIN_TOPUP_ATOMIC` / `MAX_TOPUP_ATOMIC` | `100000` / `1000000000` | Top-up limits (atomic units) |
+| `MIN_PAYABLE_ATOMIC` | `10000` | Minimum on-chain payment for a rental without sign-in |
+| `MIN_LEASE_SECONDS` / `MAX_LEASE_SECONDS` / `LEASE_SECONDS_GRANULARITY` | `60` / `14400` / `60` | Limits for prepaid blocks |
+| `SANDBOX_READY_TIMEOUT_MS` | `45000` | How long to wait for a machine to come up. Nothing is charged if it times out. |
+| `SANDBOX_STOP_TIMEOUT_MS` | `30000` | How long to wait for a machine and its tunnel to confirm cleanup |
+| `METER_INTERVAL_MS` | `10000` | How often to check whether a renter's balance has run out |
+| `ALGOD_TESTNET_URL` | `https://testnet-api.algonode.cloud` | Algorand node used for top-ups and withdrawals |
 
-## 5. Known limitations
+---
 
-- **Custodial:** top-ups pool at `PLATFORM_PAYTO` and balances are an off-chain ledger in Neon.
-  Contributor earnings **are** settled on-chain at lease end (via `PLATFORM_PRIVATE_KEY`); there's no
-  on-chain *renter* withdrawal path for unused balance yet.
-- **Billing granularity:** usage is calculated continuously but **charged once**, at lease end,
-  prorated at the hourly rate. The watchdog only checks balance exhaustion every `METER_INTERVAL_MS`,
-  so worst-case over-use is one tick before teardown.
-- **In-memory nodes/leases:** a registry restart drops live sessions (their sockets die too). This is
-  deliberate — it keeps Postgres out of the heartbeat/watchdog hot path. For HA, persist + externalize.
-- **SSH auth** is a per-lease password (the renter's wallet address) on a throwaway root container —
-  fine for ephemeral compute, but use a key-based flow for anything sensitive.
-- Contributors earn whether or not they've opted into `X402_ASSET_ID` — the opt-in is only checked at
-  **withdrawal**, which is refused (409) until it's done. A node whose address hasn't opted in is
-  still flagged `payoutBlocked` as a heads-up.
-- A single registry instance owns the WebSocket hub *and* the in-memory state; for horizontal scale
-  externalize both (e.g. a socket.io Redis adapter + shared store).
-- The public `bore.pub` server is best-effort/rate-limited; run your own and set `BORE_SERVER` on the
-  backend (it reaches every agent from there) for anything beyond demos.
+## 5. Go-live checklist
+
+**Secrets and money**
+- [ ] Strong `JWT_SECRET` set.
+- [ ] `DATABASE_URL` points at Neon.
+- [ ] `PLATFORM_PAYTO` and `PLATFORM_PRIVATE_KEY` belong to an account you control.
+- [ ] Platform account is funded with ALGO and USDC, and opted into `X402_ASSET_ID`.
+- [ ] `X402_NETWORK` matches the facilitator exactly.
+
+**Web and API**
+- [ ] `CORS_ORIGIN` lists only your real web and admin origins.
+- [ ] Website, admin, and API all use HTTPS, and WebSocket upgrades pass through nginx.
+- [ ] `NEXT_PUBLIC_REGISTRY_URL` is set on the web and admin builds; docs domain is live.
+- [ ] Google sign-in (if used): `GOOGLE_*` and `WALLET_ENCRYPTION_KEY` set, with both redirect URIs
+      registered.
+
+**Relay**
+- [ ] Relay is running, the wildcard DNS resolves, and the certificate covers `*.control` and `*.lab`.
+- [ ] Firewall has ports 9443, 20000–24999 and the Jupyter port open.
+- [ ] Certificate renewal restarts the relay.
+- [ ] A real rental gives a working SSH command and cleans up after release.
+
+**Contributors and buyers**
+- [ ] At least one contributor shows `runtime=microvm kvm=true`.
+- [ ] Buyer and contributor wallets are opted into USDC.
+
+---
+
+## 6. Known limitations
+
+- **Custodial balances.** Top-ups pool in the platform account, and balances live in Neon. Renters
+  can't withdraw unused balance on-chain yet.
+- **One charge per rental.** Usage is charged once, when the rental ends. The balance check runs
+  every `METER_INTERVAL_MS`, so a renter can overrun by up to one interval.
+- **Memory-only sessions.** Restarting the backend drops live rentals. This keeps the database
+  out of the hot path. Running more than one backend would need shared state (for example, a
+  socket.io Redis adapter).
+- **SSH login** uses the renter's public key, or their wallet address as the password.
+- **Contributors without a USDC opt-in** can still serve rentals, but they aren't credited until
+  they opt in and reconnect.
+- **Release is final.** Clicking Release stops billing immediately, even if cleanup takes a few
+  seconds. If cleanup is slow, the API returns `503 cleanup_pending`. Retrying is safe and never
+  charges twice.

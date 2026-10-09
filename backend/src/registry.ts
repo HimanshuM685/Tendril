@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
-import type { ComputeNode, ExplorerNode } from "@tendril/shared";
-import { isOnline } from "@tendril/shared";
+import type { ComputeNode, ExplorerNode, SandboxRuntime, SandboxCapabilities, SandboxCapability } from "@tendril/shared";
+import { isOnline, capabilities, runtimeAdvertisement } from "@tendril/shared";
 import { config } from "./config.js";
-import { toExplorer } from "./hosted.js";
+import { modalConfigured, toExplorer } from "./hosted.js";
 import { hasOptedIn } from "./payout.js";
 
 /**
@@ -12,6 +12,7 @@ import { hasOptedIn } from "./payout.js";
  * wallet money state is persisted (see db.ts).
  */
 const nodes = new Map<string, ComputeNode>();
+export const registryEffects = { optedIn: hasOptedIn };
 
 export interface UpsertNodeInput {
   id?: string;
@@ -22,6 +23,9 @@ export interface UpsertNodeInput {
   ramMb: number;
   gpu: string | null;
   pricePerHourUsd: number;
+  runtime?: SandboxRuntime;
+  kvm?: boolean;
+  capabilities?: Partial<SandboxCapabilities>;
 }
 
 function withStatus(node: ComputeNode): ComputeNode {
@@ -36,8 +40,8 @@ function withStatus(node: ComputeNode): ComputeNode {
  *
  * A payout address that hasn't opted into the payment asset can't receive an
  * ASA transfer, so we check once at registration and flag the node rather than
- * turn it away — it still serves compute and still earns; the payouts are just
- * recorded unpaid until the contributor opts in.
+ * turn it away — it still serves compute, but payoutBlocked leases skip earnings
+ * credit. Opt in and reconnect before opening new leases.
  */
 export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   const now = Date.now();
@@ -47,12 +51,13 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
     id,
     ownerAddr: input.ownerAddr,
     payToAddr: input.payToAddr,
-    payoutBlocked: !(await hasOptedIn(input.payToAddr)),
+    payoutBlocked: !(await registryEffects.optedIn(input.payToAddr)),
     label: input.label,
     cpuCores: input.cpuCores,
     ramMb: input.ramMb,
     gpu: input.gpu,
     provider: "contributor",
+    ...runtimeAdvertisement(input),
     pricePerHourUsd: input.pricePerHourUsd,
     lastHeartbeat: now,
     createdAt: existing?.createdAt ?? now,
@@ -61,7 +66,7 @@ export async function upsertNode(input: UpsertNodeInput): Promise<ComputeNode> {
   nodes.set(id, node);
   if (node.payoutBlocked) {
     console.warn(
-      `[registry] node ${id}: ${node.payToAddr} has not opted into asset ${config.assetId} — payouts will be recorded unpaid`,
+      `[registry] node ${id}: ${node.payToAddr} has not opted into asset ${config.assetId} — lease earnings credit blocked`,
     );
   }
   return node;
@@ -77,9 +82,14 @@ export function getNode(id: string): ComputeNode | undefined {
   return withStatus(node);
 }
 
-export function touchHeartbeat(id: string): void {
+export function touchHeartbeat(
+  id: string,
+  patch?: { runtime?: SandboxRuntime; kvm?: boolean; capabilities?: Partial<SandboxCapabilities> },
+): void {
   const node = nodes.get(id);
-  if (node) node.lastHeartbeat = Date.now();
+  if (!node) return;
+  node.lastHeartbeat = Date.now();
+  Object.assign(node, runtimeAdvertisement(patch ?? {}));
 }
 
 /** Mark a node offline immediately (e.g. on socket disconnect). */
@@ -108,16 +118,47 @@ export function listNodesByOwner(ownerAddr: string): ComputeNode[] {
  * `isFree` is passed in rather than imported to keep this module free of the
  * lease/ws cycle it would otherwise create.
  */
-export function pickBestValueNode(isFree: (nodeId: string) => boolean): ComputeNode | null {
-  const candidates = onlinePeers().filter((n) => isFree(n.id));
-  if (candidates.length === 0) return null;
-  const score = (n: ComputeNode) =>
-    n.pricePerHourUsd <= 0
-      ? Number.POSITIVE_INFINITY
-      : (n.cpuCores + n.ramMb / 1024 / 4) / n.pricePerHourUsd;
+function score(n: ComputeNode): number {
+  return n.pricePerHourUsd <= 0
+    ? Number.POSITIVE_INFINITY
+    : (n.cpuCores + n.ramMb / 1024 / 4) / n.pricePerHourUsd;
+}
+
+function best(list: ComputeNode[]): ComputeNode {
   // Ties break on the lower absolute price, so an equal-value cheaper machine
   // wins and a caller with little credit is not sent to an expensive one.
-  return candidates.sort((a, b) => score(b) - score(a) || a.pricePerHourUsd - b.pricePerHourUsd)[0];
+  return [...list].sort((a, b) => score(b) - score(a) || a.pricePerHourUsd - b.pricePerHourUsd)[0];
+}
+
+/**
+ * Automatic placement. An idle microVM peer wins over Modal. With none idle,
+ * hosted CPU is allowed even if a Docker peer is online. Otherwise any idle peer.
+ */
+export function chooseNode(
+  peers: ComputeNode[],
+  hosted: ComputeNode[],
+  isFree: (nodeId: string) => boolean,
+  required: SandboxCapability = "python",
+): ComputeNode | null {
+  const idle = (list: ComputeNode[]) => list.filter((n) =>
+    n.status === "online" && capabilities(n.capabilities)[required] && (n.provider === "modal" || isFree(n.id)),
+  );
+  const micro = idle(peers.filter((n) => n.runtime === "microvm" && n.kvm));
+  if (micro.length > 0) return best(micro);
+  const modal = idle(hosted);
+  if (modal.length > 0) return best(modal);
+  const rest = idle(peers);
+  if (rest.length > 0) return best(rest);
+  return null;
+}
+
+/** Contributor peers only: hosted CPU is an explicit notebook lane (see routes). */
+export function pickBestValueNode(isFree: (nodeId: string) => boolean, required: SandboxCapability = "python"): ComputeNode | null {
+  return chooseNode(onlinePeers(), [], isFree, required);
+}
+
+export function notebooksAvailable(): boolean {
+  return modalConfigured() || onlinePeers().some((n) => capabilities(n.capabilities).notebook);
 }
 
 export function listOnlineNodes(): ExplorerNode[] {

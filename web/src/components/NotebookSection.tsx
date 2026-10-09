@@ -26,7 +26,7 @@ interface Props {
   session: Session | null;
   activeAddress: string | null;
   signTransactions: SignTransactions;
-  /** A lane can take the notebook: a peer is online, or Modal is configured. */
+  /** A lane can take the notebook: a capable peer is online, or Modal is configured. */
   notebooks: boolean;
   /** Priority lane. Modal image includes numpy, pandas, matplotlib, requests. */
   priority: boolean;
@@ -187,9 +187,9 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Contributor training uses a live peer. Priority training runs on Modal and E2B training in an E2B cloud sandbox, both with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests ready. All lanes bill by the second from credit and stop when it runs out.";
+    return "Upload a .ipynb. Contributor training uses a notebook-capable peer. Priority training runs on Modal and E2B training in an E2B cloud sandbox, both with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests ready. All lanes bill by the second from credit and stop when it runs out.";
   }
-  return "No contributor node is online, and no hosted lane is configured.";
+  return "No notebook-capable contributor is online, and no hosted lane is configured.";
 }
 
 export function NotebookSection({

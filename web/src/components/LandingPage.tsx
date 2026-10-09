@@ -17,7 +17,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is it safe to contribute my PC's compute?",
-    a: "Yes. Safety is enforced by an ephemeral Docker sandbox: zero host filesystem mounts, no inbound host ports (SSH dials out via a bore tunnel), all root capabilities dropped, and hard cgroup caps. The container is completely destroyed upon lease end.",
+    a: "Linux/KVM nodes use ephemeral Firecracker microVMs with a separate guest kernel, jailer/seccomp, fixed-size disks and resource caps. SSH and Jupyter dial out through per-lease TLS relays. Legacy Docker remains available with SSH/Python capabilities; Explore defaults to microVMs.",
   },
   {
     q: "Do I need ALGO to pay for compute?",
@@ -33,11 +33,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "How are nodes scored and matched?",
-    a: "Nodes are scored by true value: (cores + RAM_GB / 4) / pricePerHourUsd. We route jobs to the most cost-effective hardware rather than artificially slow, cheap instances.",
+    a: "Placement checks Python or notebook capability first. Eligible idle microVM peers win over hosted fallback; within each tier, nodes are scored by (cores + RAM_GB / 4) / pricePerHourUsd.",
   },
   {
     q: "What happens if my balance runs out mid-session?",
-    a: "Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can save your artifacts and work. The platform absorbs this cost before the container is cleanly terminated.",
+    a: "Tendril provides an automatic grace window equal to $1.00 of runtime at your node's rate so you can save your artifacts and work. The platform absorbs this cost before the sandbox is terminated.",
   },
   {
     q: "How do contributors earn and get paid?",
@@ -53,7 +53,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I cancel or release a lease at any time?",
-    a: "Yes, immediately. Clicking Release in the dashboard or sending a DELETE request stops billing instantly and destroys the remote sandbox.",
+    a: "Yes. Release freezes billing immediately. The node remains reserved until sandbox and relay cleanup finish; if cleanup is pending, retry Release with the same lease token.",
   },
 ];
 
@@ -846,7 +846,7 @@ export function LandingPage() {
           <a href="#how-it-works" className="feature-link">Learn more <span className="arrow">→</span></a>
         </article>
 
-        {/*  2. Ephemeral Docker Sandboxes  */}
+        {/*  2. Ephemeral MicroVM Sandboxes  */}
         <article className="feature-card reveal-on-scroll reveal-stagger-1">
           <div className="feature-icon-bubble icon-green">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -855,8 +855,8 @@ export function LandingPage() {
             </svg>
           </div>
           <h3 className="feature-card-title">Ephemeral Sandboxes</h3>
-          <p className="feature-card-desc">Hardened Docker containers with dropped capabilities, cgroups caps, and no host
-            filesystem mounts.</p>
+          <p className="feature-card-desc">Linux/KVM Firecracker guests with separate kernels, jailer/seccomp, resource caps,
+            and no host filesystem mounts.</p>
           <a href="#how-it-works" className="feature-link">Learn more <span className="arrow">→</span></a>
         </article>
 
@@ -940,7 +940,7 @@ export function LandingPage() {
                       <polyline points="2.5 7 5.5 10 11.5 4" />
                     </svg>
                   </span>
-                  <span>Ephemeral Docker</span>
+                  <span>Ephemeral MicroVMs</span>
                 </div>
                 <div className="check-pill">
                   <span className="check-mark">
@@ -1358,7 +1358,7 @@ export function LandingPage() {
           <li><a href={docsUrl("/docs/api/x402")}>x402 Specification</a></li>
           <li><a href={docsUrl("/docs/concepts/algorand-settlement")}>Algorand Settlement</a></li>
           <li><a href={docsUrl("/docs/concepts/sandboxes-bore-tunnels")}>Bore Tunneling</a></li>
-          <li><a href={docsUrl("/docs/guides-access/security-sandboxes")}>Docker Sandboxes</a></li>
+          <li><a href={docsUrl("/docs/guides-access/security-sandboxes")}>MicroVM Sandboxes</a></li>
         </ul>
       </div>
 

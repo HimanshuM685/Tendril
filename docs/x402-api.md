@@ -77,6 +77,10 @@ Leaseless runs settle their gate fee before provisioning so long jobs do not out
 transaction's validity window. A subsequent run startup failure does not undo that gate fee;
 execution usage starts billing only after sandbox readiness.
 
+Contributor readiness means authenticated SSH with a pinned guest host key, or authenticated
+Jupyter status plus a real kernel WebSocket roundtrip. MicroVM boot failure never retries Docker
+or Modal on the same attempt. No failed provision creates a usage charge.
+
 **Fees are sponsored.** The 402 carries `extra.feePayer`, the facilitator's address. The client
 builds a two-transaction group — its own transfer plus an unsigned self-payment from the fee payer
 whose fee covers both — and signs **only its own**. The facilitator signs the other and submits.
@@ -239,14 +243,18 @@ Base64 payload of `PAYMENT-RESPONSE`.
 ```jsonc
 {
   "kind": "ssh",
-  "host": "bore.pub",
-  "port": 41823,
+  "host": "lease.ssh.example.com",
+  "port": 20000,
   "username": "root",
   "authMethod": "publickey",            // or "password"
   "password": null,                     // your address, under "password"
-  "command": "ssh root@bore.pub -p 41823"
+  "command": "ssh root@lease.ssh.example.com -p 20000"
 }
 ```
+
+For `surface=jupyter`, access is `{ "kind": "jupyter", "url": "https://lease.lab.example.com/?token=…",
+"token": "…" }`; rent returns it as `jupyter` with `ssh: null`. Open the notebook on a second
+explicit click. Both surfaces are ephemeral; save work before Release.
 
 ### Error envelope
 
@@ -490,13 +498,15 @@ at the end of a block they guessed wrong.
 | Name | Required | Description |
 |---|---|---|
 | `nodeId` | yes | Which machine to rent, from `GET /explorer`. May also be sent as a body field. Missing it is `400 node_required`. |
+| `surface` | no | `ssh` (default) or `jupyter`; requires that capability. Modal supports Jupyter only. May also be sent in the body. |
 
 ### Request body
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `nodeId` | string | no | Alternative to `?nodeId=`. The query parameter wins if both are given. |
-| `sshPubKey` | string | no | An OpenSSH public key line, e.g. `ssh-ed25519 AAAAC3Nza…`. Installed as the sandbox's `authorized_keys`; the response then has `authMethod: "publickey"` and `password: null`. **Without a session this is the only usable auth** — there is no address to use as a password. |
+| `sshPubKey` | string | no | An OpenSSH public key line, e.g. `ssh-ed25519 AAAAC3Nza…`. Installed as guest `authorized_keys`; response has `authMethod: "publickey"` and `password: null`. Otherwise the verified payer address is the ephemeral password. |
+| `surface` | string | no | `ssh` or `jupyter`; query value wins. |
 
 ```jsonc
 { "sshPubKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI… you@host" }
@@ -519,12 +529,12 @@ Sandbox is up, the gate fee has settled, and the meter is running. Carries `PAYM
   },
   "ssh": {
     "kind": "ssh",
-    "host": "bore.pub",
-    "port": 41823,
+    "host": "lease.ssh.example.com",
+    "port": 20000,
     "username": "root",
     "authMethod": "publickey",
     "password": null,
-    "command": "ssh root@bore.pub -p 41823"
+    "command": "ssh root@lease.ssh.example.com -p 20000"
   },
   "startedAt": "2026-08-01T10:14:02.000Z",
   "fundedUntil": "2026-08-01T11:14:02.000Z",   // or "never" on a free node
@@ -556,7 +566,7 @@ window closes. `GET /lease/:id` reports it as `graceUntil`. Top up during it and
 | `402` | *(PaymentRequired body)* | Pay the gate fee, or your payment did not verify. Nothing submitted. |
 | `402` | `insufficient_credit` | Verified, but the payer's credit funds less than `MIN_LEASE_SECONDS` at this node's rate. **Nothing settled** — top up first. Carries `detail`, `creditAtomic`, `rateAtomicPerHour`. |
 | `402` | `credit_exhausted` | The payer's balance is **negative** — an earlier `/x402/run` overdrew it. **Nothing settled.** Top up by at least the amount owed. Carries `creditAtomic`. |
-| `402` | `settlement_failed` | Sandbox came up but the gate fee would not settle. Sandbox torn down, node freed. Carries `detail`. |
+| `402` | `settlement_failed` | Sandbox came up but the gate fee would not settle. No usage charge; node stays reserved until cleanup completes. Carries `detail`. |
 | `400` | `invalid_ssh_key` | `sshPubKey` is not a valid OpenSSH public key line. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
 | `404` | `node_not_found` | No such node. |
@@ -599,7 +609,7 @@ curl -sS -X POST "$API/x402/rent?nodeId=$NODE" \
 
 ```json
 {
-  "cmd": "ssh root@bore.pub -p 41823",
+  "cmd": "ssh root@lease.ssh.example.com -p 20000",
   "until": "2026-08-01T11:14:02.000Z"
 }
 ```
@@ -612,8 +622,8 @@ export LEASE_TOKEN=$(jq -r .leaseToken lease.json)
 eval "$(jq -r .ssh.command lease.json)"      # actually connect
 ```
 
-Without a session, **omitting `sshPubKey` leaves you locked out**: the fallback password is the
-session address, and there isn't one. The rent still succeeds and still bills.
+Without `sshPubKey`, use the verified payer address returned as `ssh.password`. A session is not
+required for password authentication; a public key is supported for headless clients.
 
 Failures you can reproduce with `curl` alone, no signer:
 
@@ -650,10 +660,12 @@ no execution credit, but do not undo an already-settled leaseless gate fee.
 
 ### Which machine you get
 
-Not the cheapest — the best value. Nodes are scored `(cores + RAM_GB / 4) / pricePerHourUsd` among
-those online and idle, highest first, ties broken on the lower price. A machine at half the rate that
+Capability decides eligibility: Python requires `python`, notebooks require `notebook`. An idle,
+connected microVM peer wins over Modal; otherwise configured hosted inventory can provide fallback.
+Within an eligible tier, nodes are scored `(cores + RAM_GB / 4) / pricePerHourUsd`, highest first,
+ties broken on lower price. A machine at half the rate that
 takes three times as long is not a saving, and you have no way to see that happen, so the pick
-optimises capability per unit of rate. A free node (`pricePerHourUsd = 0`) always wins.
+optimises capability per unit of rate. A free node (`pricePerHourUsd = 0`) wins within its tier.
 
 ### Billing, and how you can end up owing money
 
@@ -684,7 +696,7 @@ at the prepaid budget and cannot overdraw execution credit.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `payload` | string | one of payload/notebook | Python source to execute. Its stdout comes back in `result`. |
-| `notebook` | object | one of payload/notebook | Python nbformat 4 notebook, up to 1.5 MB and 500 cells. |
+| `notebook` | object | one of payload/notebook | Python nbformat 4 notebook, up to 1.5 MB and 500 cells. The `contributor` lane needs a notebook-capable (microVM) peer. |
 | `lane` | `contributor`, `priority` or `e2b` | no | Notebook only. Omitted prefers priority when Modal is configured, then e2b when E2B is configured; otherwise contributor. |
 | `e2b` | `{ "vCpu": 1\|2\|4\|6\|8, "memGiB": 1\|2\|4\|8 }` | no | `e2b` lane only. Sandbox size; default 2 vCPU · 4 GiB. Priced per size (see `GET /explorer` `e2bPrices`). |
 
@@ -747,6 +759,11 @@ Carries `PAYMENT-RESPONSE`.
 
 `ok: false` means the job ran and failed; `result` holds whatever it printed. It is still a `200`,
 and it is still charged — the compute was consumed.
+
+Notebook jobs also return executed `notebook` JSON and `artifacts` entries (`name`, `mediaType`,
+`base64`). Contributor notebook uploads/results use private guest Jupyter HTTP Contents APIs;
+Socket.IO carries job references/control, not notebook or artifact bytes. The agent runs the job
+over private TAP SSH. One-shot Python opens no public tunnel.
 
 A **leaseless** run carries one extra object naming the machine it found and what the time cost:
 
@@ -837,10 +854,10 @@ Free — closing costs nothing. This is the moment compute is billed, and the on
 taken when the session opened, so there is nothing to refund.
 
 ```
-usedSeconds = wall-clock seconds the sandbox was up
+usedSeconds = seconds from startedAt to the first close signal's frozen endedAt
 usedAtomic  = ceil(usedSeconds / 3600 × rate)
 charged     = min(usedAtomic, balance)   -> taken from the payer's credit
-payout      = charged × (1 − PLATFORM_FEE_PCT/100)  -> contributor, on-chain USDC
+payout      = charged × (1 − PLATFORM_FEE_PCT/100)  -> eligible contributor earnings balance
 ```
 
 `charged` is clamped to the balance because the watchdog only ticks every `METER_INTERVAL_MS`, so a
@@ -872,8 +889,11 @@ part-way, so it bills in full and can leave you owing — see
 }
 ```
 
-Idempotent. `charges.lease_id` is unique, so a concurrent release and watchdog tick cannot bill the
-same session twice — the loser returns zeros and the current balance.
+First close signal freezes billing and changes status to `stopping`. The node stays reserved
+until guest and relay cleanup are acknowledged and billing completes. Concurrent closers share
+a promise; retries preserve the cutoff and original settlement. Unique charge/earnings keys prevent
+duplicate debit or payout. `payoutBlocked` skips earnings credit only; 402 `payTo` stays
+`PLATFORM_PAYTO`. Earnings move on-chain only when the contributor withdraws.
 
 ### Responses
 
@@ -881,6 +901,7 @@ same session twice — the loser returns zeros and the current balance.
 |---|---|---|
 | `401` | `invalid or missing lease token` | Token absent, malformed, or for a different lease. |
 | `404` | `lease not found` | Already gone. |
+| `503` | `cleanup_pending` | Cleanup/billing pending; cutoff frozen and node reserved. Retry Release. |
 
 ---
 
@@ -904,12 +925,13 @@ Lease status. Free.
     "payerAddr": "AGENT7XYZ…",
     "payToAddr": "CONTRIB…",
     "access": { /* SandboxAccess */ },
-    "status": "active",                 // starting | active | ended | failed
+    "status": "active",                 // starting | active | stopping | ended | failed
     "rateAtomicPerHour": 1000000,
     "gateFeeAtomic": 10000,
     "fundingAtomic": 1000000,
     "paymentTxid": "DEF456…",
     "startedAt": 1785542042000,
+    "endedAt": null,                    // frozen epoch-ms timestamp after first close signal
     "expiresAt": 1785542942000,
     "graceUntil": null,                 // set once credit runs out — see below
     "createdAt": 1785542040000
@@ -962,14 +984,21 @@ Nodes available to rent. Free, no auth.
       "ramMb": 32768,
       "gpu": null,
       "pricePerHourUsd": 1.0,
-      "status": "online"
+      "status": "online",
+      "provider": "contributor",
+      "runtime": "microvm",
+      "kvm": true,
+      "capabilities": { "ssh": true, "python": true, "notebook": true, "jupyter": true }
     }
   ]
 }
 ```
 
 `payoutBlocked: true` means the contributor's address has not opted into the payment asset. They
-still earn normally — the opt-in is only required to **withdraw** those earnings.
+still serve compute and charge renters, but those leases skip earnings credit. Opt in and
+reconnect before opening new leases. Hosted inventory remains listed alongside contributors;
+Explore defaults to microVM/KVM nodes. Absent capability maps mean legacy SSH/Python; absent
+fields in modern maps mean false.
 
 ---
 
@@ -996,6 +1025,7 @@ still earn normally — the opt-in is only required to **withdraw** those earnin
 | `payload (string) required` | 400 | run | |
 | `provisioning_failed` | 503 | rent | **nothing settled**; carries `detail` |
 | `settlement_failed` | 402 | all paid | carries `detail` |
+| `cleanup_pending` | 503 | Release | cutoff frozen; reservation retained; retry |
 
 ### The first-run failure
 
@@ -1145,8 +1175,7 @@ const node = nodes
   .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
 if (!node) throw new Error("no node available");
 
-// 3. Open the session. Send a public key — without a session token it is the
-//    only usable auth, since there is no wallet address to use as a password.
+// 3. Open the session. Send a public key for key authentication.
 const res = await pay(`${API}/x402/rent?nodeId=${node.id}`, {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -1157,7 +1186,7 @@ const res = await pay(`${API}/x402/rent?nodeId=${node.id}`, {
 if (!res.ok) throw new Error(`rent failed: ${res.status} ${await res.text()}`);
 const lease = await res.json();
 
-console.log(lease.ssh.command);                 // ssh root@bore.pub -p 41823
+console.log(lease.ssh.command);                 // ssh root@lease.ssh.example.com -p 20000
 console.log("lease   ", lease.leaseId);
 console.log("token   ", lease.leaseToken);      // KEEP THIS — needed to release
 console.log("funded  ", lease.fundedUntil);     // when credit runs out at this rate
@@ -1165,12 +1194,10 @@ console.log("funded  ", lease.fundedUntil);     // when credit runs out at this 
 
 ```bash
 node rent.mjs
-# ssh root@bore.pub -p 41823
+# ssh root@lease.ssh.example.com -p 20000
 ```
 
-No key yet? `ssh-keygen -t ed25519` first. Omitting `sshPubKey` falls back to password auth, but
-the password is the *session* address — so without signing in there is nothing to log in with. Send
-the key.
+No key yet? `ssh-keygen -t ed25519` first, or use the verified payer address in `ssh.password`.
 
 ### Working, then stopping
 

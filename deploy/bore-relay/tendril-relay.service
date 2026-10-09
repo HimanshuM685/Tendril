@@ -1,0 +1,23 @@
+[Unit]
+Description=Tendril per-lease bore and TLS relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tendril
+EnvironmentFile=/etc/tendril/relay.env
+RuntimeDirectory=tendril-relay
+RuntimeDirectoryMode=0750
+StateDirectory=tendril-relay
+StateDirectoryMode=0700
+ExecStart=/usr/bin/npm run relay -w backend
+Restart=on-failure
+KillMode=control-group
+TimeoutStopSec=60
+UMask=0077
+ExecStartPre=/usr/bin/chgrp ${RELAY_BACKEND_GID} /run/tendril-relay
+
+[Install]
+WantedBy=multi-user.target
