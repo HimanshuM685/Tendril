@@ -33,7 +33,7 @@ export function dockerDriver(): RuntimeDriver {
             keys = [keys, (await readFile(join(row.dir, "exec.pub"), "utf8")).trim()].filter(Boolean).join("\n");
           }
           if (lease.surface !== "exec" && !lease.relay?.ssh) throw new Error("SSH relay allocation missing");
-          const endpoint = await dockerEffects.startSandbox(lease.leaseId, lease.image, lease.limits, lease.sshPubKey ? null : lease.sshPassword, keys, lease.surface === "exec", lease.relay, signal);
+          const endpoint = await dockerEffects.startSandbox(lease.leaseId, lease.image, lease.limits, lease.sshPubKey ? null : lease.sshPassword, keys, lease.surface === "exec", lease.relay, signal, lease.lifetimeMs);
           signal.throwIfAborted();
           if (row.cancelled || (lease.deadline && Date.now() >= lease.deadline)) throw new Error("lease cancelled during Docker start");
           if (row.dir) {

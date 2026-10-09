@@ -21,6 +21,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-server ca-certificates iproute2 util-linux \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir jupyterlab==4.3.6 papermill==2.6.0 nbconvert==7.16.6 ipykernel==6.29.5 \
+        nbclient nbformat numpy pandas matplotlib requests scipy scikit-learn pillow psutil \
     && python -m ipykernel install --sys-prefix \
     && mkdir -p /work/jobs /etc/tendril /proc /sys /dev /run
 COPY --from=bore /out/bin/bore /usr/local/bin/bore

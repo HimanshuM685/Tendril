@@ -55,7 +55,8 @@ export const config = {
   // fee, so a client needs the asset but no ALGO.
   facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://facilitator.goplausible.xyz",
   // How long a 402 challenge stays payable.
-  x402MaxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 60),
+  // Notebook runs settle after the wallet signs. A 60s window dies mid-Modal start.
+  x402MaxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 3600),
 
   // ────────────────────── Bazaar discovery / branding ──────────────────────
   // Tag every resource carries. The facilitator uses it to attribute activity,
@@ -141,8 +142,8 @@ export const config = {
 
   // ─────────────────────────── Modal hosted CPU ───────────────────────────
   // Read only here. Never forwarded to the web app, a contributor, or a sandbox.
-  modalTokenId: process.env.MODAL_TOKEN_ID ?? "",
-  modalTokenSecret: process.env.MODAL_TOKEN_SECRET ?? "",
+  modalTokenId: (process.env.MODAL_TOKEN_ID ?? "").trim(),
+  modalTokenSecret: (process.env.MODAL_TOKEN_SECRET ?? "").trim(),
   modalAppName: process.env.MODAL_APP_NAME ?? "tendril",
   /** Fraction added on top of Modal's sandbox rate. Clamped to 0.25–0.40. */
   hostedMarkup: Number(process.env.HOSTED_MARKUP ?? 0.3),
@@ -152,6 +153,18 @@ export const config = {
    * Nothing is settled if this elapses.
    */
   modalReadyTimeoutMs: Number(process.env.MODAL_SANDBOX_READY_TIMEOUT_MS ?? 300_000),
+
+  // ─────────────────────────── E2B hosted CPU ───────────────────────────
+  // Read only here, like the Modal credentials.
+  e2bApiKey: (process.env.E2B_API_KEY ?? "").trim(),
+  /** Fraction added on top of E2B's sandbox rate. Clamped to 0.20–0.30. */
+  e2bMarkup: Number(process.env.E2B_MARKUP ?? 0.25),
+  /** Empty = E2B's default code-interpreter template (jupyter + ipykernel + pandas…). */
+  e2bTemplate: (process.env.E2B_TEMPLATE ?? "").trim(),
+  /** How long sandbox create + dependency check may take before we 503. */
+  e2bReadyTimeoutMs: Number(process.env.E2B_SANDBOX_READY_TIMEOUT_MS ?? 60_000),
+  /** First run of a new size builds its template; that can take minutes, once per size. */
+  e2bTemplateBuildTimeoutMs: Number(process.env.E2B_TEMPLATE_BUILD_TIMEOUT_MS ?? 900_000),
 
   // ─────────────────────── Google OAuth custodial login ───────────────────────
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",

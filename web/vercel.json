@@ -1,9 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/x402/:path*",
-      "destination": "https://tendrilregister.007575.xyz/x402/:path*"
-    },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
 }

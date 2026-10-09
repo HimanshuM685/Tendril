@@ -26,7 +26,7 @@ export async function start(args: StartArgs): Promise<SandboxAccess | null> {
   ctx.started = true;
   const access = await startContainer({ nodeId: args.node.id, leaseId: args.leaseId, image: args.image, limits: args.limits,
     sshPassword: args.sshPassword, sshPubKey: args.sshPubKey, surface: args.surface, notebook: args.notebook,
-    relay: ctx.relay?.relay, jupyterToken: notebook ? ctx.token : undefined, timeoutMs: Math.max(1, deadline - Date.now()) });
+    relay: ctx.relay?.relay, jupyterToken: notebook ? ctx.token : undefined, lifetimeMs: args.timeoutMs, timeoutMs: Math.max(1, deadline - Date.now()) });
   if (notebook) {
     if (!ctx.relay?.notebookBaseUrl) throw new Error("private notebook transport unavailable");
     await waitForJupyter(args.surface === "jupyter" ? ctx.relay.notebookPublicUrl! : ctx.relay.notebookBaseUrl, ctx.token, deadline);

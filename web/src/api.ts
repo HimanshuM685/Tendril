@@ -8,6 +8,7 @@ import type {
   LeaseCloseResponse,
   Metrics,
   PlatformInfo,
+  RunJobResponse,
   RunResponse,
   SandboxAccess,
   WalletSummary,
@@ -18,7 +19,7 @@ import { payingFetch, type PayStage, type SignTransactions } from "./lib/x402Cli
 import { EXPLORER_URL } from "./lib/network";
 
 export const REGISTRY_URL = (
-  (import.meta.env.VITE_REGISTRY_URL as string | undefined) ?? "http://localhost:4000"
+  process.env.NEXT_PUBLIC_REGISTRY_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
 
 export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;
@@ -50,7 +51,9 @@ export async function apiError(res: Response, what: string): Promise<Error> {
   try {
     const text = await res.text();
     try {
-      detail = (JSON.parse(text) as { error?: string }).error ?? text;
+      const body = JSON.parse(text) as { error?: string; detail?: string };
+      const parts = [body.error, body.detail].filter((v) => typeof v === "string" && v.length > 0);
+      detail = [...new Set(parts)].join(": ") || text;
     } catch {
       detail = text;
     }
@@ -67,18 +70,63 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   } catch (err) {
     if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("Failed"))) {
       throw new Error(
-        `Unable to connect to backend API at ${REGISTRY_URL}. Ensure backend server is running and VITE_REGISTRY_URL is configured correctly.`
+        `Unable to connect to backend API at ${REGISTRY_URL}. Ensure backend server is running and NEXT_PUBLIC_REGISTRY_URL is configured correctly.`
       );
     }
     throw err;
   }
 }
 
-export async function fetchExplorer(): Promise<{ nodes: ExplorerNode[]; notebooks: boolean }> {
+/** One E2B sandbox size. CPU and RAM come from E2B's chart. */
+export interface E2bSize {
+  vCpu: number;
+  memGiB: number;
+}
+
+export interface E2bPreset extends E2bSize {
+  usdPerHour: number;
+}
+
+/** Key into `e2bPrices`, matching the backend's `e2bSizeId`. */
+export function e2bSizeKey({ vCpu, memGiB }: E2bSize): string {
+  return `c${vCpu}-m${memGiB}`;
+}
+
+export async function fetchExplorer(): Promise<{
+  nodes: ExplorerNode[];
+  notebooks: boolean;
+  priority: boolean;
+  priorityUsdPerHour: number | null;
+  e2b: boolean;
+  e2bUsdPerHour: number | null;
+  e2bPresets: E2bPreset[];
+  e2bOptions: { vCpu: number[]; memGiB: number[] };
+  e2bPrices: Record<string, number>;
+}> {
   const res = await safeFetch(`${REGISTRY_URL}/explorer`);
   if (!res.ok) throw await apiError(res, "explorer");
-  const body = (await res.json()) as { nodes?: ExplorerNode[]; notebooks?: boolean };
-  return { nodes: body.nodes ?? [], notebooks: !!body.notebooks };
+  const body = (await res.json()) as {
+    nodes?: ExplorerNode[];
+    notebooks?: boolean;
+    priority?: boolean;
+    priorityUsdPerHour?: number | null;
+    e2b?: boolean;
+    e2bUsdPerHour?: number | null;
+    e2bPresets?: E2bPreset[];
+    e2bOptions?: { vCpu?: number[]; memGiB?: number[] };
+    e2bPrices?: Record<string, number>;
+  };
+  return {
+    nodes: body.nodes ?? [],
+    notebooks: !!body.notebooks,
+    priority: !!body.priority,
+    priorityUsdPerHour: typeof body.priorityUsdPerHour === "number" ? body.priorityUsdPerHour : null,
+    e2b: !!body.e2b,
+    e2bUsdPerHour: typeof body.e2bUsdPerHour === "number" ? body.e2bUsdPerHour : null,
+    e2bPresets: Array.isArray(body.e2bPresets) ? body.e2bPresets : [],
+    e2bOptions: { vCpu: body.e2bOptions?.vCpu ?? [], memGiB: body.e2bOptions?.memGiB ?? [] },
+    e2bPrices: body.e2bPrices ?? {},
+  };
 }
 
 /** Where to send top-ups + the USD→ALGO rate used to show prices in ALGO. */
@@ -220,24 +268,36 @@ export async function fetchLease(leaseId: string, leaseToken: string): Promise<L
 }
 
 /**
- * Execute an uploaded notebook with no lease: `POST /x402/run` `{ notebook }`.
- * The executed notebook and any files it wrote come back in the response.
- * Seconds are billed from credit after the run, same as a Python payload.
+ * Start an uploaded notebook with no lease: `POST /x402/run` `{ notebook }`.
+ * Provisioning + execution can take minutes (a cold Modal image build, a
+ * sandbox boot), so this resolves as soon as the gate fee settles, handing
+ * back a job to poll with `pollRunJob` — not the finished run.
  */
 export async function runNotebook(
   token: string | null,
   address: string,
   sign: SignTransactions,
   notebook: Record<string, unknown>,
+  lane: "contributor" | "priority" | "e2b",
   onStage?: (stage: PayStage) => void,
-): Promise<RunResponse> {
+  e2bSize?: E2bSize,
+): Promise<RunJobResponse> {
   const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ notebook }),
+    body: JSON.stringify({ notebook, lane, ...(lane === "e2b" && e2bSize ? { e2b: e2bSize } : {}) }),
+  });
+  if (!res.ok) throw await apiError(res, "run");
+  return res.json();
+}
+
+/** Poll a notebook job started by `runNotebook`: `GET /x402/run/:jobId`. No payment — just a status read. */
+export async function pollRunJob(jobId: string, jobToken: string): Promise<RunJobResponse> {
+  const res = await safeFetch(`${REGISTRY_URL}/x402/run/${jobId}`, {
+    headers: { authorization: `Bearer ${jobToken}` },
   });
   if (!res.ok) throw await apiError(res, "run");
   return res.json();

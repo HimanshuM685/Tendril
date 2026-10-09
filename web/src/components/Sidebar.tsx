@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import type { WalletSummary } from "@tendril/shared";
 import type { Session } from "../App";
 import { network } from "../lib/network";
+import { docsUrl } from "../lib/docsLinks";
 
 interface SidebarProps {
   session: Session | null;
@@ -134,14 +135,14 @@ export function Sidebar({
         </button>
 
 
-        <NavLink to="/docs" className="sec-item">
+        <a href={docsUrl()} className="sec-item">
           <span className="sec-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </span>
           <span>CLI &amp; Docs</span>
-        </NavLink>
+        </a>
       </div>
 
       {/* User / Wallet Profile at Bottom */}

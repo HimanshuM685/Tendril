@@ -23,7 +23,7 @@ export type PrepareAction =
   | { action: "topup"; amountAtomic: number }
   | { action: "optin" }
   | { action: "rent"; nodeId: string; sshPubKey?: string | null; surface?: "ssh" | "jupyter" }
-  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number }
+  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number; lane?: "contributor" | "priority" | "e2b"; e2b?: { vCpu: number; memGiB: number } }
   | { action: "release"; leaseId: string; leaseToken: string }
   | { action: "mintkey"; label?: string };
 
@@ -120,7 +120,7 @@ export async function prepareCustodialSign(
       details = `Execute a one-shot job; billed from credit when done.`;
       const url = `${internalRegistryUrl()}/x402/run`;
       const requestBody = body.notebook
-        ? { notebook: body.notebook }
+        ? { notebook: body.notebook, ...(body.lane ? { lane: body.lane } : {}), ...(body.e2b ? { e2b: body.e2b } : {}) }
         : { payload: body.code };
       run = async () => {
         const pay = custodialPayingFetchForUser(user);

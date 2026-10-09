@@ -53,7 +53,8 @@ and the opt-in real-kernel verification gate.
 |---|---|
 | `backend/` | **The backend.** Express + **Neon (Postgres)** + socket.io. In-memory node registry, free `/explorer`, the flat-price `POST /x402/rent` and `POST /x402/run`, the metered `POST /x402/topup`, and the early-close `DELETE /x402/leases/:id`, a **watchdog** that ends a lease when its prepaid time runs out, contributor **API keys**, and the **earnings balance + `POST /withdraw`** that pays contributors on-chain. Only money state hits the DB. |
 | `contributor/` | **The contributor daemon.** API-key authentication and capability heartbeats; cached-rootfs Firecracker guests on Linux/KVM, or legacy Docker. SSH/Python and capable-peer notebook/Jupyter surfaces share acknowledged teardown. |
-| `web/` | **The website.** Vite + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
+| `web/` | **The website.** Next.js + React + `@txnlab/use-wallet` — connect a wallet (Pera/Lute/Defly). **Explore** (browse + rent + copyable **SSH** connect command + balance countdown), a **wallet panel** (balance + top-up + history), and **Contribute**. |
+| `docs-web/` | **The documentation website.** Independently deployable Next.js + React app at [docs.tendrilhq.com](https://docs.tendrilhq.com). Dedicated pages, searchable navigation, per-page anchors, and responsive architecture diagrams; content comes from `docs/`. |
 | `example-buyer/` | A headless autonomous "training agent": tops up over x402 → discovers → rents → runs a script → releases, with zero clicks **and no sign-in** — the payment is the identity. |
 | `shared/` | Shared types, the WebSocket contract, and pricing helpers — imported by all of the above as `@tendril/shared`. |
 
@@ -75,11 +76,48 @@ charge. The contributor is credited out of what was collected, minus `PLATFORM_F
 withdraws that balance on-chain in one transfer ($5 minimum) rather than one per lease.
 Signing in still exists, but its job has shrunk to reading your balance.
 
-Or skip renting entirely: `POST /x402/run` takes some code, finds the best-value idle machine, runs
-it in a throwaway sandbox and gives you the output. No lease to open, choose or release. The
-execution time comes out of credit — and because a job is never killed part-way to protect a
-balance, that one charge **can leave you owing**. A negative balance blocks renting and further runs
-until it is topped back up.
+Or skip renting entirely: `POST /x402/run` takes Python source or a Python notebook and runs it in
+a throwaway sandbox. No lease to open, choose or release. Script execution can overdraw credit;
+notebook jobs stop at their prepaid execution budget. A negative balance blocks further runs until
+it is topped back up.
+
+### Notebook jobs
+
+Upload an nbformat 4 `.ipynb` in Explore, or send `{ "notebook": <notebook>, "lane": "contributor" }`
+to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox, or `"e2b"` for an E2B cloud sandbox (needs `E2B_API_KEY`; pick 1–8 vCPU and 1–8 GiB with `"e2b": {"vCpu": 4, "memGiB": 8}`, priced per size). All lanes use a real
+IPython kernel: `%pip`, `!commands`, cell magics, top-level `await`, plots, and process pools work.
+Bundled images include NumPy, pandas, matplotlib, SciPy, scikit-learn, Pillow, requests, and psutil.
+Custom contributor images must supply `nbclient`, `nbformat`, `ipykernel`, and workload dependencies.
+
+- Upload: **1.5 MB**, **500 cells**, Python only. Syntax errors stop before earlier cells execute;
+  source is never silently repaired. Runtime errors preserve earlier cell output when available.
+- Execution: `RUN_TIMEOUT_MS` (default **120 seconds**, maximum **15 minutes**), additionally capped
+  by prepaid credit. One notebook per payer; release existing sessions first. Failed executed jobs
+  still consume billable time.
+- Results: **2 MB** cell output, **4 MB total** artifacts, **12 MB** transport. Save small files in
+  `/work`; hidden files, symlinks, and special files are not returned. Oversized artifacts are skipped.
+- `POST` settles the gate fee before provisioning and returns `jobId`/`jobToken`. Poll
+  `GET /x402/run/:id` with `Authorization: Bearer <jobToken>` until `run` or `error` is present.
+  Terminal status can appear before billing/result collection finishes. The gate fee remains paid
+  if provisioning fails; execution charges begin only when the sandbox is ready.
+- Results are in-memory: download promptly. Retained for up to one hour, subject to oldest-first
+  eviction at 32 jobs or 64 MB total; restart or eviction makes old job tokens return `404`.
+
+Contributor one-shot sandboxes have no SSH/bore tunnel, no host mounts, no added capabilities,
+a read-only image, and bounded writable `/work`/`/tmp`. `%pip` installs into a disposable venv.
+Registry and contributor agents must both be updated; bundled sandbox image tags include a content
+hash and rebuild after Dockerfile changes. Explicit custom images need rebuilding by their operator.
+
+Try [the training QA notebook](example-buyer/notebooks/tendril_qa_training.ipynb) for offline training,
+checkpoint resume, plots, artifacts, and opt-in failure/limit cases. Its configuration cell selects the QA mode;
+the default `smoke` mode is upload-ready. The final Markdown cell includes an end-to-end QA checklist.
+For compute-focused checks, use [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb).
+Local execution tests:
+
+```bash
+docker build -t tendril-notebook-test contributor/sandbox-ssh
+TENDRIL_NOTEBOOK_TEST_IMAGE=tendril-notebook-test npx tsx --test backend/src/providers/notebookRunner.test.ts backend/src/runLimits.test.ts backend/src/leases.lifecycle.test.ts contributor/tests/docker.test.ts
+```
 
 ## The payable endpoints
 
@@ -117,8 +155,10 @@ they guessed wrong.
 Wallet popups, end to end: top up = 1, rent = 1, each job execution = 1, release/SSH = 0.
 
 API reference: **[docs/api.md](docs/api.md)** (plain HTTP), **[docs/x402-api.md](docs/x402-api.md)**
-(paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). On the site they share one
-**Docs** page.
+(paid endpoints), **[docs/mcp.md](docs/mcp.md)** (agent MCP tools). Browse dedicated pages at
+**[Tendril Docs](https://docs.tendrilhq.com)**. Run `npm run docs` for the local Docs app;
+build all browser apps with `npm run build:apps`. Separate domain deployment settings
+are in [DEPLOY.md](./DEPLOY.md#3b1-documentation-app-separate-nextjs-app).
 
 **The payable routes are CORS-free.** They answer any origin, so a browser anywhere can pay one —
 the Tendril web app has no privileged access, and the frontend is just another x402 client.
@@ -153,6 +193,9 @@ you prefer.
 ```bash
 npm install
 cp .env.example .env            # set DATABASE_URL (Neon), PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY — REQUIRED
+cp web/.env.example web/.env.local
+cp docs-web/.env.example docs-web/.env.local
+cp admin/.env.example admin/.env.local
 ```
 
 ```bash
@@ -168,21 +211,27 @@ TENDRIL_API_KEY=<key> PRICE_PER_HOUR_USD=1.0 npm run contributor   # …or:  cd 
 #   without KVM, auto advertises legacy Docker (outside the default Explore filter).
 
 # 3a. Web UI                                      # http://localhost:5173
-cp web/.env.example web/.env    # set VITE_REGISTRY_URL (defaults to localhost:4000)
 npm run web                     # connect (wallet or email) → Sign in → Top up → Rent → ssh
 
-# 3b. …or the autonomous agent (its own funded key — signs in, tops up, rents)
+# 3b. Documentation UI                            # http://localhost:5175
+npm run docs
+
+# 3c. Admin UI                                    # http://localhost:5174
+#     requires ADMIN_EMAILS + Google OAuth config on backend
+npm run admin
+
+# 3d. …or the autonomous agent (its own funded key — signs in, tops up, rents)
 AVM_PRIVATE_KEY=<buyer-key> npm run client       # …or:  cd example-buyer && npm run start
 ```
 
 Each top-level folder is a self-contained piece you can `cd` into: **`backend/`**, **`contributor/`**,
-**`web/`**, **`example-buyer/`**, with **`shared/`** holding the types they all import.
+**`web/`**, **`docs-web/`**, **`admin/`**, **`example-buyer/`**, with **`shared/`** holding the types they all import.
 
 ## Run with Docker
 
 Each piece is its own Compose service, run independently. The backend usually lives on a server; a
 contributor runs on each machine sharing compute and needs only a **`TENDRIL_API_KEY`** in `.env`
-(`REGISTRY_URL` only when self-hosting). The **web app is not dockerized** (it's a static Vite SPA — see [Web app](#web-app-static-spa) below).
+(`REGISTRY_URL` only when self-hosting). The **web app is not dockerized** (it runs as a Next.js app — see [Web app](#web-app-nextjs) below).
 
 ```bash
 cp .env.example .env                     # then set REGISTRY_URL to your backend
@@ -209,21 +258,24 @@ microVM templates are always prepared before registration.
   *out* over its allocated TLS/bore relay. Backend allocations take priority over standalone
   `TUNNEL_MODE=local`; configure the platform relay before renting contributor SSH.
 
-### Web app (static SPA)
+### Web app (Next.js)
 
-The web app isn't a container — it's a static build you host anywhere:
+The web app isn't a container — run its Next.js server or deploy to Vercel:
 
 ```bash
-VITE_REGISTRY_URL=http://your-host:4000 npm run build -w web   # → web/dist
+NEXT_PUBLIC_REGISTRY_URL=http://your-host:4000 npm run build -w web   # → web/.next
+# Build web, docs, and admin together:
+npm run build:apps
 ```
 
-Drop `web/dist` on Vercel / Netlify / Cloudflare Pages / nginx (full steps in [DEPLOY.md](./DEPLOY.md)).
+Deploy `web/.next` with `npm run start -w web` on a Node host or use Vercel (full steps in [DEPLOY.md](./DEPLOY.md)).
 
 ## Configuration
 
 All Node services read the repo-root `.env` (and each app's own `.env`, which overrides it);
-inline `FOO=bar npm run …` overrides both. The web app reads `web/.env` (`VITE_*` only, baked
-in at build time). See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
+inline `FOO=bar npm run …` overrides both. Browser apps read public `NEXT_PUBLIC_*` values from
+their `.env.local` files. See [`.env.example`](./.env.example), [`web/.env.example`](./web/.env.example),
+[`docs-web/.env.example`](./docs-web/.env.example), [`admin/.env.example`](./admin/.env.example),
 and the env tables in [DEPLOY.md](./DEPLOY.md) for every variable.
 
 ### Testnet / mainnet
@@ -232,13 +284,24 @@ One switch picks the chain:
 
 ```bash
 ALGORAND_NETWORK=testnet        # backend, contributor, buyer
-VITE_ALGORAND_NETWORK=testnet   # web — Vite inlines it, so set it at BUILD time
+NEXT_PUBLIC_ALGORAND_NETWORK=testnet   # web/.env.local — set it at BUILD time
 ```
+
+Frontend configuration is app-local:
+
+| App | Example file | Main values |
+|---|---|---|
+| Web | `web/.env.local` | `NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_ALGORAND_NETWORK`, `NEXT_PUBLIC_ALGOD_URL`, `NEXT_PUBLIC_EXPLORER_URL` |
+| Docs | `docs-web/.env.local` | `NEXT_PUBLIC_REGISTRY_URL` for URLs shown in examples |
+| Admin | `admin/.env.local` | `NEXT_PUBLIC_REGISTRY_URL`, `NEXT_PUBLIC_EXPLORER_URL` |
+
+`NEXT_PUBLIC_*` values are browser-visible and embedded by Next.js at build time. Never put private
+keys, database credentials, or admin secrets in these files.
 
 Everything chain-specific derives from it — the CAIP-2 id every payment must be on, the algod
 endpoint, the USDC asset id (`10458941` testnet / `31566704` mainnet) and the block explorer — so
 the pieces can't be left half-migrated. Each still has its own override (`ALGOD_URL`,
-`X402_ASSET_ID`, `VITE_EXPLORER_URL`) for a private node or a non-USDC ASA. An unrecognised value
+`X402_ASSET_ID`, `NEXT_PUBLIC_EXPLORER_URL`) for a private node or a non-USDC ASA. An unrecognised value
 throws at boot rather than defaulting: silently running testnet while you believe you configured
 mainnet is worse than not starting.
 
@@ -349,5 +412,5 @@ Real payments additionally need platform/funded USDC accounts, a reachable x402 
   A **session token** (minted after signing a login nonce) is only needed to *spend existing credit*.
   Unauthenticated callers can still hint `?payer=`, but the discount is floored at
   `MIN_PAYABLE_ATOMIC` so nobody can drain a stranger's balance.
-- `web/` uses Vite (not Next.js) deliberately: the wallet stack is client-only, so an SPA
-  avoids SSR/hydration friction.
+ - `web/` uses a Next.js client shell for wallet operations. Wallet-only code remains browser-bound,
+  while Next.js owns deployment, route handling, metadata, and asset delivery.

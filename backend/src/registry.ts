@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import type { ComputeNode, ExplorerNode, SandboxRuntime, SandboxCapabilities, SandboxCapability } from "@tendril/shared";
 import { isOnline, capabilities, runtimeAdvertisement } from "@tendril/shared";
 import { config } from "./config.js";
-import { hostedById, hostedCatalog, modalConfigured, toExplorer, withHostedFallback } from "./hosted.js";
+import { modalConfigured, toExplorer } from "./hosted.js";
 import { hasOptedIn } from "./payout.js";
 
 /**
@@ -78,9 +78,8 @@ function onlinePeers(): ComputeNode[] {
 
 export function getNode(id: string): ComputeNode | undefined {
   const node = nodes.get(id);
-  if (node) return withStatus(node);
-  if (!modalConfigured()) return undefined;
-  return hostedById(id);
+  if (!node) return undefined;
+  return withStatus(node);
 }
 
 export function touchHeartbeat(
@@ -153,9 +152,9 @@ export function chooseNode(
   return null;
 }
 
+/** Contributor peers only: hosted CPU is an explicit notebook lane (see routes). */
 export function pickBestValueNode(isFree: (nodeId: string) => boolean, required: SandboxCapability = "python"): ComputeNode | null {
-  const hosted = modalConfigured() ? hostedCatalog() : [];
-  return chooseNode(onlinePeers(), hosted, isFree, required);
+  return chooseNode(onlinePeers(), [], isFree, required);
 }
 
 export function notebooksAvailable(): boolean {
@@ -163,9 +162,7 @@ export function notebooksAvailable(): boolean {
 }
 
 export function listOnlineNodes(): ExplorerNode[] {
-  const peers = onlinePeers()
+  return onlinePeers()
     .sort((a, b) => b.createdAt - a.createdAt)
     .map(toExplorer);
-  const hosted = modalConfigured() ? hostedCatalog().map(toExplorer) : [];
-  return withHostedFallback(peers, hosted);
 }

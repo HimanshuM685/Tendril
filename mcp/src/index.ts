@@ -1,7 +1,7 @@
-#!/usr/bin/env npx tsx
 /**
  * Tendril MCP — stdio. Agents call named tools; this process pays x402.
  * Do not log to stdout (that is the MCP transport).
+ * Published bin is dist/cli.js (shebang added at build).
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -81,6 +81,42 @@ server.tool(
   async ({ payload, leaseToken }) => {
     try {
       return text(await tools.run(payload, leaseToken));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "tendril_run_notebook",
+  "Start a Python/IPython notebook job on contributor or priority CPU. Returns jobId and jobToken; use tendril_notebook_job to collect outputs and artifacts. Gate fee on-chain; seconds bill from prepaid credit. Needs AVM_PRIVATE_KEY.",
+  {
+    notebook: z
+      .record(z.unknown())
+      .describe("nbformat JSON object, under 1.5 MB"),
+    lane: z.enum(["contributor", "priority", "e2b"]).optional().describe("Priority uses Modal CPU; e2b uses an E2B cloud sandbox; contributor uses an idle peer. Omitted prefers priority, then e2b, when configured."),
+    e2bVcpu: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(6), z.literal(8)]).optional().describe("e2b lane only: vCPUs (1, 2, 4, 6, 8). Default 2."),
+    e2bMemoryGib: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8)]).optional().describe("e2b lane only: RAM in GiB (1, 2, 4, 8). Default 4. Price follows E2B's per-vCPU and per-GiB rate."),
+  },
+  async ({ notebook, lane, e2bVcpu, e2bMemoryGib }) => {
+    try {
+      const size = lane === "e2b" && (e2bVcpu || e2bMemoryGib)
+        ? { vCpu: e2bVcpu ?? 2, memGiB: e2bMemoryGib ?? 4 }
+        : undefined;
+      return text(await tools.runNotebook(notebook, lane, size));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "tendril_notebook_job",
+  "Poll a notebook job for status, executed cells, artifacts, and billed usage. Free. Poll every few seconds until run or error is present; terminal status alone may precede result collection.",
+  { jobId: z.string(), jobToken: z.string().describe("Token returned by tendril_run_notebook") },
+  async ({ jobId, jobToken }) => {
+    try {
+      return text(await tools.notebookJob(jobId, jobToken));
     } catch (err) {
       return fail(err);
     }

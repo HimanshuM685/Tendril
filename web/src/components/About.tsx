@@ -43,7 +43,7 @@ export function About() {
 
         <h3>Stack</h3>
         <p>
-          TypeScript everywhere. Vite + React + <code>@txnlab/use-wallet</code> (Pera/Lute/Defly) on the
+          TypeScript everywhere. Next.js + React + <code>@txnlab/use-wallet</code> (Pera/Lute/Defly) on the
           web; Express + socket.io
           + Neon Postgres for the registry; Docker + bore for sandboxes;
           algosdk for native-ALGO payments and on-chain payouts. Algorand {network.network}.

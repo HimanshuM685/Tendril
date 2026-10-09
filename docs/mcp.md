@@ -10,7 +10,7 @@ It talks to the **registry HTTP API**. It does **not** start the contributor dae
 
 - [Run](#run)
 - [Environment](#environment)
-- [Cursor / Claude](#cursor--claude)
+- [Clients](#clients)
 - [Spend cap](#spend-cap)
 - [Tools](#tools)
   - [Consumer](#consumer)
@@ -21,13 +21,13 @@ It talks to the **registry HTTP API**. It does **not** start the contributor dae
 
 ## Run
 
-From the repo root (after `npm install`):
+Anyone, no clone:
 
 ```bash
-npm run mcp
+npx -y @tendril/mcp-server
 ```
 
-Or `npx tsx mcp/src/index.ts`. Stdio only — do not pipe logs to stdout.
+Stdio only — do not pipe logs to stdout. From this repo, `npm run mcp` is the same server.
 
 ## Environment
 
@@ -41,24 +41,66 @@ Or `npx tsx mcp/src/index.ts`. Stdio only — do not pipe logs to stdout.
 
 The wallet must be **opted into USDC** and hold enough of it for on-chain gate fees. Prepaid **credit** (`balanceAtomic`) is separate: top up once, then execution time bills that ledger. Contributor **earnings** (`earningsAtomic`) only leave via `tendril_withdraw`.
 
-## Cursor / Claude
+## Clients
+
+Stdio only. Package is `@tendril/mcp-server`. Restart the client after saving. Do not commit the secret. A contributor `TENDRIL_API_KEY` does not belong in these files — it cannot pay x402.
+
+Cline and Roo take the same `mcpServers` object as Claude Desktop. Only the settings file path differs.
+
+### Claude Desktop
+
+macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "tendril": {
       "command": "npx",
-      "args": ["tsx", "mcp/src/index.ts"],
+      "args": ["-y", "@tendril/mcp-server"],
       "env": {
         "REGISTRY_URL": "https://tendrilregister.007575.xyz",
-        "AVM_PRIVATE_KEY": "<base64 sk>"
+        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"
       }
     }
   }
 }
 ```
 
-Run from the repo root so `tsx` resolves `mcp/src/index.ts`. Do not commit the secret.
+### Cursor
+
+Global: `~/.cursor/mcp.json`. Project: `.cursor/mcp.json`. Same JSON as Claude Desktop.
+
+### Claude Code
+
+```bash
+claude mcp add --transport stdio tendril \
+  --env REGISTRY_URL=https://tendrilregister.007575.xyz \
+  --env AVM_PRIVATE_KEY=<base64 64-byte secret> \
+  -- npx -y @tendril/mcp-server
+```
+
+Or commit a project `.mcp.json` with the same `mcpServers` object (leave the secret out of git; pass it via the shell env the command already supports).
+
+### VS Code
+
+`.vscode/mcp.json` (or the user `mcp.json`). The key is `servers`, and `type` is required.
+
+```json
+{
+  "servers": {
+    "tendril": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@tendril/mcp-server"],
+      "env": {
+        "REGISTRY_URL": "https://tendrilregister.007575.xyz",
+        "AVM_PRIVATE_KEY": "<base64 64-byte secret>"
+      }
+    }
+  }
+}
+```
 
 ## Spend cap
 
@@ -79,6 +121,8 @@ Before paying, the MCP probes the 402 and reads `accepts[0].amount`. If that int
 | `tendril_account` | nonce + `POST /auth/wallet-login` then `GET /wallet` | `balanceAtomic` (prepaid) vs `earningsAtomic` (contributor). Session cached. |
 | `tendril_topup` | `POST /x402/topup?amount=` | Paid. `amountAtomic` is USDC atomic units (`1000000` = $1). |
 | `tendril_run` | `POST /x402/run` `{payload}` | Paid. Python in, stdout out. Optional `leaseToken` runs inside a rented box. |
+| `tendril_run_notebook` | `POST /x402/run` `{notebook, lane?}` | Paid. Python nbformat 4. Contributor, priority (Modal) or e2b CPU. Returns `jobId` and `jobToken`. |
+| `tendril_notebook_job` | `GET /x402/run/:id` | Free. Pass `jobId`/`jobToken`; poll until `run` or `error` arrives for cells, artifacts, and billed usage. |
 | `tendril_rent` | `POST /x402/rent?nodeId=` | Paid. Returns `ssh`, `leaseId`, `leaseToken`. Optional `sshPubKey`. |
 | `tendril_lease` | `GET /lease/:id` | Needs `leaseToken`. |
 | `tendril_release` | `DELETE /x402/leases/:id` | Stops the meter; bills seconds used. |

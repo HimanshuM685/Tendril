@@ -8,7 +8,7 @@
 export type NodeStatus = "online" | "offline";
 
 /** Who actually runs the sandbox. Contributor machines stay on the socket path. */
-export type ComputeProvider = "contributor" | "modal";
+export type ComputeProvider = "contributor" | "modal" | "e2b";
 
 /**
  * How a contributor isolates a lease. gVisor is a published value only — this
@@ -73,7 +73,7 @@ export interface ComputeNode {
   ramMb: number;
   /** GPU model string, or null if none. */
   gpu: string | null;
-  /** `"modal"` is a hosted CPU row. Everything a contributor registers is `"contributor"`. */
+  /** `"modal"` / `"e2b"` are hosted CPU rows. Everything a contributor registers is `"contributor"`. */
   provider: ComputeProvider;
   /** Isolation the agent last advertised. Hosted rows are not microVMs. */
   runtime: SandboxRuntime;
@@ -155,7 +155,7 @@ export type SandboxAccess = SshAccess | JupyterAccess;
 export interface Lease {
   id: string;
   nodeId: string;
-  /** Which provider started the sandbox. Modal leases never create a payout row. */
+  /** Which provider started the sandbox. Hosted (Modal, E2B) leases never create a payout row. */
   provider: ComputeProvider;
   /** Algorand address of the renter (the sandbox user). */
   renterAddr: string;
@@ -441,11 +441,14 @@ export interface StartContainerMsg {
    * renter with no session (nothing to use as a password).
    */
   sshPubKey: string | null;
+  /** `exec` = one-shot job: no SSH server or public tunnel. Old agents default to SSH. */
   surface?: SandboxSurface;
   notebook?: boolean;
   deadline?: number;
   relay?: LeaseRelay;
   jupyterToken?: string;
+  /** Maximum lifetime of an exec sandbox, including readiness and execution. */
+  lifetimeMs?: number;
 }
 
 /** agent -> registry: the sandbox is up and reachable for SSH at host:port. */
@@ -483,6 +486,8 @@ export interface RunJobMsg {
   /** Only a reference: notebook bytes use the private Jupyter HTTP endpoint. */
   notebookJob?: boolean;
   deadline?: number;
+  /** Enforced inside the sandbox, not only by the registry's wait timer. */
+  timeoutMs?: number;
 }
 
 /** agent -> registry: job finished (or errored). */
@@ -563,6 +568,24 @@ export interface RunResponse {
      *  until it is back above zero. */
     balance: string;
   };
+}
+
+/**
+ * `POST /x402/run` (notebook path) and `GET /x402/run/:jobId` — async job
+ * status/result. Provisioning + execution can take minutes (a cold Modal image
+ * build, a sandbox boot), too long for one HTTP request to hold open, so the
+ * POST settles payment and returns a job immediately; the caller polls this
+ * shape until `status` reaches a terminal state.
+ */
+export interface RunJobResponse {
+  jobId: string;
+  /** Present only on the initial POST response. */
+  jobToken?: string;
+  status: LeaseStatus;
+  /** Present once a result was recorded, whether the run succeeded or not. */
+  run?: RunResponse;
+  /** Present when the job failed outright (provisioning) or the run itself did (`run.ok === false`). */
+  error?: string;
 }
 
 // ───────────────────────── Wallet auth DTOs ─────────────────────────
@@ -925,3 +948,4 @@ export function networkDefaults(name?: string | null): NetworkDefaults {
   }
   return found;
 }
+export * from "./notebook.js";

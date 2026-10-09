@@ -1,3 +1,4 @@
+import { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-client";
 import { x402Client } from "@x402/core/client";
 import { ExactAvmScheme } from "@x402/avm/exact/client";
 import { normalizeAlgorandNetwork } from "@x402/avm";
@@ -37,7 +38,14 @@ export function payingFetch(
   // `sign` must already be serialized — see `serializeSigner`. Wrapping again
   // here would deadlock: the inner queue would wait on the slot the outer one
   // is holding.
-  const scheme = new ExactAvmScheme({ address, signTransactions: sign }, { algodUrl: ALGOD_URL });
+  const scheme = new ExactAvmScheme(
+    { address, signTransactions: sign },
+    {
+      algorandClient: AlgorandClient.fromConfig({
+        algodConfig: { server: ALGOD_URL, token: "" },
+      }).setDefaultValidityWindow(1000),
+    },
+  );
   // Both spellings of the network's CAIP-2 id are registered against one scheme:
   // @x402/avm uses the 32-char genesis prefix, our shared constant the full
   // hash. Whichever the registry quotes, a scheme is registered for it.
@@ -83,12 +91,45 @@ let walletQueue: Promise<unknown> = Promise.resolve();
  */
 const WALLET_PROMPT_TIMEOUT_MS = 180_000;
 
+/**
+ * How long to wait for the wallet's *answer* once a request is open. WalletConnect
+ * wallets (Pera, Defly) reply over a relay socket; when the browser tab is
+ * backgrounded while the user approves on their phone, that reply can be lost and
+ * the promise never settles — the UI would sit on "signing" forever with no error.
+ */
+const WALLET_RESPONSE_TIMEOUT_MS = 120_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            "The wallet didn't send its approval back. If you approved on your phone, return to this " +
+              "tab and try again — if it keeps happening, disconnect and reconnect the wallet.",
+          ),
+        ),
+      ms,
+    );
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function serializeSigner(sign: SignTransactions): SignTransactions {
   return (txns, indexesToSign) => {
     const previous = walletQueue;
     const run = (async () => {
       await waitForSlot(previous);
-      return sign(txns, indexesToSign);
+      return withTimeout(sign(txns, indexesToSign), WALLET_RESPONSE_TIMEOUT_MS);
     })();
     walletQueue = run.catch(() => undefined);
     return run;

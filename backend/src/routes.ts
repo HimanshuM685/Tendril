@@ -5,9 +5,13 @@ import {
   formatUsdc,
   fundedSeconds,
   capabilities,
+  NOTEBOOK_MAX_BYTES,
+  boundedRunTimeoutMs,
+  notebookError,
   type CreateApiKeyResponse,
   type LeaseCloseResponse,
   type PlatformInfo,
+  type RunJobResponse,
   type RunResponse,
   type SandboxLimits,
   type WalletLoginResponse,
@@ -75,20 +79,43 @@ import {
   abandonLease,
   activateLease,
   closeLease,
-  createLease,
   confirmLeasePayment,
+  createLease,
+  failLease,
   getLease,
+  getRunResult,
+  hasLivePayerLease,
   heldLease,
   leaseByPayment,
   liveSessions,
   nodeBusy,
+  setRunResult,
   waitForLeaseAccess,
+  type RunJobResult,
 } from "./leases.js";
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
-import { modalConfigured, sandboxLifetimeMs } from "./hosted.js";
+import {
+  E2B_DEFAULT_SIZE,
+  E2B_GIB_OPTIONS,
+  E2B_PRESETS,
+  E2B_VCPU_OPTIONS,
+  e2bConfigured,
+  e2bNode,
+  e2bPriceTable,
+  e2bUsdPerHour,
+  isE2bSize,
+  type E2bSize,
+  hostedCatalog,
+  isHosted,
+  modalConfigured,
+  priorityHourlyUsd,
+  sandboxLifetimeMs,
+} from "./hosted.js";
 import { providerFor } from "./providers/index.js";
+import { ensureTemplate } from "./providers/e2b.js";
+import { claimNotebookPayer, notebookPayerBusy, withRunDeadline } from "./runLimits.js";
 import {
   confirmCustodialSign,
   exportMnemonicForUser,
@@ -368,9 +395,22 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 
 // ─────────────────────── discovery (free) ───────────────────────
 router.get("/explorer", guard((_req, res) => {
-  // `notebooks` is independent of the rent pool. A contributor being online hides
-  // hosted rows from `nodes`, but a notebook still runs on Modal when tokens are set.
-  res.json({ nodes: listOnlineNodes(), notebooks: notebooksAvailable() });
+  const nodes = listOnlineNodes();
+  const priority = modalConfigured();
+  const e2b = e2bConfigured();
+  res.json({
+    nodes,
+    notebooks: priority || e2b || notebooksAvailable(),
+    priority,
+    priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
+    e2b,
+    e2bUsdPerHour: e2b ? e2bUsdPerHour() : null,
+    // Size picker for the e2b lane: presets, the chart's options, and the
+    // authoritative price for every combination (keyed "c{vCpu}-m{memGiB}").
+    e2bPresets: e2b ? E2B_PRESETS.map((size) => ({ ...size, usdPerHour: e2bUsdPerHour(size) })) : [],
+    e2bOptions: { vCpu: E2B_VCPU_OPTIONS, memGiB: E2B_GIB_OPTIONS },
+    e2bPrices: e2b ? e2bPriceTable() : {},
+  });
 }));
 
 // Public platform metrics — growth series + leaderboards.
@@ -684,16 +724,11 @@ async function rent(req: Request, res: Response) {
   if (!surface) {
     return res.status(400).json({ error: "invalid_surface", detail: "surface must be ssh or jupyter" });
   }
-  if (node.provider === "modal") {
-    if (!modalConfigured()) {
-      return res.status(503).json({ error: "provisioning_failed", detail: "hosted compute is not configured" });
-    }
-    if (surface !== "jupyter") {
-      return res.status(400).json({
-        error: "surface_unsupported",
-        detail: "hosted nodes open JupyterLab; pass surface=jupyter",
-      });
-    }
+  if (isHosted(node.provider)) {
+    return res.status(400).json({
+      error: "surface_unsupported",
+      detail: "hosted CPU is not a rentable node; upload a notebook",
+    });
   } else if (!capabilities(node.capabilities)[surface]) {
     return res.status(400).json({
       error: "surface_unsupported",
@@ -719,7 +754,7 @@ async function rent(req: Request, res: Response) {
   // A second rent of a machine this payer already holds must hand back the SSH
   // (or Jupyter) details. Charging another gate fee, or returning a bare 409,
   // is how a refresh loses the only copy of the connection.
-  const held = node.provider === "contributor" ? heldLease(node.id) : undefined;
+  const held = heldLease(node.id);
   if (held) {
     if (held.payerAddr === renter && !held.allowOverdraft) {
       const access =
@@ -812,7 +847,12 @@ interface ProvisionArgs {
  */
 async function provision(res: Response, args: ProvisionArgs): Promise<void> {
   const { node, rate, gateFee, fundingAtomic, renterAddr, payerAddr, sshPubKey, surface, paid } = args;
-  if (node.provider === "contributor" && nodeBusy(node.id)) {
+
+  if (notebookPayerBusy(payerAddr)) {
+    res.status(409).json({ error: "payer_busy", detail: "Wait for your notebook to finish before spending this credit on another session." });
+    return;
+  }
+  if (nodeBusy(node.id)) {
     res.status(409).json({ error: "node_busy" });
     return;
   }
@@ -833,7 +873,7 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
 
   const limits: SandboxLimits = {
     memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-    cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+    cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
     gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
   };
 
@@ -849,14 +889,14 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
         fundingAtomic,
         rate,
         config.graceAtomic,
-        config.modalReadyTimeoutMs,
+        hostedReadyMs(node.provider),
       ),
       // Hosted Jupyter never uses the wallet address as a password.
-      sshPassword: node.provider === "modal" || sshPubKey ? null : renterAddr,
-      sshPubKey: node.provider === "modal" ? null : sshPubKey,
+      sshPassword: isHosted(node.provider) || sshPubKey ? null : renterAddr,
+      sshPubKey: isHosted(node.provider) ? null : sshPubKey,
     });
     if (!access) throw new Error("renter access missing after readiness");
-    activateLease(lease.id, access);
+    if (!activateLease(lease.id, access)) throw new Error("lease stopped during provisioning");
   } catch (err) {
     await abandonLease(lease.id).catch(() => undefined);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
@@ -961,11 +1001,13 @@ const RUN_DESCRIPTION =
   `executes it in a throwaway sandbox and bills the seconds it took from your credit. Send a lease ` +
   `token instead to run it inside a machine you already hold.`;
 
-const NOTEBOOK_MAX_BYTES = 1_500_000;
-
 interface JobInput {
   payload?: string;
   notebook?: Record<string, unknown>;
+  /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
+  lane?: "contributor" | "priority" | "e2b";
+  /** e2b lane only: sandbox size. Defaults to E2B's 2 vCPU · 4 GiB. */
+  e2b?: E2bSize;
 }
 
 async function run(req: Request, res: Response): Promise<void> {
@@ -999,7 +1041,7 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     res.status(409).json({ error: "lease not active" });
     return;
   }
-  if (job.notebook && !capabilities(lease.capabilities).notebook && lease.provider !== "modal") {
+  if (job.notebook && !isHosted(lease.provider) && !capabilities(lease.capabilities).notebook) {
     res.status(400).json({
       error: "notebook_unsupported",
       detail: "lease did not advertise notebook capability",
@@ -1023,7 +1065,8 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     });
   } catch (err) {
     // Nothing ran, so nothing settles.
-    res.status(502).json({ error: (err as Error).message });
+    const message = (err as Error).message || "execution failed";
+    res.status(502).json({ error: message, detail: message });
     return;
   }
   if (!(await paid.settle(res))) return;
@@ -1064,110 +1107,308 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
   // Everything below is after verify and before settle, so each of these bails
   // out with the caller having paid nothing.
   const payer = paid.facts.payer;
-  const credit = await runEffects.balance(payer);
-  if (credit <= 0) {
-    res.status(402).json({
-      error: "insufficient_credit",
-      detail:
-        credit < 0
-          ? `this address owes ${formatUsdc(-credit)}; top up before running anything else.`
-          : "top up first — execution time is billed from credit.",
-      creditAtomic: String(credit),
-    });
+  const releasePayer = job.notebook ? claimNotebookPayer(payer) : () => undefined;
+  if (!releasePayer || (!job.notebook && notebookPayerBusy(payer))) {
+    res.status(409).json({ error: "payer_busy", detail: "A notebook is already using this payer's credit." });
     return;
   }
-
-  const node = pickBestValueNode((id) => runEffects.connected(id) && !nodeBusy(id), job.notebook ? "notebook" : "python");
-  if (!node) {
-    res.status(503).json({
-      error: "no_node_available",
-      detail: job.notebook ? "hosted CPU is busy" : "every machine is busy or offline",
-    });
-    return;
-  }
-
-  const rate = atomicPerHour(node.pricePerHourUsd);
-  const lease = createLease({
-    nodeId: node.id,
-    renterAddr: payer,
-    payerAddr: payer,
-    payToAddr: node.payToAddr,
-    rateAtomicPerHour: rate,
-    gateFeeAtomic: config.flatRunAtomic,
-    fundingAtomic: credit,
-    paymentTxid: paid.facts.txid,
-    allowOverdraft: true,
-    provider: node.provider,
-    payoutBlocked: node.payoutBlocked,
-    capabilities: capabilities(node.capabilities),
-  });
-
+  let handedOff = false;
   try {
-    const access = await providerFor(node.provider).start({
-      leaseId: lease.id,
+    if (job.notebook && hasLivePayerLease(payer)) {
+      res.status(409).json({ error: "payer_busy", detail: "Release your existing session before starting a notebook." });
+      return;
+    }
+    const credit = await runEffects.balance(payer);
+    if (credit <= 0) {
+      res.status(402).json({
+        error: "insufficient_credit",
+        detail:
+          credit < 0
+            ? `this address owes ${formatUsdc(-credit)}; top up before running anything else.`
+            : "top up first — execution time is billed from credit.",
+        creditAtomic: String(credit),
+      });
+      return;
+    }
+
+    const lane = job.notebook
+      ? job.lane ?? (modalConfigured() ? "priority" : e2bConfigured() ? "e2b" : "contributor")
+      : undefined;
+    if (job.notebook && lane === "priority" && !modalConfigured()) {
+      res.status(503).json({
+        error: "provisioning_failed",
+        detail: "priority training needs MODAL_TOKEN_ID and MODAL_TOKEN_SECRET",
+      });
+      return;
+    }
+    if (job.notebook && lane === "e2b" && !e2bConfigured()) {
+      res.status(503).json({
+        error: "provisioning_failed",
+        detail: "the e2b lane needs E2B_API_KEY",
+      });
+      return;
+    }
+    const freePeer = (id: string) => runEffects.connected(id) && !nodeBusy(id);
+    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer, job.notebook ? "notebook" : "python")
+      : lane === "e2b" ? freeE2bNode(job.e2b ?? E2B_DEFAULT_SIZE)
+      : pickNotebookHost("hosted-cpu-2");
+    if (!node) {
+      res.status(503).json({
+        error: "no_node_available",
+        detail: job.notebook
+          ? lane === "contributor"
+            ? "no contributor node is free"
+            : "hosted CPU is busy"
+          : "every machine is busy or offline",
+      });
+      return;
+    }
+
+    const rate = atomicPerHour(node.pricePerHourUsd);
+    const funded = job.notebook ? fundedSeconds(credit, rate) : null;
+    if (job.notebook && funded !== null && funded <= 0) {
+      res.status(402).json({
+        error: "insufficient_credit",
+        detail: "credit does not cover one second at the notebook rate. Top up, then upload again.",
+        creditAtomic: String(credit),
+      });
+      return;
+    }
+
+    // Settle before the sandbox starts. The signed group is only valid for a
+    // handful of rounds; a notebook that runs past that window comes back
+    // "txn dead" if we settle after exec.
+    const runLimitMs = boundedRunTimeoutMs(config.runTimeoutMs);
+    const budgetMs = job.notebook ? Math.min(runLimitMs, (funded ?? runLimitMs / 1000) * 1000) : runLimitMs;
+    // Reserve before awaiting settlement, so two paid requests cannot both
+    // provision a node that looked idle or reuse the same credit window.
+    if (nodeBusy(node.id) || (job.notebook ? hasLivePayerLease(payer) : notebookPayerBusy(payer))) {
+      res.status(409).json({ error: "node_or_payer_busy" });
+      return;
+    }
+    const lease = createLease({
+      nodeId: node.id,
+      renterAddr: payer,
+      payerAddr: payer,
+      payToAddr: node.payToAddr,
+      rateAtomicPerHour: rate,
+      gateFeeAtomic: config.flatRunAtomic,
+      fundingAtomic: credit,
+      paymentTxid: paid.facts.txid,
+      allowOverdraft: !job.notebook,
+      provider: node.provider,
+      payoutBlocked: node.payoutBlocked,
+      capabilities: capabilities(node.capabilities),
+    });
+    try {
+      if (!(await paid.settle(res))) {
+        await abandonLease(lease.id).catch(() => undefined);
+        return;
+      }
+      confirmLeasePayment(lease.id);
+    } catch (err) {
+      await abandonLease(lease.id).catch(() => undefined);
+      throw err;
+    }
+
+    // Return a polling token instead of holding a multi-minute notebook request
+    // open through a cold image build, provisioning, and execution.
+    if (job.notebook) {
+      const body: RunJobResponse = { jobId: lease.id, jobToken: issueLeaseToken(lease.id), status: lease.status };
+      res.json(body);
+      handedOff = true;
+      void runNotebookJob(lease.id, node, job, payer, budgetMs).catch(async (err) => {
+        console.error(`[run] job ${lease.id} crashed uncaught:`, (err as Error).message);
+        await closeLease(lease.id, "run-error");
+        setRunResult(lease.id, { ok: false, result: "", error: (err as Error).message });
+      }).finally(releasePayer);
+      return;
+    }
+
+    try {
+      const access = await providerFor(node.provider).start({
+        leaseId: lease.id,
+        node,
+        surface: "exec",
+        image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+        limits: {
+          memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
+          cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
+          gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
+        },
+        timeoutMs: hostedReadyMs(node.provider) + budgetMs,
+        // One-shot sandboxes are not logged into. Never the wallet address.
+        sshPassword: isHosted(node.provider) ? null : nanoid(32),
+        sshPubKey: null,
+      });
+      if (!activateLease(lease.id, access)) {
+        await providerFor(node.provider).destroy(lease.id, node.id);
+        res.status(409).json({ error: "lease_ended", detail: "The run was stopped during provisioning." });
+        return;
+      }
+    } catch (err) {
+      await abandonLease(lease.id).catch(() => undefined);
+      res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
+      return;
+    }
+
+    const jobId = nanoid(10);
+    let result;
+    try {
+      result = await providerFor(node.provider).exec({
+        leaseId: lease.id,
+        nodeId: node.id,
+        jobId,
+        timeoutMs: budgetMs,
+        payload: job.payload,
+      });
+    } catch (err) {
+      const settled = await closeLease(lease.id, "run-stopped");
+      const message = (err as Error).message || "execution failed";
+      res.status(502).json({
+        error: message,
+        detail: message,
+        ...(settled ? {
+          execution: {
+            nodeId: node.id,
+            seconds: settled.usedSeconds,
+            costAtomic: String(settled.chargedAtomic),
+            balance: String(settled.balance),
+          },
+        } : {}),
+      });
+      return;
+    }
+
+    // Gate fee already settled. This debit is the seconds, from credit.
+    const settled = await closeLease(lease.id, "run-complete");
+    const body: RunResponse = {
+      jobId,
+      ok: result.ok,
+      result: result.result,
+      execution: {
+        nodeId: node.id,
+        seconds: settled?.usedSeconds ?? 0,
+        costAtomic: String(settled?.chargedAtomic ?? 0),
+        balance: String(settled?.balance ?? (await creditBalance(payer))),
+      },
+    };
+    res.json(body);
+  } finally {
+    if (!handedOff) releasePayer();
+  }
+}
+
+/**
+ * Background half of a notebook run, split out of `runAnywhere` at the point
+ * the gate fee settles. Never writes to an HTTP response — outcomes land in
+ * `runResults` (via `setRunResult`) for `GET /x402/run/:id` to report.
+ */
+async function runNotebookJob(
+  leaseId: string,
+  node: ComputeNode,
+  job: JobInput,
+  payer: string,
+  budgetMs: number,
+): Promise<void> {
+  const provider = providerFor(node.provider);
+  // A bundled contributor image can be cold too; allow its first build the
+  // same bounded provisioning window as the hosted notebook image.
+  const readyTimeoutMs = boundedRunTimeoutMs(Math.max(config.sandboxReadyTimeoutMs, hostedReadyMs(node.provider)));
+  try {
+    // A first run of a new E2B size builds its template (minutes, once per size).
+    // That gets its own budget so the sandbox-ready deadline below stays tight.
+    if (node.provider === "e2b" && !config.e2bTemplate) {
+      await withRunDeadline(
+        ensureTemplate({ vCpu: node.cpuCores, memGiB: Math.round(node.ramMb / 1024) }),
+        config.e2bTemplateBuildTimeoutMs,
+        "E2B template build timed out; nothing was billed.",
+      );
+    }
+    const starting = provider.start({
+      leaseId,
       node,
       surface: "exec",
-      notebook: !!job.notebook,
+      notebook: true,
       image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits: {
         memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-        cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+        cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
         gpus: node.runtime === "microvm" ? "" : node.gpu ? "all" : "",
       },
-      timeoutMs: config.modalReadyTimeoutMs + config.runTimeoutMs,
-      // One-shot sandboxes are not logged into. Never the wallet address.
-      sshPassword: node.provider === "modal" ? null : nanoid(32),
+      timeoutMs: readyTimeoutMs + budgetMs,
+      sshPassword: isHosted(node.provider) ? null : nanoid(32),
       sshPubKey: null,
+    }).then(async (access) => {
+      const lease = getLease(leaseId);
+      if (!lease || (lease.status !== "starting" && lease.status !== "active")) {
+        await provider.destroy(leaseId, node.id);
+        throw new Error("The notebook was stopped during provisioning.");
+      }
+      return access;
     });
-    activateLease(lease.id, access);
+    const access = await withRunDeadline(starting, readyTimeoutMs,
+      "Notebook provisioning timed out; sandbox stopped.");
+    if (!activateLease(leaseId, access)) {
+      await provider.destroy(leaseId, node.id);
+      throw new Error("The notebook was stopped during provisioning.");
+    }
   } catch (err) {
-    await abandonLease(lease.id).catch(() => undefined);
-    res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
+    await failLease(leaseId);
+    setRunResult(leaseId, { ok: false, result: "", error: (err as Error).message });
     return;
   }
 
   const jobId = nanoid(10);
   let result;
   try {
-    result = await providerFor(node.provider).exec({
-      leaseId: lease.id,
+    result = await withRunDeadline(providerFor(node.provider).exec({
+      leaseId,
       nodeId: node.id,
       jobId,
-      timeoutMs: config.runTimeoutMs,
+      timeoutMs: budgetMs,
       payload: job.payload,
       notebook: job.notebook,
-    });
+    }), budgetMs);
   } catch (err) {
-    // The job never produced a result, so nothing settles and nothing is billed
-    // — abandon rather than close, or the caller pays for a job they never got.
-    await abandonLease(lease.id).catch(() => undefined);
-    res.status(502).json({ error: (err as Error).message });
+    const settled = await closeLease(leaseId, "run-stopped");
+    const message = (err as Error).message || "notebook execution failed";
+    const left = settled?.balance ?? (await creditBalance(payer));
+    const exhausted = left <= 0;
+    const body: RunJobResult = {
+      ok: false,
+      result: message,
+      error: exhausted
+        ? "run stopped when prepaid credit ran out. Charged for the seconds used."
+        : message,
+      ...(settled
+        ? {
+            execution: {
+              nodeId: node.id,
+              seconds: settled.usedSeconds,
+              costAtomic: String(settled.chargedAtomic),
+              balance: String(settled.balance),
+            },
+          }
+        : {}),
+    };
+    setRunResult(leaseId, body);
     return;
   }
 
-  lease.endedAt ??= Date.now(); // execution ends before the settlement network roundtrip
-  if (!(await paid.settle(res))) {
-    await abandonLease(lease.id).catch(() => undefined);
-    return;
-  }
-  try { confirmLeasePayment(lease.id); }
-  catch { res.status(503).json({ error: "lease_stopped_during_settlement" }); return; }
-
-  // Tear down and bill the seconds it took. This is the only debit.
-  const settled = await closeLease(lease.id, "run-complete");
-  const body: RunResponse = {
-    jobId,
+  const settled = await closeLease(leaseId, "run-complete");
+  setRunResult(leaseId, {
     ok: result.ok,
     result: result.result,
+    ...(!result.ok ? { error: result.result || "Notebook failed. Inspect the cell error below." } : {}),
     ...(result.notebook ? { notebook: result.notebook, artifacts: result.artifacts ?? [] } : {}),
     execution: {
       nodeId: node.id,
       seconds: settled?.usedSeconds ?? 0,
-      costAtomic: String(settled?.usedAtomic ?? 0),
+      costAtomic: String(settled?.chargedAtomic ?? 0),
       balance: String(settled?.balance ?? (await creditBalance(payer))),
     },
-  };
-  res.json(body);
+  });
 }
 
 // Canonical. Lease token optional — with it you run in your own machine, without
@@ -1176,6 +1417,21 @@ router.post("/x402/run", guard(run));
 // Legacy alias — lease-only, and `:id` must still match the token, as it always did.
 router.post("/lease/:id/run", guard(run));
 
+// Poll a notebook job started above. Same bearer-token check as `GET
+// /lease/:id` — a job *is* a lease under the hood — so `:id` must match that
+// route's param name for `requireLease` to validate it.
+router.get("/x402/run/:id", guard((req: Request, res: Response) => {
+  const lease = requireLease(req, res);
+  if (!lease) return;
+  const stored = getRunResult(lease.id);
+  const body: RunJobResponse = {
+    jobId: lease.id,
+    status: lease.status,
+    ...(stored ? { run: toRunResponse(lease.id, stored), error: stored.error } : {}),
+  };
+  res.json(body);
+}));
+
 router.get("/lease/:id", guard((req: Request, res: Response) => {
   const lease = requireLease(req, res);
   if (!lease) return;
@@ -1183,6 +1439,24 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 }));
 
 // ─────────────────────────── helpers ───────────────────────────
+
+/** Provisioning window for a hosted sandbox; contributors keep the Modal-sized window they always had. */
+function hostedReadyMs(provider: ComputeNode["provider"]): number {
+  return provider === "e2b" ? config.e2bReadyTimeoutMs : config.modalReadyTimeoutMs;
+}
+
+/** The E2B node for this size, unless a run of that size is already in flight. */
+function freeE2bNode(size: E2bSize): ComputeNode | null {
+  const node = e2bNode(size);
+  return nodeBusy(node.id) ? null : node;
+}
+
+/** A hosted notebook SKU by id (Modal `hosted-cpu-2`, or E2B). Not a pool node — only notebook upload uses it. */
+function pickNotebookHost(id: string): ComputeNode | null {
+  const node = hostedCatalog().find((n) => n.id === id);
+  if (!node || nodeBusy(node.id)) return null;
+  return node;
+}
 
 function readSurface(req: Request): "ssh" | "jupyter" | null {
   const q = req.query.surface;
@@ -1198,9 +1472,15 @@ function readJob(body: unknown): JobInput | null {
   const hasNotebook = notebook !== undefined && notebook !== null;
   if (hasPayload === hasNotebook) return null;
   if (hasNotebook) {
-    if (typeof notebook !== "object" || Array.isArray(notebook)) return null;
-    if (JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return null;
-    return { notebook: notebook as Record<string, unknown> };
+    if (notebookError(notebook)) return null;
+    if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return null;
+    const laneRaw = (b as { lane?: unknown }).lane;
+    const lane = laneRaw === "contributor" || laneRaw === "priority" || laneRaw === "e2b" ? laneRaw : undefined;
+    const sizeRaw = (b as { e2b?: { vCpu?: unknown; memGiB?: unknown } }).e2b;
+    const e2b = sizeRaw && isE2bSize(sizeRaw.vCpu, sizeRaw.memGiB)
+      ? { vCpu: sizeRaw.vCpu as number, memGiB: sizeRaw.memGiB as number }
+      : undefined;
+    return { notebook: notebook as Record<string, unknown>, lane, ...(e2b ? { e2b } : {}) };
   }
   return { payload: b?.payload as string };
 }
@@ -1211,10 +1491,8 @@ function jobError(body: unknown): string {
   const notebook = b?.notebook;
   const hasNotebook = notebook !== undefined && notebook !== null;
   if (hasPayload && hasNotebook) return "pass payload or notebook, not both";
-  if (hasNotebook && (typeof notebook !== "object" || Array.isArray(notebook))) {
-    return "notebook must be a JSON object";
-  }
-  if (hasNotebook && JSON.stringify(notebook).length > NOTEBOOK_MAX_BYTES) return "notebook_too_large";
+  if (hasNotebook && notebookError(notebook)) return notebookError(notebook)!;
+  if (hasNotebook && Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return "notebook_too_large";
   return "payload (string) or notebook (object) required";
 }
 
@@ -1251,6 +1529,17 @@ function requireCustodialSession(
  * is the only source, which is no weaker — the token was always the thing being
  * checked, and the path segment only ever had to match it.
  */
+/** `RunJobResult` (internal, keyed by lease id) → `RunResponse` (wire shape). */
+function toRunResponse(jobId: string, r: RunJobResult): RunResponse {
+  return {
+    jobId,
+    ok: r.ok,
+    result: r.result,
+    ...(r.notebook ? { notebook: r.notebook, artifacts: r.artifacts ?? [] } : {}),
+    ...(r.execution ? { execution: r.execution } : {}),
+  };
+}
+
 function requireLease(req: Request, res: Response) {
   const tokenLeaseId = leaseIdFromAuthHeader(req.header("authorization"));
   if (!tokenLeaseId || (req.params.id !== undefined && tokenLeaseId !== req.params.id)) {

@@ -40,20 +40,38 @@ await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 const address = server.address(); assert.ok(address && typeof address === "object");
 const base = `http://127.0.0.1:${address.port}`;
 const post = (body: object) => fetch(`${base}/x402/run`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const poll = async (id: string, token: string) => {
+  for (let i = 0; i < 200; i++) {
+    const body = await (await fetch(`${base}/x402/run/${id}`, { headers: { authorization: `Bearer ${token}` } })).json() as
+      { status: string; run?: { notebook?: object }; error?: string };
+    if (body.status === "ended" || body.status === "failed") return body;
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  throw new Error("notebook job never finished");
+};
+const notebookBody = (lane?: string) => ({ notebook: { nbformat: 4, nbformat_minor: 5, cells: [], metadata: {} }, ...(lane ? { lane } : {}) });
 try {
-  const inventory = await (await fetch(`${base}/explorer`)).json() as { nodes: { provider: string }[]; notebooks: boolean };
-  assert.equal(inventory.nodes.filter((n) => n.provider === "modal").length, 3);
-  assert.equal(inventory.notebooks, true);
+  // Hosted CPU is an explicit notebook lane, not a rentable row in the peer pool.
+  const inventory = await (await fetch(`${base}/explorer`)).json() as { nodes: { provider: string }[]; notebooks: boolean; priority: boolean };
+  assert.equal(inventory.nodes.filter((n) => n.provider === "modal").length, 0);
+  assert.equal(inventory.notebooks, true); assert.equal(inventory.priority, true);
   const python = await post({ payload: "print('hello')" }); assert.equal(python.status, 200);
-  const notebook = await post({ notebook: { nbformat: 4, nbformat_minor: 5, cells: [], metadata: {} } });
-  assert.equal(notebook.status, 200); assert.ok((await notebook.json() as { notebook: object }).notebook);
+  const notebook = await post(notebookBody("contributor"));
+  assert.equal(notebook.status, 200);
+  const job = await notebook.json() as { jobId: string; jobToken: string };
+  const done = await poll(job.jobId, job.jobToken);
+  assert.equal(done.status, "ended"); assert.ok(done.run?.notebook);
   assert.equal(starts, 2); assert.equal(modalCreates, 0); assert.equal(settles, 2); assert.equal(chargeRows, 2); assert.equal(payoutRows, 0);
+  // Gate fee settles before boot. A failed boot keeps the peer reserved until
+  // cleanup is acknowledged, charges no usage, and never falls through to Modal.
   bootFailure = true;
-  const failed = post({ notebook: { nbformat: 4, cells: [], metadata: {} } });
+  const failedJob = await (await post(notebookBody("contributor"))).json() as { jobId: string; jobToken: string };
   for (let i = 0; i < 100 && !cleanupAck; i++) await new Promise((r) => setTimeout(r, 5));
   assert.ok(cleanupAck); assert.equal(getLease(pendingLease)?.status, "stopping"); assert.equal(nodeBusy(micro.id), true);
-  assert.equal(modalCreates, 0); assert.equal(settles, 2);
-  cleanupAck(); assert.equal((await failed).status, 503);
+  assert.equal(modalCreates, 0); assert.equal(settles, 3);
+  cleanupAck();
+  const failed = await poll(failedJob.jobId, failedJob.jobToken);
+  assert.equal(failed.status, "failed"); assert.ok(failed.error);
   assert.equal(nodeBusy(micro.id), false); assert.equal(starts, 3); assert.equal(chargeRows, 2); assert.equal(modalCreates, 0);
-  console.log("HTTP placement: peer wins Python/notebook, hosted inventory, reservation and no boot fallthrough ok");
+  console.log("HTTP placement: peer wins Python/notebook, hosted is a lane, reservation and no boot fallthrough ok");
 } finally { await new Promise<void>((resolve) => server.close(() => resolve())); }

@@ -1,21 +1,45 @@
-import { useRef, useState } from "react";
-import type { RunArtifact, RunResponse } from "@tendril/shared";
-import { formatUsdc } from "@tendril/shared";
-import { runNotebook } from "../api";
+import { useEffect, useRef, useState } from "react";
+import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
+import { formatUsdc, NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
+import { e2bSizeKey, pollRunJob, runNotebook, type E2bPreset, type E2bSize } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { isCustodialSession } from "../lib/session";
 
-const NOTEBOOK_MAX_BYTES = 1_500_000;
 const OUTPUT_TEXT_CAP = 12_000;
+
+type TrainLane = "contributor" | "priority" | "e2b";
+
+/** The E2B size picker's data, straight from `GET /explorer`. Prices are authoritative. */
+export interface E2bSizes {
+  presets: E2bPreset[];
+  options: { vCpu: number[]; memGiB: number[] };
+  prices: Record<string, number>;
+}
+
+export const NO_E2B_SIZES: E2bSizes = { presets: [], options: { vCpu: [], memGiB: [] }, prices: {} };
+
+const DEFAULT_E2B_SIZE: E2bSize = { vCpu: 2, memGiB: 4 };
 
 interface Props {
   session: Session | null;
   activeAddress: string | null;
   signTransactions: SignTransactions;
-  /** Backend has a notebook-capable peer or hosted CPU. */
+  /** A lane can take the notebook: a capable peer is online, or Modal is configured. */
   notebooks: boolean;
+  /** Priority lane. Modal image includes numpy, pandas, matplotlib, requests. */
+  priority: boolean;
+  /** Customer USD/hour for the priority sandbox (2 vCPU + 4 GiB). */
+  priorityUsdPerHour: number | null;
+  /** E2B lane. An isolated E2B cloud sandbox with the code-interpreter stack. */
+  e2b: boolean;
+  /** Customer USD/hour for the default E2B sandbox (2 vCPU · 4 GiB). */
+  e2bUsdPerHour: number | null;
+  /** E2B sizes the user can pick, with a price for each. */
+  e2bSizes: E2bSizes;
+  /** Contributor lane. Uses a live peer and that node's own Python image. */
+  peers: boolean;
   checking: boolean;
   onOpenConnectWallet?: () => void;
   onWalletChanged?: () => void;
@@ -131,14 +155,14 @@ function parseNotebookFile(name: string, text: string): PendingNotebook {
     throw new Error("That file is not a Jupyter notebook.");
   }
   const notebook = parsed as Record<string, unknown>;
-  if (!Array.isArray(notebook.cells)) {
-    throw new Error("That file is not a Jupyter notebook.");
-  }
-  if (text.length > NOTEBOOK_MAX_BYTES) {
+  const invalid = notebookError(notebook);
+  if (invalid) throw new Error(invalid);
+  if (new TextEncoder().encode(text).byteLength > NOTEBOOK_MAX_BYTES) {
     throw new Error("Notebooks must be under 1.5 MB.");
   }
-  const cells = notebook.cells.length;
-  const codeCells = notebook.cells.filter(
+  const entries = notebook.cells as Record<string, unknown>[];
+  const cells = entries.length;
+  const codeCells = entries.filter(
     (cell) => !!cell && typeof cell === "object" && (cell as { cell_type?: string }).cell_type === "code",
   ).length;
   return { name, notebook, cells, codeCells };
@@ -163,9 +187,9 @@ function downloadBlob(name: string, blob: Blob) {
 function availabilityCopy(checking: boolean, notebooks: boolean): string {
   if (checking) return "Checking which machines can run a notebook.";
   if (notebooks) {
-    return "Upload a .ipynb. Cells run on a capable machine, then outputs, plots, and files appear here. Billed by the second from credit.";
+    return "Upload a .ipynb. Contributor training uses a notebook-capable peer. Priority training runs on Modal and E2B training in an E2B cloud sandbox, both with numpy, pandas, matplotlib, scipy, scikit-learn, Pillow, and requests ready. All lanes bill by the second from credit and stop when it runs out.";
   }
-  return "No notebook-capable machines available. Connect a capable contributor or configure hosted CPU.";
+  return "No notebook-capable contributor is online, and no hosted lane is configured.";
 }
 
 export function NotebookSection({
@@ -173,6 +197,12 @@ export function NotebookSection({
   activeAddress,
   signTransactions,
   notebooks,
+  priority,
+  priorityUsdPerHour,
+  e2b,
+  e2bUsdPerHour,
+  e2bSizes,
+  peers,
   checking,
   onOpenConnectWallet,
   onWalletChanged,
@@ -185,6 +215,18 @@ export function NotebookSection({
   const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<NotebookView | null>(null);
+  const [job, setJob] = useState<{ jobId: string; jobToken: string } | null>(null);
+  const [jobStatus, setJobStatus] = useState<LeaseStatus | null>(null);
+  const [lane, setLane] = useState<TrainLane>("contributor");
+  const [e2bSize, setE2bSize] = useState<E2bSize>(DEFAULT_E2B_SIZE);
+  const [e2bCustom, setE2bCustom] = useState(false);
+  const e2bPrice = e2bSizes.prices[e2bSizeKey(e2bSize)] ?? e2bUsdPerHour;
+  const laneOpen: Record<TrainLane, boolean> = { contributor: peers, priority, e2b };
+  useEffect(() => {
+    if (laneOpen[lane]) return;
+    const next = (["contributor", "priority", "e2b"] as const).find((l) => laneOpen[l]);
+    if (next) setLane(next);
+  }, [lane, peers, priority, e2b]);
 
   const isCustodial = isCustodialSession(session);
   const canPick = notebooks && !uploading;
@@ -192,6 +234,12 @@ export function NotebookSection({
   function takeFile(file: File | undefined) {
     if (!file || !canPick) return;
     setError(null);
+    if (file.size > NOTEBOOK_MAX_BYTES) {
+      setPending(null);
+      setError("Notebooks must be under 1.5 MB.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     void file.text().then(
       (text) => {
         try {
@@ -220,52 +268,121 @@ export function NotebookSection({
     setUploading(true);
     setError(null);
     setView(null);
+    setJob(null);
+    setJobStatus(null);
     setStage(null);
     try {
-      let res: RunResponse;
+      let res: RunJobResponse;
       if (isCustodial && session) {
         setStage("confirming");
         res = (await runCustodialAction(session.token, {
           action: "run",
           notebook: pending.notebook,
-        })) as RunResponse;
+          lane,
+          ...(lane === "e2b" ? { e2b: e2bSize } : {}),
+        })) as RunJobResponse;
       } else {
         res = await runNotebook(
           session?.token ?? null,
           activeAddress,
           signTransactions,
           pending.notebook,
+          lane,
           setStage,
+          lane === "e2b" ? e2bSize : undefined,
         );
       }
-      setView({
-        fileName: pending.name,
-        ok: res.ok,
-        log: stripAnsi(res.result ?? "").trim(),
-        seconds: res.execution?.seconds,
-        costAtomic: res.execution?.costAtomic,
-        cells: cellsFrom(res.notebook),
-        artifacts: res.artifacts ?? [],
-        notebook: res.notebook,
-      });
-      onWalletChanged?.();
+      // Payment is settled; the job itself can still take minutes (cold Modal
+      // image, sandbox boot). The poll effect below picks it up from here.
+      setStage(null);
+      setJobStatus(res.status);
+      setJob({ jobId: res.jobId, jobToken: res.jobToken! });
     } catch (e) {
       if ((e as Error).message !== "cancelled") setError((e as Error).message);
-    } finally {
       setUploading(false);
       setStage(null);
     }
   }
 
+  // Once the job is running server-side, poll for its result instead of
+  // holding one request open for however long provisioning + execution take.
+  // Same cadence/visibility-pause as LeasePanel's lease poll.
+  useEffect(() => {
+    if (!job) return;
+    let alive = true;
+    const finish = (r: RunJobResponse) => {
+      if (!alive) return;
+      setJobStatus(r.status);
+      if (r.status !== "ended" && r.status !== "failed") return;
+      // Teardown claims terminal status before billing/result collection
+      // finishes. Keep polling until the result is actually recorded.
+      if (!r.run && !r.error) return;
+      if (r.run) {
+        setView({
+          fileName: pending?.name ?? "",
+          ok: r.run.ok,
+          log: clip(stripAnsi(r.run.result ?? "").trim()),
+          seconds: r.run.execution?.seconds,
+          costAtomic: r.run.execution?.costAtomic,
+          cells: cellsFrom(r.run.notebook),
+          artifacts: r.run.artifacts ?? [],
+          notebook: r.run.notebook,
+        });
+        if (!r.run.ok) {
+          const failure = cellsFrom(r.run.notebook).flatMap((c) => c.outputs
+            .filter((o) => o.kind === "error")
+            .map((o) => `Cell ${c.index}: ${o.text.split("\n")[0]}`))[0];
+          setError(failure ?? stripAnsi(r.error ?? r.run.result ?? "Notebook run failed.").slice(0, 500));
+        }
+        onWalletChanged?.();
+      } else {
+        setError(r.error ?? "Notebook run failed.");
+      }
+      setUploading(false);
+      setJob(null);
+    };
+    const poll = () =>
+      pollRunJob(job.jobId, job.jobToken)
+        .then(finish)
+        .catch((e) => {
+          if (!alive) return;
+          setError((e as Error).message);
+          setUploading(false);
+          setJob(null);
+        });
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      if (timer) return;
+      poll();
+      timer = setInterval(poll, 4000);
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      alive = false;
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [job]);
+
   const runLabel = uploading
     ? stage === "signing"
-      ? "Waiting for wallet…"
-      : stage === "settling"
+      ? "Approve in wallet…"
+      : !job
         ? "Settling payment…"
-        : stage === "confirming"
-          ? "Confirming…"
-          : "Running cells…"
-    : "Run notebook";
+        : jobStatus === "active"
+          ? "Running on our server…"
+          : "Provisioning…"
+    : lane === "priority"
+      ? "Run priority"
+      : lane === "e2b"
+        ? `Run on E2B · ${e2bSize.vCpu} vCPU · ${e2bSize.memGiB} GiB`
+        : "Run on contributor";
 
   const costLabel =
     view?.costAtomic !== undefined && Number.isFinite(Number(view.costAtomic))
@@ -321,8 +438,8 @@ export function NotebookSection({
               {canPick
                 ? "or click to choose a file · 1.5 MB max"
                 : checking
-                   ? "Checking notebook-capable machines"
-                   : "No notebook-capable machines available"}
+                  ? "Checking machines"
+                  : "No peer online and no hosted lane is on"}
             </span>
           </label>
 
@@ -346,10 +463,125 @@ export function NotebookSection({
             </div>
           )}
 
+          <div className="notebook-lanes" role="radiogroup" aria-label="Where to run the notebook">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "contributor"}
+              className={`notebook-lane${lane === "contributor" ? " is-on" : ""}`}
+              disabled={uploading || !peers}
+              onClick={() => setLane("contributor")}
+            >
+              <span>Contributor training</span>
+              <small>Live peer. That node's rate.</small>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "priority"}
+              className={`notebook-lane${lane === "priority" ? " is-on" : ""}`}
+              disabled={uploading || !priority}
+              onClick={() => setLane("priority")}
+            >
+              <span>Priority training</span>
+              <small>
+                {priorityUsdPerHour != null ? `$${priorityUsdPerHour}/hr · ` : ""}
+                2 vCPU · 4 GiB. No GPU.
+              </small>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lane === "e2b"}
+              className={`notebook-lane${lane === "e2b" ? " is-on" : ""}`}
+              disabled={uploading || !e2b}
+              onClick={() => setLane("e2b")}
+            >
+              <span>E2B training</span>
+              <small>
+                {e2bPrice != null ? `$${e2bPrice}/hr · ` : ""}
+                {e2bSize.vCpu} vCPU · {e2bSize.memGiB} GiB cloud sandbox. No GPU.
+              </small>
+            </button>
+          </div>
+
+          {lane === "e2b" && e2b && e2bSizes.presets.length > 0 && (
+            <div className="notebook-sizes" role="radiogroup" aria-label="E2B compute size">
+              {e2bSizes.presets.map((p) => {
+                const on = !e2bCustom && p.vCpu === e2bSize.vCpu && p.memGiB === e2bSize.memGiB;
+                return (
+                  <button
+                    key={e2bSizeKey(p)}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    className={`notebook-lane${on ? " is-on" : ""}`}
+                    disabled={uploading}
+                    onClick={() => {
+                      setE2bCustom(false);
+                      setE2bSize({ vCpu: p.vCpu, memGiB: p.memGiB });
+                    }}
+                  >
+                    <span>
+                      {p.vCpu} vCPU · {p.memGiB} GiB
+                    </span>
+                    <small>${p.usdPerHour}/hr</small>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={e2bCustom}
+                className={`notebook-lane${e2bCustom ? " is-on" : ""}`}
+                disabled={uploading}
+                onClick={() => setE2bCustom(true)}
+              >
+                <span>Custom</span>
+                <small>{e2bCustom && e2bPrice != null ? `$${e2bPrice}/hr` : "Pick vCPU and RAM"}</small>
+              </button>
+              {e2bCustom && (
+                <div className="notebook-size-custom">
+                  <label>
+                    vCPU
+                    <select
+                      value={e2bSize.vCpu}
+                      disabled={uploading}
+                      onChange={(e) => setE2bSize({ ...e2bSize, vCpu: Number(e.target.value) })}
+                    >
+                      {e2bSizes.options.vCpu.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    RAM (GiB)
+                    <select
+                      value={e2bSize.memGiB}
+                      disabled={uploading}
+                      onChange={(e) => setE2bSize({ ...e2bSize, memGiB: Number(e.target.value) })}
+                    >
+                      {e2bSizes.options.memGiB.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="notebook-size-price">
+                    {e2bPrice != null ? `$${e2bPrice}/hr` : "—"}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             type="button"
             className="ca-btn ca-btn-primary notebook-run-btn"
-            disabled={!pending || uploading || !notebooks}
+            disabled={!pending || uploading || !notebooks || !laneOpen[lane]}
             onClick={() => void run()}
           >
             {runLabel}

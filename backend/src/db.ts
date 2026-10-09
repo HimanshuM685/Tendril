@@ -35,6 +35,11 @@ import { config } from "./config.js";
  * "testnet"/"mainnet", so this is a closed set and safe to interpolate.
  */
 const SCHEMA = config.network;
+/** Ledger table in this network's schema. Unqualified names miss the row on a pooled connection and a charge clamps to 0. */
+export function ledger(table: string): string {
+  if (!/^[a-z_]+$/.test(table)) throw new Error(`refusing ledger table ${table}`);
+  return `"${SCHEMA}".${table}`;
+}
 if (!/^[a-z]+$/.test(SCHEMA)) {
   throw new Error(`refusing to use "${SCHEMA}" as a schema name`);
 }

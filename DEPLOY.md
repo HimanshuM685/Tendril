@@ -7,14 +7,15 @@ Tendril is and how to demo it, see [README.md](./README.md).
 
 ## The big picture
 
-Tendril has five pieces. Only two of them live on your server.
+Tendril has six pieces. Only two of them live on your server.
 
 | Piece | Where it runs | What it does |
 |---|---|---|
 | **Backend** (registry) | Your Linux server | The API. Handles sign-in, payments, billing, and keeps track of every contributor machine. |
 | **Relay** | Same Linux server as the backend | Gives each rental its own public SSH address (and Jupyter URL), so renters can reach a contributor's machine without that machine opening any ports. |
-| **Web app** | Any static host | The website people use to rent and contribute. |
-| **Admin app** | Any static host | Small internal dashboard for approving gas grants. |
+| **Web app** | Vercel or any Node host | The website people use to rent and contribute (Next.js). |
+| **Docs site** | Vercel or any Node host | Public documentation at docs.tendrilhq.com (Next.js). |
+| **Admin app** | Vercel or any Node host | Small internal dashboard for approving gas grants (Next.js). |
 | **Contributor agent** | Each contributor's own Linux machine | Boots a fresh Firecracker microVM for every rental and tears it down afterwards. |
 
 How a rental reaches the renter:
@@ -91,14 +92,15 @@ cp .env.example .env      # fill in DATABASE_URL, PLATFORM_PAYTO, PLATFORM_PRIVA
 ```
 
 The root `.env` is shared by the backend, contributor, and example buyer. An app's own `.env`
-overrides it, and `FOO=bar npm run ...` overrides both. The web app reads `web/.env`, which only
-takes `VITE_*` variables.
+overrides it, and `FOO=bar npm run ...` overrides both. The browser apps (web, docs, admin) read
+public `NEXT_PUBLIC_*` values from their own `.env.local` files.
 
 Start each piece in its own terminal:
 
 ```bash
 npm run backend       # API on http://localhost:4000
 npm run web           # website on http://localhost:5173
+npm run docs          # documentation on http://localhost:5175
 npm run admin         # admin dashboard on http://localhost:5174 (needs ADMIN_EMAILS)
 npm run contributor   # contributor agent (needs TENDRIL_API_KEY)
 npm run client        # autonomous buyer (needs its own funded AVM_PRIVATE_KEY)
@@ -345,31 +347,46 @@ Then rent a contributor machine from the website. You should get an
 
 ### 3c. Web app
 
-The web app is a static site. Set the API address **at build time**:
+The website is a Next.js app. Set the API address **at build time**:
 
 ```bash
-VITE_REGISTRY_URL=https://api.example.com npm run build -w web
-# upload web/dist to any static host
+NEXT_PUBLIC_REGISTRY_URL=https://api.example.com npm run build -w web
+npm run start -w web      # on a Node host; or deploy to Vercel
 ```
 
-On Vercel, Netlify, or Cloudflare Pages:
+On Vercel:
 
-- **Build command:** `npm install && npm run build -w web`
-- **Output directory:** `web/dist`
-- **Env var:** `VITE_REGISTRY_URL=https://api.example.com`
-- **SPA routing:** every route should serve `index.html`. On Netlify, add `/* /index.html 200` to
-  `_redirects`. Vercel and Cloudflare Pages handle this on their own.
+- **Root Directory:** `web`, with **Include source files outside of the Root Directory** turned on
+  (the app uses the shared workspace)
+- **Framework:** Next.js, **build command** `npm run build`
+- **Env vars:** `NEXT_PUBLIC_REGISTRY_URL=https://api.example.com` and
+  `NEXT_PUBLIC_ALGORAND_NETWORK`
 
-If the site uses HTTPS, the API must too. Otherwise browsers block the calls.
+`web/next.config.ts` proxies `/x402` to the API and redirects `/docs/...` and `/api` to the docs
+site. If the site uses HTTPS, the API must too. Otherwise browsers block the calls.
+
+### 3c2. Docs site
+
+The docs are a separate Next.js app, deployed as a **second project** on its own domain
+(`docs.tendrilhq.com`). It reads the Markdown in `docs/` and needs no backend.
+
+```bash
+npm run build -w docs-web
+```
+
+On Vercel: Root Directory `docs-web`, **Include source files outside of the Root Directory** on
+(the Markdown lives in `docs/`), framework Next.js, build command `npm run build`. Deploy it and
+attach its domain before publishing the web app, since the web app redirects its old docs links
+there. `NEXT_PUBLIC_REGISTRY_URL` is optional and only changes the API address shown in examples.
 
 ### 3d. Admin app
 
-This is a separate static site where admins approve one-time ALGO gas grants for Google sign-in
+This is a separate Next.js app where admins approve one-time ALGO gas grants for Google sign-in
 users. Access is limited to the emails in `ADMIN_EMAILS`.
 
 ```bash
-VITE_REGISTRY_URL=https://api.example.com npm run build -w admin
-# upload admin/dist to your admin subdomain
+NEXT_PUBLIC_REGISTRY_URL=https://api.example.com npm run build -w admin
+npm run start -w admin    # on a Node host; or deploy to Vercel with Root Directory `admin`
 ```
 
 In Google Cloud Console, add a second OAuth redirect URI:
@@ -475,7 +492,7 @@ what it spent.
 **Web and API**
 - [ ] `CORS_ORIGIN` lists only your real web and admin origins.
 - [ ] Website, admin, and API all use HTTPS, and WebSocket upgrades pass through nginx.
-- [ ] `VITE_REGISTRY_URL` is baked into the web and admin builds.
+- [ ] `NEXT_PUBLIC_REGISTRY_URL` is set on the web and admin builds; docs domain is live.
 - [ ] Google sign-in (if used): `GOOGLE_*` and `WALLET_ENCRYPTION_KEY` set, with both redirect URIs
       registered.
 

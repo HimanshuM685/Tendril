@@ -70,6 +70,7 @@ export function TopUpControl({
         {PRESETS.map((p) => (
           <button
             key={p}
+            type="button"
             className={`btn ghost${amount === p ? " active" : ""}`}
             onClick={() => setAmount(p)}
           >
@@ -87,6 +88,7 @@ export function TopUpControl({
           aria-label="Top-up amount in USDC"
         />
         <button
+          type="button"
           className="btn"
           disabled={busy || !amountOk}
           title={amountOk ? "" : "Enter an amount above 0"}
@@ -98,7 +100,7 @@ export function TopUpControl({
 
       {/* Settlement takes seconds — say what we're waiting on. */}
       {stage && (
-        <p className="muted small" role="status" aria-live="polite">
+        <p className="muted small topup-status" role="status" aria-live="polite">
           {STAGE_LABEL[stage]}
         </p>
       )}

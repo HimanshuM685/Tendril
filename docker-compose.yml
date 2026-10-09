@@ -6,8 +6,9 @@
 #   docker compose up --build contributor   # share THIS machine's compute
 #   docker compose run  --rm   buyer        # one-shot autonomous buyer
 #
-# The WEB app is NOT here on purpose — it's a static Vite SPA, so build it with
-# `npm run build -w web` and drop web/dist on any static host (see DEPLOY.md).
+# Browser apps are NOT here on purpose — they are Next.js apps. Run them with
+# `npm run web`, `npm run docs`, or `npm run admin`, or deploy their Next.js builds.
+# `npm run build:apps` and deploy each Next.js app with Vercel or a Node host (see DEPLOY.md).
 #
 # All config comes from the repo-root .env (copy from .env.example first). Point
 # the contributor/buyer at your backend by setting REGISTRY_URL there.

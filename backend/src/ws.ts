@@ -1,6 +1,6 @@
 import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
-import { WS, type AgentHelloMsg, type ContainerFailedMsg, type ContainerReadyMsg,
+import { WS, JOB_RESULT_MAX_BYTES, type AgentHelloMsg, type ContainerFailedMsg, type ContainerReadyMsg,
   type ContainerDestroyedMsg, type HeartbeatMsg, type HelloAckMsg, type JobResultMsg,
   type SandboxAccess, type StartContainerMsg } from "@tendril/shared";
 import { ownerOfApiKey } from "./db.js";
@@ -18,9 +18,9 @@ export const wsEffects = { ownerOfApiKey };
 const receiptKey = (nodeId: string, leaseId: string) => `${nodeId}:${leaseId}`;
 
 export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "*"): Server {
-  // Guest stdout is bounded at 4 MB; default Socket.IO's 1 MB would disconnect
-  // a healthy agent when it returns an allowed result.
-  const io = new Server(httpServer, { cors: { origin: corsOrigin }, maxHttpBufferSize: 6_000_000 });
+  // Default Socket.IO's 1 MB would disconnect a healthy agent returning an
+  // allowed notebook result (output + artifacts).
+  const io = new Server(httpServer, { cors: { origin: corsOrigin }, maxHttpBufferSize: JOB_RESULT_MAX_BYTES + 100_000 });
   io.on("connection", (socket) => {
     let bound: string | null = null;
     const owns = (leaseId: string) => !!bound && getLease(leaseId)?.nodeId === bound && agentSockets.get(bound) === socket;
@@ -77,7 +77,9 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
     socket.on(WS.jobResult, (msg: JobResultMsg) => {
       const pending = jobs.get(msg.jobId);
       if (!pending || !owns(pending.leaseId)) return;
-      pending.resolve(msg);
+      if (typeof msg.result !== "string" || Buffer.byteLength(msg.result) > JOB_RESULT_MAX_BYTES) {
+        pending.reject(new Error("job result exceeded output limit"));
+      } else pending.resolve(msg);
       jobs.delete(msg.jobId);
     });
     socket.on("disconnect", () => {
@@ -126,5 +128,5 @@ export function destroyContainer(nodeId: string, leaseId: string): Promise<void>
 export function runJob(nodeId: string, leaseId: string, jobId: string, payload: string, timeoutMs = 120_000,
   notebookJob = false): Promise<JobResultMsg> {
   return request(jobs, jobId, nodeId, leaseId, timeoutMs,
-    (socket) => socket.emit(WS.runJob, { leaseId, jobId, payload, notebookJob, deadline: Date.now() + timeoutMs }));
+    (socket) => socket.emit(WS.runJob, { leaseId, jobId, payload, notebookJob, deadline: Date.now() + timeoutMs, timeoutMs }));
 }

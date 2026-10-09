@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { docsUrl } from "../lib/docsLinks";
 import "../landing.css";
 
 const SAMPLE_PROMPT =
@@ -188,7 +189,7 @@ export function LandingPage() {
       <nav className="desktop-nav" aria-label="Main Navigation">
         <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection("how-it-works"); }}>How it works</a>
         <a href="#faq" onClick={(e) => { e.preventDefault(); scrollToSection("faq"); }}>FAQ</a>
-        <a href="/docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }}>Docs</a>
+        <a href={docsUrl()}>Docs</a>
         {/* <a href="/about" onClick={(e) => { e.preventDefault(); navigate("/about"); }}>About</a> */}
       </nav>
 
@@ -231,12 +232,8 @@ export function LandingPage() {
         FAQ
       </a>
       <a
-        href="/docs"
-        onClick={(e) => {
-          e.preventDefault();
-          setMobileNavOpen(false);
-          navigate("/docs");
-        }}
+        href={docsUrl()}
+        onClick={() => setMobileNavOpen(false)}
       >
         Docs
       </a>
@@ -602,7 +599,7 @@ export function LandingPage() {
             </div>
 
             <div className="sidebar-footer-links">
-              <a href="#mcp" onClick={(e) => e.preventDefault()} className="sf-item">
+              <a href={docsUrl("/docs/build/mcp")} className="sf-item">
                 <span className="sf-icon">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
@@ -611,7 +608,7 @@ export function LandingPage() {
                 </span>
                 <span>Connect MCP</span>
               </a>
-              <a href="#docs" onClick={(e) => e.preventDefault()} className="sf-item">
+              <a href={docsUrl()} className="sf-item">
                 <span className="sf-icon">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
@@ -1348,7 +1345,7 @@ export function LandingPage() {
           <li><a href="/explore" onClick={(e) => { e.preventDefault(); navigate("/explore"); }}>Explore Nodes</a></li>
           <li><a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection("how-it-works"); }}>How It Works</a></li>
           <li><a href="/contribute" onClick={(e) => { e.preventDefault(); navigate("/contribute"); }}>Contribute Compute</a></li>
-          <li><a href="/docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }}>Run Script (/run)</a></li>
+          <li><a href={docsUrl("/docs/guides-access/one-shot-jobs")}>Run Script (/run)</a></li>
           <li><a href="#faq" onClick={(e) => { e.preventDefault(); scrollToSection("faq"); }}>FAQ</a></li>
           <li><a href="/dashboard" onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }}>Active Leases</a></li>
         </ul>
@@ -1358,10 +1355,10 @@ export function LandingPage() {
       <div className="footer-nav-col">
         <h4 className="footer-nav-heading">PROTOCOL</h4>
         <ul className="footer-link-list">
-          <li><a href="#protocol">x402 Specification</a></li>
-          <li><a href="#protocol">Algorand Settlement</a></li>
-          <li><a href="#protocol">Bore Tunneling</a></li>
-          <li><a href="#protocol">MicroVM Sandboxes</a></li>
+          <li><a href={docsUrl("/docs/api/x402")}>x402 Specification</a></li>
+          <li><a href={docsUrl("/docs/concepts/algorand-settlement")}>Algorand Settlement</a></li>
+          <li><a href={docsUrl("/docs/concepts/sandboxes-bore-tunnels")}>Bore Tunneling</a></li>
+          <li><a href={docsUrl("/docs/guides-access/security-sandboxes")}>MicroVM Sandboxes</a></li>
         </ul>
       </div>
 
@@ -1370,7 +1367,7 @@ export function LandingPage() {
         <h4 className="footer-nav-heading">RESOURCES</h4>
         <ul className="footer-link-list">
           <li><a href="https://github.com/HimanshuM685/Tendril" target="_blank" rel="noopener">GitHub Repository</a></li>
-          <li><a href="#contribute">Contributor Daemon</a></li>
+          <li><a href={docsUrl("/docs/build#daemon-install")}>Contributor Daemon</a></li>
           <li><a href="#privacy">Privacy Policy</a></li>
           <li><a href="#terms">Terms of Service</a></li>
         </ul>

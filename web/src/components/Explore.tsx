@@ -4,7 +4,7 @@ import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/sha
 import { formatUsdc, listedOnDefaultExplore } from "@tendril/shared";
 import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
-import { NotebookSection } from "./NotebookSection";
+import { NO_E2B_SIZES, NotebookSection, type E2bSizes } from "./NotebookSection";
 import { useCustodialSign } from "../context/CustodialSignContext";
 import type { Session } from "../App";
 import { isCustodialSession } from "../lib/session";
@@ -61,6 +61,11 @@ export function Explore({
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
   const [poolFilter, setPoolFilter] = useState<"microvm" | "all">("microvm");
   const [notebooks, setNotebooks] = useState(false);
+  const [priority, setPriority] = useState(false);
+  const [priorityUsdPerHour, setPriorityUsdPerHour] = useState<number | null>(null);
+  const [e2b, setE2b] = useState(false);
+  const [e2bUsdPerHour, setE2bUsdPerHour] = useState<number | null>(null);
+  const [e2bSizes, setE2bSizes] = useState<E2bSizes>(NO_E2B_SIZES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renting, setRenting] = useState<string | null>(null);
@@ -84,10 +89,15 @@ export function Explore({
     let alive = true;
     const load = () =>
       fetchExplorer()
-        .then(({ nodes: next, notebooks: canRun }) => {
+        .then(({ nodes: next, notebooks: canRun, priority, priorityUsdPerHour, e2b, e2bUsdPerHour, e2bPresets, e2bOptions, e2bPrices }) => {
           if (!alive) return;
           setNodes(next);
           setNotebooks(canRun);
+          setPriority(priority);
+          setPriorityUsdPerHour(priorityUsdPerHour);
+          setE2b(e2b);
+          setE2bUsdPerHour(e2bUsdPerHour);
+          setE2bSizes({ presets: e2bPresets, options: e2bOptions, prices: e2bPrices });
           setError(null);
         })
         .catch((err) => {
@@ -333,6 +343,12 @@ export function Explore({
         activeAddress={activeAddress}
         signTransactions={signTransactions}
         notebooks={notebooks}
+        priority={priority}
+        priorityUsdPerHour={priorityUsdPerHour}
+        e2b={e2b}
+        e2bUsdPerHour={e2bUsdPerHour}
+        e2bSizes={e2bSizes}
+        peers={nodes.length > 0}
         checking={loading && nodes.length === 0}
         onOpenConnectWallet={onOpenConnectWallet}
         onWalletChanged={onWalletChanged}
@@ -522,13 +538,7 @@ export function Explore({
                       </div>
                       <div className="hw-meta">
                         {n.cpuCores} Cores &middot; {(n.ramMb / 1024).toFixed(0)}GB RAM &middot; ${n.pricePerHourUsd}/hr
-                        {n.provider === "modal"
-                          ? " · JupyterLab in the browser"
-                          : n.runtime === "microvm"
-                            ? " · microVM"
-                            : n.runtime
-                              ? ` · ${n.runtime}`
-                              : ""}
+                        {n.runtime === "microvm" ? " · microVM" : n.runtime ? ` · ${n.runtime}` : ""}
                       </div>
                     </div>
                     <div className="hw-action">
@@ -538,15 +548,15 @@ export function Explore({
                           type="button"
                           className="hw-pill-btn pill-available"
                           disabled={renting === n.id}
-                          onClick={() =>
-                            rent(n.id, n.pricePerHourUsd, n.provider === "modal" ? "jupyter" : undefined)
-                          }
+                          onClick={() => rent(n.id, n.pricePerHourUsd)}
                         >
                           {renting === n.id
-                            ? stage || "Starting…"
-                            : n.provider === "modal"
-                              ? "Open lab"
-                              : "Available"}
+                            ? stage === "signing"
+                              ? "Approve in wallet…"
+                              : stage === "settling" || stage === "confirming"
+                                ? "Starting machine…"
+                                : "Starting…"
+                            : "Available"}
                         </button>
                         {n.provider !== "modal" && n.capabilities?.jupyter && (
                           <button type="button" className="btn-tiny" disabled={renting === n.id}

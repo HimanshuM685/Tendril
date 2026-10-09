@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { SandboxLimits, LeaseRelay } from "@tendril/shared";
+import { RUN_MAX_TIMEOUT_MS } from "@tendril/shared";
 import { config } from "./config.js";
 import { command } from "./runtime/process.js";
 
@@ -122,6 +123,8 @@ export async function startSandbox(
   internal = false,
   relay?: LeaseRelay,
   signal?: AbortSignal,
+  /** Exec sandboxes self-terminate after this, whatever happens to the agent. */
+  lifetimeMs = RUN_MAX_TIMEOUT_MS + 300_000,
 ): Promise<SandboxEndpoint> {
   const image = imageOverride || config.sandbox.image;
   const runImage = await ensureImage(image);
@@ -140,6 +143,8 @@ export async function startSandbox(
   const cpus = String(cpusNum);
   const gpus = limits.gpus || config.sandbox.gpus;
   const local = !relay?.ssh && config.tunnelMode === "local";
+  // One-shot jobs: no sshd, read-only root, bounded tmpfs, self-expiring.
+  const execOnly = internal;
 
   const args = [
     "run",
@@ -157,38 +162,53 @@ export async function startSandbox(
     "256",
     "--cap-drop",
     "ALL",
-    // The few caps sshd needs to accept a root password login under PAM.
-    // SYS_CHROOT is required for sshd's privilege-separation chroot — without it
-    // sshd accepts the TCP connection then drops it before the banner.
-    "--cap-add",
-    "CHOWN",
-    "--cap-add",
-    "DAC_OVERRIDE",
-    "--cap-add",
-    "FOWNER",
-    "--cap-add",
-    "SETUID",
-    "--cap-add",
-    "SETGID",
-    "--cap-add",
-    "SYS_CHROOT",
-    "--cap-add",
-    "AUDIT_WRITE",
     "--security-opt",
     "no-new-privileges",
   ];
+  if (execOnly) {
+    args.push(
+      "--init", "--read-only",
+      "--tmpfs", "/work:rw,nosuid,nodev,size=256m,mode=1777",
+      "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m,mode=1777",
+      "--ulimit", "fsize=134217728:134217728",
+      "-e", "HOME=/work", "-e", "PYTHONDONTWRITEBYTECODE=1",
+      "-e", "PIP_NO_CACHE_DIR=1", "-e", "MPLBACKEND=Agg",
+      "-e", `OMP_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
+      "-e", `OPENBLAS_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
+    );
+  } else {
+    args.push(
+      // The few caps sshd needs to accept a root password login under PAM.
+      // SYS_CHROOT is required for sshd's privilege-separation chroot — without it
+      // sshd accepts the TCP connection then drops it before the banner.
+      "--cap-add",
+      "CHOWN",
+      "--cap-add",
+      "DAC_OVERRIDE",
+      "--cap-add",
+      "FOWNER",
+      "--cap-add",
+      "SETUID",
+      "--cap-add",
+      "SETGID",
+      "--cap-add",
+      "SYS_CHROOT",
+      "--cap-add",
+      "AUDIT_WRITE",
+    );
+  }
 
   // Agent key can coexist with renter password; renter key disables password.
-  if (sshPubKey) {
+  if (!execOnly && sshPubKey) {
     args.push("-e", `SSH_PUBKEY=${sshPubKey}`);
   }
-  if (sshPassword) {
+  if (!execOnly && sshPassword) {
     args.push("-e", `SSH_PASSWORD=${sshPassword}`);
   }
 
   let hostPort = 0;
-  if (internal) {
-    args.push("-e", "NO_BORE=1");
+  if (execOnly) {
+    // no SSH, no tunnel
   } else if (local) {
     hostPort = await getFreePort();
     args.push("-e", "NO_BORE=1", "-p", `127.0.0.1:${hostPort}:22`);
@@ -199,17 +219,25 @@ export async function startSandbox(
     if (config.sandbox.boreSecret) args.push("-e", `BORE_SECRET=${config.sandbox.boreSecret}`);
   }
   if (gpus) args.push("--gpus", gpus);
+  if (execOnly) args.push("--entrypoint", "sleep");
   args.push(runImage);
+  if (execOnly) args.push(String(Math.ceil(Math.min(RUN_MAX_TIMEOUT_MS + 300_000, lifetimeMs) / 1000)));
 
   console.log(
-    `[docker] starting SSH sandbox ${name} (${runImage})` +
-      (internal ? " (private exec)" : local ? ` on 127.0.0.1:${hostPort}` : " via TLS relay"),
+    `[docker] starting ${execOnly ? "exec" : "SSH"} sandbox ${name} (${runImage})` +
+      (execOnly ? " (private exec)" : local ? ` on 127.0.0.1:${hostPort}` : " via TLS relay"),
   );
   // execFile errors include argv, which contains credentials. Never propagate them.
   try { await command("docker", args, { signal, timeoutMs: 60_000 }); }
   catch { throw new Error("Docker sandbox launch failed"); }
 
-  if (internal) return { leaseId, containerName: name, host: "", port: 0 };
+  if (execOnly) {
+    // A venv on bounded writable storage allows %pip without changing the
+    // read-only image or the contributor host.
+    try { await command("docker", ["exec", name, "python3", "-m", "venv", "--system-site-packages", "/work/.venv"], { signal, timeoutMs: 30_000 }); }
+    catch (err) { await stopSandbox(leaseId); throw err; }
+    return { leaseId, containerName: name, host: "", port: 0 };
+  }
 
   if (local) {
     await waitForPort(hostPort, 60_000, signal);
