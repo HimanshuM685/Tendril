@@ -9,7 +9,7 @@ const SENTINEL = "__TENDRIL_NB__";
 /** This code runs ONLY inside a disposable sandbox, never in the registry. */
 export function notebookToPayload(notebook: Record<string, unknown>, timeoutMs = 120_000): string {
   const encoded = Buffer.from(JSON.stringify(notebook), "utf8").toString("base64");
-  return `import asyncio, base64, json, os, sys, tempfile, time, stat, mimetypes
+  return `import asyncio, base64, json, os, subprocess, sys, tempfile, time, stat, mimetypes
 from pathlib import Path
 import nbformat
 from nbclient import NotebookClient
@@ -50,9 +50,14 @@ class BoundedClient(NotebookClient):
 with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
     kernel = Path(runtime) / "kernels" / "tendril-python3"
     kernel.mkdir(parents=True)
+    # A fresh IPYTHONDIR keeps the sandbox image's IPython profile (startup
+    # scripts, custom display formatters) out of the kernel, so every lane runs
+    # the same plain kernel whatever image it is on.
     (kernel / "kernel.json").write_text(json.dumps({
         "argv": [sys.executable, "-m", "ipykernel_launcher", "--matplotlib=inline", "-f", "{connection_file}"],
-        "display_name": "Python 3", "language": "python"
+        "display_name": "Python 3", "language": "python",
+        "env": {"IPYTHONDIR": str(Path(runtime) / "ipython"),
+                "MPLBACKEND": "module://matplotlib_inline.backend_inline"},
     }))
     km = AsyncKernelManager(kernel_name="tendril-python3", transport="ipc",
         connection_file=str(Path(runtime) / "connection.json"),
@@ -77,7 +82,25 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
         client.execute()
         ok = True
     except Exception as exc:
-        failure = str(exc)[-4000:]
+        # Never an empty log: some exceptions carry no message at all.
+        failure = (f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__)[-4000:]
+        # Per-cell timeouts here only ever come from the run deadline (credit or cap).
+        if type(exc).__name__ == "CellTimeoutError" or time.monotonic() >= deadline - 1:
+            failure = (f"Stopped at the ${boundedRunTimeoutMs(timeoutMs) / 1000}s limit "
+                       f"(credit-funded time or job cap). " + failure)[-4000:]
+        if "Kernel died" in failure:
+            # nbclient only says the kernel died. Launch the same command by hand to
+            # surface the real startup error (missing ipykernel, bad interpreter, …).
+            try:
+                probe = subprocess.run(
+                    [sys.executable, "-m", "ipykernel_launcher", "--matplotlib=inline", "-f", str(Path(runtime) / "probe.json")],
+                    capture_output=True, text=True, timeout=8)
+                detail = (probe.stderr or probe.stdout or "").strip()[-1500:]
+                failure = (failure + " | kernel startup: " + detail)[-4000:]
+            except subprocess.TimeoutExpired:
+                failure += " | the kernel starts on its own; it died only under the runner."
+            except Exception:
+                pass
     finally:
         # A supplied KernelManager is caller-owned; always stop its processes.
         async def cleanup():
@@ -92,13 +115,14 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
 # Preserve useful partial output. Failures are concise; full cell errors stay
 # in the executed notebook. Uploaded source is never automatically rewritten.
 code_index = 0
+stopped = failure.split(". ", 1)[0] + ". " if failure.startswith("Stopped at") else ""
 for cell in nb.cells:
     if cell.cell_type != "code":
         continue
     code_index += 1
     for out in cell.get("outputs", []):
         if out.get("output_type") == "error":
-            failure = f"Cell {code_index}: {out.get('ename', 'Error')}: {out.get('evalue', '')}"[:4000]
+            failure = (stopped + f"Cell {code_index}: {out.get('ename', 'Error')}: {out.get('evalue', '')}")[:4000]
             break
 artifacts = []
 used = 0

@@ -82,7 +82,7 @@ it is topped back up.
 ### Notebook jobs
 
 Upload an nbformat 4 `.ipynb` in Explore, or send `{ "notebook": <notebook>, "lane": "contributor" }`
-to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox. Both lanes use a real
+to `POST /x402/run`. Use `"priority"` for Modal's 2-vCPU/4-GiB CPU sandbox, or `"e2b"` for an E2B cloud sandbox (needs `E2B_API_KEY`; pick 1–8 vCPU and 1–8 GiB with `"e2b": {"vCpu": 4, "memGiB": 8}`, priced per size). All lanes use a real
 IPython kernel: `%pip`, `!commands`, cell magics, top-level `await`, plots, and process pools work.
 Bundled images include NumPy, pandas, matplotlib, SciPy, scikit-learn, Pillow, requests, and psutil.
 Custom contributor images must supply `nbclient`, `nbformat`, `ipykernel`, and workload dependencies.
@@ -106,7 +106,11 @@ a read-only image, and bounded writable `/work`/`/tmp`. `%pip` installs into a d
 Registry and contributor agents must both be updated; bundled sandbox image tags include a content
 hash and rebuild after Dockerfile changes. Explicit custom images need rebuilding by their operator.
 
-Try [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb). Local execution tests:
+Try [the training QA notebook](example-buyer/notebooks/tendril_qa_training.ipynb) for offline training,
+checkpoint resume, plots, artifacts, and opt-in failure/limit cases. Its configuration cell selects the QA mode;
+the default `smoke` mode is upload-ready. The final Markdown cell includes an end-to-end QA checklist.
+For compute-focused checks, use [the bounded benchmark](example-buyer/notebooks/tendril_benchmark.ipynb).
+Local execution tests:
 
 ```bash
 docker build -t tendril-notebook-test contributor/sandbox-ssh

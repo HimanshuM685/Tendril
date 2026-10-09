@@ -94,8 +94,25 @@ import {
 import { verifyLoginSignature } from "./wallet.js";
 import { isNodeConnected } from "./ws.js";
 import { config } from "./config.js";
-import { hostedCatalog, modalConfigured, priorityHourlyUsd, sandboxLifetimeMs } from "./hosted.js";
+import {
+  E2B_DEFAULT_SIZE,
+  E2B_GIB_OPTIONS,
+  E2B_PRESETS,
+  E2B_VCPU_OPTIONS,
+  e2bConfigured,
+  e2bNode,
+  e2bPriceTable,
+  e2bUsdPerHour,
+  isE2bSize,
+  type E2bSize,
+  hostedCatalog,
+  isHosted,
+  modalConfigured,
+  priorityHourlyUsd,
+  sandboxLifetimeMs,
+} from "./hosted.js";
 import { providerFor } from "./providers/index.js";
+import { ensureTemplate } from "./providers/e2b.js";
 import { claimNotebookPayer, notebookPayerBusy, withRunDeadline } from "./runLimits.js";
 import {
   confirmCustodialSign,
@@ -376,11 +393,19 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
 router.get("/explorer", guard((_req, res) => {
   const nodes = listOnlineNodes();
   const priority = modalConfigured();
+  const e2b = e2bConfigured();
   res.json({
     nodes,
-    notebooks: priority || nodes.length > 0,
+    notebooks: priority || e2b || nodes.length > 0,
     priority,
     priorityUsdPerHour: priority ? priorityHourlyUsd() : null,
+    e2b,
+    e2bUsdPerHour: e2b ? e2bUsdPerHour() : null,
+    // Size picker for the e2b lane: presets, the chart's options, and the
+    // authoritative price for every combination (keyed "c{vCpu}-m{memGiB}").
+    e2bPresets: e2b ? E2B_PRESETS.map((size) => ({ ...size, usdPerHour: e2bUsdPerHour(size) })) : [],
+    e2bOptions: { vCpu: E2B_VCPU_OPTIONS, memGiB: E2B_GIB_OPTIONS },
+    e2bPrices: e2b ? e2bPriceTable() : {},
   });
 }));
 
@@ -695,7 +720,7 @@ async function rent(req: Request, res: Response) {
   if (!surface) {
     return res.status(400).json({ error: "invalid_surface", detail: "surface must be ssh or jupyter" });
   }
-  if (node.provider === "modal" || surface === "jupyter") {
+  if (isHosted(node.provider) || surface === "jupyter") {
     return res.status(400).json({
       error: "surface_unsupported",
       detail: "hosted CPU is not a rentable node; upload a notebook",
@@ -837,7 +862,7 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
 
   const limits: SandboxLimits = {
     memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-    cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+    cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
     gpus: node.gpu ? "all" : "",
   };
 
@@ -853,13 +878,13 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
         fundingAtomic,
         rate,
         config.graceAtomic,
-        config.modalReadyTimeoutMs,
+        hostedReadyMs(node.provider),
       ),
       // Hosted Jupyter never uses the wallet address as a password.
-      sshPassword: node.provider === "modal" || sshPubKey ? null : renterAddr,
-      sshPubKey: node.provider === "modal" ? null : sshPubKey,
+      sshPassword: isHosted(node.provider) || sshPubKey ? null : renterAddr,
+      sshPubKey: isHosted(node.provider) ? null : sshPubKey,
     });
-    if (node.provider === "modal") activateLease(lease.id, access);
+    if (isHosted(node.provider)) activateLease(lease.id, access);
   } catch (err) {
     await abandonLease(lease.id);
     res.status(503).json({ error: "provisioning_failed", detail: (err as Error).message });
@@ -964,7 +989,9 @@ interface JobInput {
   payload?: string;
   notebook?: Record<string, unknown>;
   /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
-  lane?: "contributor" | "priority";
+  lane?: "contributor" | "priority" | "e2b";
+  /** e2b lane only: sandbox size. Defaults to E2B's 2 vCPU · 4 GiB. */
+  e2b?: E2bSize;
 }
 
 async function run(req: Request, res: Response): Promise<void> {
@@ -998,7 +1025,7 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     res.status(409).json({ error: "lease not active" });
     return;
   }
-  if (job.notebook && lease.provider !== "modal") {
+  if (job.notebook && !isHosted(lease.provider)) {
     res.status(400).json({
       error: "notebook_unsupported",
       detail: "contributor sandboxes run Python source; notebooks run on hosted CPU",
@@ -1089,7 +1116,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     }
 
     const lane = job.notebook
-      ? job.lane ?? (modalConfigured() ? "priority" : "contributor")
+      ? job.lane ?? (modalConfigured() ? "priority" : e2bConfigured() ? "e2b" : "contributor")
       : undefined;
     if (job.notebook && lane === "priority" && !modalConfigured()) {
       res.status(503).json({
@@ -1098,8 +1125,17 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       });
       return;
     }
+    if (job.notebook && lane === "e2b" && !e2bConfigured()) {
+      res.status(503).json({
+        error: "provisioning_failed",
+        detail: "the e2b lane needs E2B_API_KEY",
+      });
+      return;
+    }
     const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
-    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer) : pickNotebookHost();
+    const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer)
+      : lane === "e2b" ? freeE2bNode(job.e2b ?? E2B_DEFAULT_SIZE)
+      : pickNotebookHost("hosted-cpu-2");
     if (!node) {
       res.status(503).json({
         error: "no_node_available",
@@ -1178,12 +1214,12 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
         limits: {
           memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-          cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+          cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
           gpus: node.gpu ? "all" : "",
         },
-        timeoutMs: config.modalReadyTimeoutMs + budgetMs,
+        timeoutMs: hostedReadyMs(node.provider) + budgetMs,
         // One-shot sandboxes are not logged into. Never the wallet address.
-        sshPassword: node.provider === "modal" ? null : nanoid(32),
+        sshPassword: isHosted(node.provider) ? null : nanoid(32),
         sshPubKey: null,
       });
       if (!activateLease(lease.id, access)) {
@@ -1259,8 +1295,17 @@ async function runNotebookJob(
   const provider = providerFor(node.provider);
   // A bundled contributor image can be cold too; allow its first build the
   // same bounded provisioning window as the hosted notebook image.
-  const readyTimeoutMs = boundedRunTimeoutMs(Math.max(config.sandboxReadyTimeoutMs, config.modalReadyTimeoutMs));
+  const readyTimeoutMs = boundedRunTimeoutMs(Math.max(config.sandboxReadyTimeoutMs, hostedReadyMs(node.provider)));
   try {
+    // A first run of a new E2B size builds its template (minutes, once per size).
+    // That gets its own budget so the sandbox-ready deadline below stays tight.
+    if (node.provider === "e2b" && !config.e2bTemplate) {
+      await withRunDeadline(
+        ensureTemplate({ vCpu: node.cpuCores, memGiB: Math.round(node.ramMb / 1024) }),
+        config.e2bTemplateBuildTimeoutMs,
+        "E2B template build timed out; nothing was billed.",
+      );
+    }
     const starting = provider.start({
       leaseId,
       node,
@@ -1268,11 +1313,11 @@ async function runNotebookJob(
       image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits: {
         memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
-        cpus: Math.min(node.cpuCores, node.provider === "modal" ? node.cpuCores : 4),
+        cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
         gpus: node.gpu ? "all" : "",
       },
       timeoutMs: readyTimeoutMs + budgetMs,
-      sshPassword: node.provider === "modal" ? null : nanoid(32),
+      sshPassword: isHosted(node.provider) ? null : nanoid(32),
       sshPubKey: null,
     }).then(async (access) => {
       const lease = getLease(leaseId);
@@ -1375,9 +1420,20 @@ router.get("/lease/:id", guard((req: Request, res: Response) => {
 
 // ─────────────────────────── helpers ───────────────────────────
 
-/** Smallest hosted SKU. Not a pool node — only notebook upload uses it. */
-function pickNotebookHost(): ComputeNode | null {
-  const node = hostedCatalog().find((n) => n.id === "hosted-cpu-2");
+/** Provisioning window for a hosted sandbox; contributors keep the Modal-sized window they always had. */
+function hostedReadyMs(provider: ComputeNode["provider"]): number {
+  return provider === "e2b" ? config.e2bReadyTimeoutMs : config.modalReadyTimeoutMs;
+}
+
+/** The E2B node for this size, unless a run of that size is already in flight. */
+function freeE2bNode(size: E2bSize): ComputeNode | null {
+  const node = e2bNode(size);
+  return nodeBusy(node.id) ? null : node;
+}
+
+/** A hosted notebook SKU by id (Modal `hosted-cpu-2`, or E2B). Not a pool node — only notebook upload uses it. */
+function pickNotebookHost(id: string): ComputeNode | null {
+  const node = hostedCatalog().find((n) => n.id === id);
   if (!node || nodeBusy(node.id)) return null;
   return node;
 }
@@ -1399,8 +1455,12 @@ function readJob(body: unknown): JobInput | null {
     if (notebookError(notebook)) return null;
     if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return null;
     const laneRaw = (b as { lane?: unknown }).lane;
-    const lane = laneRaw === "contributor" || laneRaw === "priority" ? laneRaw : undefined;
-    return { notebook: notebook as Record<string, unknown>, lane };
+    const lane = laneRaw === "contributor" || laneRaw === "priority" || laneRaw === "e2b" ? laneRaw : undefined;
+    const sizeRaw = (b as { e2b?: { vCpu?: unknown; memGiB?: unknown } }).e2b;
+    const e2b = sizeRaw && isE2bSize(sizeRaw.vCpu, sizeRaw.memGiB)
+      ? { vCpu: sizeRaw.vCpu as number, memGiB: sizeRaw.memGiB as number }
+      : undefined;
+    return { notebook: notebook as Record<string, unknown>, lane, ...(e2b ? { e2b } : {}) };
   }
   return { payload: b?.payload as string };
 }

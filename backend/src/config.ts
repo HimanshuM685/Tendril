@@ -152,6 +152,18 @@ export const config = {
    */
   modalReadyTimeoutMs: Number(process.env.MODAL_SANDBOX_READY_TIMEOUT_MS ?? 300_000),
 
+  // ─────────────────────────── E2B hosted CPU ───────────────────────────
+  // Read only here, like the Modal credentials.
+  e2bApiKey: (process.env.E2B_API_KEY ?? "").trim(),
+  /** Fraction added on top of E2B's sandbox rate. Clamped to 0.20–0.30. */
+  e2bMarkup: Number(process.env.E2B_MARKUP ?? 0.25),
+  /** Empty = E2B's default code-interpreter template (jupyter + ipykernel + pandas…). */
+  e2bTemplate: (process.env.E2B_TEMPLATE ?? "").trim(),
+  /** How long sandbox create + dependency check may take before we 503. */
+  e2bReadyTimeoutMs: Number(process.env.E2B_SANDBOX_READY_TIMEOUT_MS ?? 60_000),
+  /** First run of a new size builds its template; that can take minutes, once per size. */
+  e2bTemplateBuildTimeoutMs: Number(process.env.E2B_TEMPLATE_BUILD_TIMEOUT_MS ?? 900_000),
+
   // ─────────────────────── Google OAuth custodial login ───────────────────────
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",

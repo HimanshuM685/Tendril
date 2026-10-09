@@ -121,7 +121,7 @@ Before paying, the MCP probes the 402 and reads `accepts[0].amount`. If that int
 | `tendril_account` | nonce + `POST /auth/wallet-login` then `GET /wallet` | `balanceAtomic` (prepaid) vs `earningsAtomic` (contributor). Session cached. |
 | `tendril_topup` | `POST /x402/topup?amount=` | Paid. `amountAtomic` is USDC atomic units (`1000000` = $1). |
 | `tendril_run` | `POST /x402/run` `{payload}` | Paid. Python in, stdout out. Optional `leaseToken` runs inside a rented box. |
-| `tendril_run_notebook` | `POST /x402/run` `{notebook, lane?}` | Paid. Python nbformat 4. Contributor or priority CPU. Returns `jobId` and `jobToken`. |
+| `tendril_run_notebook` | `POST /x402/run` `{notebook, lane?}` | Paid. Python nbformat 4. Contributor, priority (Modal) or e2b CPU. Returns `jobId` and `jobToken`. |
 | `tendril_notebook_job` | `GET /x402/run/:id` | Free. Pass `jobId`/`jobToken`; poll until `run` or `error` arrives for cells, artifacts, and billed usage. |
 | `tendril_rent` | `POST /x402/rent?nodeId=` | Paid. Returns `ssh`, `leaseId`, `leaseToken`. Optional `sshPubKey`. |
 | `tendril_lease` | `GET /lease/:id` | Needs `leaseToken`. |

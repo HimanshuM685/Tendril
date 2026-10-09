@@ -8,6 +8,8 @@ import { startWatchdog } from "./leases.js";
 import { allowedOrigin, corsPolicy } from "./x402/cors.js";
 import { checkFacilitator, checkDiscoveryConfig } from "./x402/server.js";
 import { warmNotebookImage } from "./providers/modal.js";
+import { warmTemplates } from "./providers/e2b.js";
+import { E2B_PRESETS } from "./hosted.js";
 
 // A billing/payment error must never take down the registry.
 process.on("unhandledRejection", (reason) => {
@@ -75,6 +77,9 @@ async function main(): Promise<void> {
     );
   }
 
+  // No-op without E2B_API_KEY (or with a pinned E2B_TEMPLATE).
+  warmTemplates(E2B_PRESETS);
+
   httpServer.listen(config.port, () => {
     console.log(`[registry] listening on http://localhost:${config.port}`);
     console.log(`[registry] Neon Postgres connected (credit ledger only); watchdog every ${config.meterIntervalMs}ms`);
@@ -84,6 +89,7 @@ async function main(): Promise<void> {
     console.log(
       `[registry] modal hosted ${config.modalTokenId && config.modalTokenSecret ? "enabled" : "off (set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET)"}`,
     );
+    console.log(`[registry] e2b hosted ${config.e2bApiKey ? "enabled" : "off (set E2B_API_KEY)"}`);
   });
 }
 

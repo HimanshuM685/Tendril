@@ -313,7 +313,7 @@ export async function closeLease(
 
 /** Contributor leases credit earnings. Hosted Modal leases do not. */
 export function earnsPayout(provider: ComputeProvider): boolean {
-  return provider !== "modal";
+  return provider === "contributor";
 }
 
 /**
