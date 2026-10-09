@@ -117,8 +117,6 @@ export const config = {
   boreServer: process.env.BORE_SERVER ?? "bore.pub",
   // Shared secret for a self-hosted bore server; empty for the public bore.pub.
   boreSecret: process.env.BORE_SECRET ?? "",
-  relaySocket: process.env.RELAY_SOCKET ?? "/run/tendril-relay/control.sock",
-  sandboxStopTimeoutMs: Number(process.env.SANDBOX_STOP_TIMEOUT_MS ?? 30_000),
 
   // ─────────────────────────── Lease bounds ───────────────────────────
   // Least credit a renter must hold to open a session, as seconds of runtime at

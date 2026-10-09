@@ -116,9 +116,13 @@ async function execText(
 }
 
 async function drop(leaseId: string, sb: Sandbox | null): Promise<void> {
-  if (!sb) return;
-  await sb.terminate();
   sandboxes.delete(leaseId);
+  if (!sb) return;
+  try {
+    await sb.terminate();
+  } catch (err) {
+    console.error(`[modal] terminate ${leaseId} failed:`, (err as Error).message);
+  }
 }
 
 function jupyterCommand(token: string): string[] {

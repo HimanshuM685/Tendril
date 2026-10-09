@@ -1269,29 +1269,6 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 /* Hardware List in explore.png */
-.pool-filter {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.pool-filter-btn {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-white);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.pool-filter-btn.is-on {
-  background: var(--lime-tint);
-  border-color: rgba(124, 179, 5, 0.45);
-  color: var(--lime-dark);
-}
-
 .hardware-list {
   display: flex;
   flex-direction: column;

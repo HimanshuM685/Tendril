@@ -1,546 +1,602 @@
-# Graph Report - .  (2026-10-05)
+# Graph Report - Tendril  (2026-10-08)
 
 ## Corpus Check
-- 7 files · ~358,890 words
-- Verdict: corpus is large enough that graph structure adds value.
+- cluster-only mode — file stats not available
 
 ## Summary
-- 1581 nodes · 2904 edges · 117 communities (103 shown, 14 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 40 edges (avg confidence: 0.86)
-- Token cost: 0 input · 0 output recorded (agent usage unavailable; actual cost unknown)
+- 1832 nodes · 3720 edges · 131 communities (104 shown, 27 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 238 edges (avg confidence: 0.96)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `a1dea539`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Compute Runtime Drivers|Compute Runtime Drivers]]
-- [[_COMMUNITY_Admin App Shell|Admin App Shell]]
-- [[_COMMUNITY_Marketplace and Dashboard|Marketplace and Dashboard]]
-- [[_COMMUNITY_Admin Portal Docs|Admin Portal Docs]]
-- [[_COMMUNITY_Example Buyer Client|Example Buyer Client]]
-- [[_COMMUNITY_Admin Route Guards|Admin Route Guards]]
-- [[_COMMUNITY_Leedlime Landing|Leedlime Landing]]
-- [[_COMMUNITY_Backend Dependencies|Backend Dependencies]]
-- [[_COMMUNITY_Shared Runtime Protocol|Shared Runtime Protocol]]
-- [[_COMMUNITY_Architecture and Top Ups|Architecture and Top Ups]]
-- [[_COMMUNITY_Wallet Account Client|Wallet Account Client]]
-- [[_COMMUNITY_Route Discovery|Route Discovery]]
-- [[_COMMUNITY_Web Wallet Dependencies|Web Wallet Dependencies]]
-- [[_COMMUNITY_Hosted Compute Catalog|Hosted Compute Catalog]]
-- [[_COMMUNITY_Wallet Export and Bars|Wallet Export and Bars]]
-- [[_COMMUNITY_Lease Lookup|Lease Lookup]]
-- [[_COMMUNITY_Lease Data Types|Lease Data Types]]
-- [[_COMMUNITY_Root Package|Root Package]]
-- [[_COMMUNITY_API Docs UI|API Docs UI]]
-- [[_COMMUNITY_MCP Package|MCP Package]]
-- [[_COMMUNITY_Contributor Sandbox Provider|Contributor Sandbox Provider]]
-- [[_COMMUNITY_Relay Client|Relay Client]]
-- [[_COMMUNITY_Admin Package|Admin Package]]
-- [[_COMMUNITY_Modal Compute Provider|Modal Compute Provider]]
-- [[_COMMUNITY_Contributor Package|Contributor Package]]
-- [[_COMMUNITY_API Authentication Docs|API Authentication Docs]]
-- [[_COMMUNITY_Database Layer|Database Layer]]
-- [[_COMMUNITY_Buyer Package|Buyer Package]]
-- [[_COMMUNITY_Lease Lifecycle|Lease Lifecycle]]
-- [[_COMMUNITY_Web TypeScript Config|Web TypeScript Config]]
-- [[_COMMUNITY_Admin Auth Config|Admin Auth Config]]
-- [[_COMMUNITY_Balance Chart|Balance Chart]]
-- [[_COMMUNITY_x402 Lease Docs|x402 Lease Docs]]
-- [[_COMMUNITY_Notebook Section|Notebook Section]]
-- [[_COMMUNITY_API Error Reference|API Error Reference]]
-- [[_COMMUNITY_Runtime Operations Guide|Runtime Operations Guide]]
-- [[_COMMUNITY_Web SPA Entry|Web SPA Entry]]
-- [[_COMMUNITY_Wallet Connect Modal|Wallet Connect Modal]]
-- [[_COMMUNITY_Provider Routing|Provider Routing]]
-- [[_COMMUNITY_Metrics Board|Metrics Board]]
-- [[_COMMUNITY_Google Auth|Google Auth]]
-- [[_COMMUNITY_Base TypeScript Config|Base TypeScript Config]]
-- [[_COMMUNITY_Cottage Painting|Cottage Painting]]
-- [[_COMMUNITY_Alpine Lake Painting|Alpine Lake Painting]]
-- [[_COMMUNITY_Deploy Guide|Deploy Guide]]
-- [[_COMMUNITY_Free Read Endpoints|Free Read Endpoints]]
-- [[_COMMUNITY_Relay Manager|Relay Manager]]
-- [[_COMMUNITY_Session Authentication Types|Session Authentication Types]]
-- [[_COMMUNITY_Custodial Wallet|Custodial Wallet]]
-- [[_COMMUNITY_Node Capability Registry|Node Capability Registry]]
-- [[_COMMUNITY_Admin TypeScript Config|Admin TypeScript Config]]
-- [[_COMMUNITY_Field Painting|Field Painting]]
-- [[_COMMUNITY_Lime Field Painting|Lime Field Painting]]
-- [[_COMMUNITY_x402 Client Recipes|x402 Client Recipes]]
-- [[_COMMUNITY_Email Auth Users|Email Auth Users]]
-- [[_COMMUNITY_Custodial Signing|Custodial Signing]]
-- [[_COMMUNITY_Graphify Agent Rules|Graphify Agent Rules]]
-- [[_COMMUNITY_Hills Smudge Painting|Hills Smudge Painting]]
-- [[_COMMUNITY_Gas Grant Records|Gas Grant Records]]
-- [[_COMMUNITY_Desktop MCP Setup|Desktop MCP Setup]]
-- [[_COMMUNITY_Mobile MCP Setup|Mobile MCP Setup]]
-- [[_COMMUNITY_Shared Package|Shared Package]]
-- [[_COMMUNITY_Claude Perplexity Marks|Claude Perplexity Marks]]
-- [[_COMMUNITY_Daisy Field Painting|Daisy Field Painting]]
-- [[_COMMUNITY_Backend Boot|Backend Boot]]
-- [[_COMMUNITY_Placement Tests|Placement Tests]]
-- [[_COMMUNITY_AgentMesh Logo|AgentMesh Logo]]
-- [[_COMMUNITY_Cloudscape Painting|Cloudscape Painting]]
-- [[_COMMUNITY_Grok USDC Marks|Grok USDC Marks]]
-- [[_COMMUNITY_Backend TypeScript Config|Backend TypeScript Config]]
-- [[_COMMUNITY_Explore Page|Explore Page]]
-- [[_COMMUNITY_Contributor TypeScript Config|Contributor TypeScript Config]]
-- [[_COMMUNITY_x402 Schemas|x402 Schemas]]
-- [[_COMMUNITY_Buyer TypeScript Config|Buyer TypeScript Config]]
-- [[_COMMUNITY_x402 Client Tests|x402 Client Tests]]
-- [[_COMMUNITY_MCP TypeScript Config|MCP TypeScript Config]]
-- [[_COMMUNITY_P1 CI Workflow|P1 CI Workflow]]
-- [[_COMMUNITY_Contributor Payouts|Contributor Payouts]]
-- [[_COMMUNITY_P1 Test Config|P1 Test Config]]
-- [[_COMMUNITY_Hash Hero|Hash Hero]]
-- [[_COMMUNITY_CORS Policy|CORS Policy]]
-- [[_COMMUNITY_ChatGPT Logo|ChatGPT Logo]]
-- [[_COMMUNITY_CLI Rental Guide|CLI Rental Guide]]
-- [[_COMMUNITY_Shared TypeScript Config|Shared TypeScript Config]]
-- [[_COMMUNITY_Format Tests|Format Tests]]
-- [[_COMMUNITY_Wallet Signing|Wallet Signing]]
-- [[_COMMUNITY_Open Graph Card|Open Graph Card]]
-- [[_COMMUNITY_Guest SSH Bridge|Guest SSH Bridge]]
-- [[_COMMUNITY_Favicon Mark|Favicon Mark]]
-- [[_COMMUNITY_Contributor Config|Contributor Config]]
-- [[_COMMUNITY_Docker Compose Services|Docker Compose Services]]
-- [[_COMMUNITY_Public Favicon|Public Favicon]]
-- [[_COMMUNITY_Hardware Specs|Hardware Specs]]
-- [[_COMMUNITY_Guest Smoke Test|Guest Smoke Test]]
-- [[_COMMUNITY_Caveman Mode Rules|Caveman Mode Rules]]
-- [[_COMMUNITY_Algorand Logo|Algorand Logo]]
-- [[_COMMUNITY_Defly Logo|Defly Logo]]
-- [[_COMMUNITY_Pera Logo|Pera Logo]]
-- [[_COMMUNITY_OpenCode Plugin|OpenCode Plugin]]
-- [[_COMMUNITY_Key Generation|Key Generation]]
-- [[_COMMUNITY_Vite Env Types|Vite Env Types]]
-- [[_COMMUNITY_Admin Vercel Rewrites|Admin Vercel Rewrites]]
-- [[_COMMUNITY_Kernel Build Script|Kernel Build Script]]
-- [[_COMMUNITY_Sandbox SSH Entrypoint|Sandbox SSH Entrypoint]]
-- [[_COMMUNITY_Sandbox Init Script|Sandbox Init Script]]
-- [[_COMMUNITY_Web Vercel Rewrites|Web Vercel Rewrites]]
-- [[_COMMUNITY_Fee Sponsorship Docs|Fee Sponsorship Docs]]
+- lib/api.ts
+- server.ts
+- WalletBar.tsx
+- backend/package.json
+- Leedlime landing page
+- Backend / Registry
+- web/src/App.tsx
+- mcp/package.json
+- shared/src/index.ts
+- docs-web/package.json
+- db.ts
+- tools.ts
+- routes.ts
+- docker.ts
+- leases.ts
+- admin/package.json
+- contributor.ts
+- src/api.ts
+- registry.ts
+- custodialSign.ts
+- contributor/package.json
+- example-buyer/package.json
+- McpModal.tsx
+- Session
+- scripts
+- api.md
+- example-buyer/src/index.ts
+- web/package.json
+- NotebookSection.tsx
+- compilerOptions
+- `POST /x402/run`
+- modal.ts
+- notebookRunner.ts
+- `POST /topup`
+- Explore.tsx
+- compilerOptions
+- config
+- compilerOptions
+- credit.ts
+- backend/src/config.ts
+- runAnywhere
+- emailAuth.ts
+- hosted.ts
+- painting1.jpg
+- Alpine Mountain Lake Landscape Painting
+- 3. Production deployment
+- Overview
+- dependencies
+- Field landscape painting
+- x402-api.md
+- Full Pipeline
+- Docs.tsx
+- Metrics.tsx
+- perplexity.svg
+- painting2.jpg
+- agentmesh.svg
+- Clouds Painting
+- grok.svg
+- CustodialSignContext.tsx
+- compilerOptions
+- ref_next
+- Common schemas
+- googleAuth.ts
+- ref_node_assert
+- Tendril MCP
+- docs.ts
+- gasGrant.ts
+- ArchDiagram.tsx
+- Build on Tendril
+- Six-Petal Radial Hexagram
+- Renting from the CLI
+- shared/package.json
+- backend/tsconfig.json
+- contributor/tsconfig.json
+- Tendril Open Graph Social Preview
+- favicon.svg
+- example-buyer/tsconfig.json
+- Docker Backend Service
+- Tendril Favicon Mark
+- Caveman
+- Algorand logo
+- Defly
+- pera.svg
+- mcp/tsconfig.json
+- components/Dashboard.tsx
+- One-shot Jobs
+- Architecture & Flow
+- Consumer Tools
+- Contributor Tools
+- docs-runtime.tsx
+- shared/tsconfig.json
+- devDependencies
+- x402Client.test.ts
+- Algorand Settlement
+- Per-Second Metering
+- USDC with x402
+- tendril_account
+- tendril_list_nodes
+- tendril_rent
+- tendril_run
+- tendril_topup
+- tendril_withdraw
+- Security & Sandboxes
+- SSH Access & Keys
+- Getting started
+- Sandboxes & Bore Tunnels
+- Algorand settlement basics
+- BalanceChart.tsx
+- scripts
+- web/src/app/client-shell.tsx
+- admin/vercel.json
+- docs-web/src/app/layout.tsx
+- docs-web/vercel.json
+- Welcome to Tendril
+- web/vercel.json
+- web/next.config.ts
+- entrypoint.sh
+- types.d.ts
 
 ## God Nodes (most connected - your core abstractions)
-1. `Fetch` - 30 edges
-2. `apiError()` - 30 edges
-3. `Session` - 26 edges
-4. `formatUsdc()` - 26 edges
-5. `q()` - 16 edges
-6. `rent()` - 16 edges
-7. `useAdminAuth()` - 15 edges
-8. `compilerOptions` - 15 edges
-9. `api()` - 15 edges
-10. `Leedlime landing page` - 15 edges
+1. `apiError()` - 33 edges
+2. `formatUsdc()` - 31 edges
+3. `Session` - 28 edges
+4. `config` - 25 edges
+5. `runAnywhere()` - 24 edges
+6. `WalletBar()` - 24 edges
+7. `App()` - 21 edges
+8. `SignTransactions` - 21 edges
+9. `creditBalance()` - 18 edges
+10. `api()` - 18 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Lease Watchdog` --semantically_similar_to--> `MCP Spend Cap (TENDRIL_MAX_ATOMIC)`  [INFERRED] [semantically similar]
+- `Lease Watchdog` --semantically_similar_to--> `Spend Cap`  [INFERRED] [semantically similar]
   README.md → docs/mcp.md
-- `loginWithWallet()` --calls--> `Fetch`  [INFERRED]
-  web/src/wallet.ts → example-buyer/src/index.ts
-- `Platform custodial account (PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY)` --conceptually_related_to--> `Backend / Registry`  [INFERRED]
-  DEPLOY.md → README.md
-- `Props` --references--> `WalletSummary`  [EXTRACTED]
-  web/src/components/Explore.tsx → shared/src/index.ts
-- `Default P1 CI verification` --references--> `npm run typecheck`  [INFERRED]
-  docs/runtime.md → .github/workflows/p1.yml
+- `rent()` --indirect_call--> `signTransactions()`  [INFERRED]
+  web/src/components/Explore.tsx → backend/src/custodialWallet.ts
+- `run()` --indirect_call--> `signTransactions()`  [INFERRED]
+  web/src/components/NotebookSection.tsx → backend/src/custodialWallet.ts
+- `deposit()` --indirect_call--> `signTransactions()`  [INFERRED]
+  web/src/components/TopUpControl.tsx → backend/src/custodialWallet.ts
+- `prepareCustodialSign()` --calls--> `formatUsdc()`  [EXTRACTED]
+  backend/src/custodialSign.ts → shared/src/index.ts
 
 ## Import Cycles
-- 1-file cycle: `example-buyer/src/index.ts -> example-buyer/src/index.ts`
-- 1-file cycle: `contributor/src/index.ts -> contributor/src/index.ts`
-- 3-file cycle: `backend/src/leases.ts -> backend/src/providers/index.ts -> backend/src/providers/contributor.ts -> backend/src/leases.ts`
 - 4-file cycle: `backend/src/leases.ts -> backend/src/providers/index.ts -> backend/src/providers/contributor.ts -> backend/src/ws.ts -> backend/src/leases.ts`
 
-## Communities (117 total, 14 thin omitted)
+## Communities (131 total, 27 thin omitted)
 
-### Community 0 - "Compute Runtime Drivers"
-Cohesion: 0.06
-Nodes (56): dockerDriver(), BootConfigInput, buildBootConfig(), firecrackerDriver(), FirecrackerOptions, jailerArgv(), JailerArgvInput, memoryMib() (+48 more)
-
-### Community 1 - "Admin App Shell"
+### Community 0 - "lib/api.ts"
 Cohesion: 0.08
-Nodes (44): AdminLayout(), LINKS, acceptGasRequest(), adminLoginUrl(), AdminUserRow, apiError(), authHeaders(), exchangeAdminCode() (+36 more)
+Nodes (55): Dashboard(), fmtAlgo(), fmtUsdc(), Filter, FILTERS, fmtAlgo(), fmtDate(), GasRequests() (+47 more)
 
-### Community 2 - "Marketplace and Dashboard"
-Cohesion: 0.07
-Nodes (32): Contribute(), Dashboard(), fmtDuration(), Props, resolveStats(), GoogleCallback(), Props, Props (+24 more)
+### Community 1 - "server.ts"
+Cohesion: 0.08
+Nodes (47): initDb(), app, corsOrigin, main(), startWatchdog(), warmNotebookImage(), router, topUp() (+39 more)
 
-### Community 3 - "Admin Portal Docs"
-Cohesion: 0.06
-Nodes (45): admin/index.html — SPA entry mounting React via /src/main.tsx, Admin SPA (admin.tendrilhq.com) — Google sign-in, email allowlist, gas grant review, Platform custodial account (PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY), Registry HTTP API, Tendril MCP Server, MCP Spend Cap (TENDRIL_MAX_ATOMIC), tendril_account, tendril_lease (+37 more)
+### Community 2 - "WalletBar.tsx"
+Cohesion: 0.10
+Nodes (39): EmailSessionResponse, formatUsdc(), formatUsdcExact(), GasRequestInfo, GoogleAccountResponse, GoogleSessionResponse, WalletLoginResponse, ConnectWalletModal() (+31 more)
 
-### Community 4 - "Example Buyer Client"
-Cohesion: 0.11
-Nodes (41): main(), authedJson(), clearSession(), ensurePay(), fail(), loadWallet(), maxAtomic(), networkName() (+33 more)
+### Community 3 - "backend/package.json"
+Cohesion: 0.04
+Nodes (48): dependencies, algosdk, cors, dotenv, express, jsonwebtoken, modal, nanoid (+40 more)
 
-### Community 5 - "Admin Route Guards"
-Cohesion: 0.07
-Nodes (38): adminRouter, Handler, requireAdmin(), adminFromAuthHeader(), activeUsersByChange(), ActiveWindow, countGasRequestsByStatus(), countGoogleUsers() (+30 more)
-
-### Community 6 - "Leedlime Landing"
+### Community 4 - "Leedlime landing page"
 Cohesion: 0.08
 Nodes (36): Leedlime landing page, Built on accuracy, not volume, Agent chat UI (Good evening / Find my ICP matches), Built for humans and agents, B2B outreach / lead generation, Get started for free, Dashboard/leads UI mock (Good afternoon, Michael / lead list), Current, not archived data (+28 more)
 
-### Community 7 - "Backend Dependencies"
-Cohesion: 0.06
-Nodes (34): dependencies, algosdk, cors, dotenv, express, jsonwebtoken, modal, nanoid (+26 more)
-
-### Community 8 - "Shared Runtime Protocol"
-Cohesion: 0.09
-Nodes (30): AgentHelloMsg, AlgorandNetwork, ContainerDestroyedMsg, ContainerFailedMsg, ContainerReadyMsg, DestroyContainerMsg, ExportKeyResponse, HeartbeatMsg (+22 more)
-
-### Community 9 - "Architecture and Top Ups"
-Cohesion: 0.09
-Nodes (22): ArchDiagram(), FlowMode, PRESETS, Props, CustodialSignProvider(), network, payingFetch(), PayStage (+14 more)
-
-### Community 10 - "Wallet Account Client"
-Cohesion: 0.16
-Nodes (27): Props, algod, fetchOnchainBalances(), fetchWalletAccount(), fetchWalletGasRequest(), optInUsdcWithWallet(), submitWalletGasRequest(), apiError() (+19 more)
-
-### Community 11 - "Route Discovery"
-Cohesion: 0.12
-Nodes (26): AssetInfo, discoveryExtensions(), RouteDiscovery, serviceMetadata, discovered, payloadFor(), rent, run (+18 more)
-
-### Community 12 - "Web Wallet Dependencies"
+### Community 5 - "Backend / Registry"
 Cohesion: 0.07
-Nodes (29): dependencies, algosdk, @blockshake/defly-connect, lute-connect, marked, @perawallet/connect, react, react-dom (+21 more)
+Nodes (27): Admin SPA (admin.tendrilhq.com) — Google sign-in, email allowlist, gas grant review, Platform custodial account (PLATFORM_PAYTO + PLATFORM_PRIVATE_KEY), Claude Desktop Client, Model Context Protocol, Registry HTTP API, Spend Cap, Tendril MCP, x402 Payment (+19 more)
 
-### Community 13 - "Hosted Compute Catalog"
+### Community 6 - "web/src/App.tsx"
+Cohesion: 0.08
+Nodes (37): @txnlab/use-wallet-react, REGISTRY_URL, App(), signIn(), ConnectWalletModal, Dashboard, DocsRedirect, GoogleCallback (+29 more)
+
+### Community 7 - "mcp/package.json"
+Cohesion: 0.04
+Nodes (43): bin, tendril-mcp, dependencies, algosdk, dotenv, @modelcontextprotocol/sdk, @x402/avm, @x402/core (+35 more)
+
+### Community 8 - "shared/src/index.ts"
+Cohesion: 0.07
+Nodes (35): agentSockets, pendingContainers, pendingJobs, activeLeases, AgentHelloMsg, ALGORAND_MAINNET_CAIP2, ALGORAND_TESTNET_CAIP2, AlgorandNetwork (+27 more)
+
+### Community 9 - "docs-web/package.json"
+Cohesion: 0.05
+Nodes (35): dependencies, marked, next, react, react-dom, react-router-dom, devDependencies, @playwright/test (+27 more)
+
+### Community 10 - "db.ts"
+Cohesion: 0.08
+Nodes (34): adminRouter, Handler, requireAdmin(), adminFromAuthHeader(), activeUsersByChange(), ActiveWindow, countGasRequestsByStatus(), countGoogleUsers() (+26 more)
+
+### Community 11 - "tools.ts"
 Cohesion: 0.15
-Nodes (24): clampMarkup(), HOSTED_SKUS, hostedById(), hostedCatalog(), hostedHourlyUsd(), HostedSku, modalConfigured(), modalUsdPerHour() (+16 more)
+Nodes (33): authedJson(), clearSession(), ensurePay(), fail(), loadWallet(), maxAtomic(), networkName(), paidAuthedJson() (+25 more)
 
-### Community 14 - "Wallet Export and Bars"
-Cohesion: 0.13
-Nodes (21): ExportKeyModal(), Props, GoogleWalletBar(), short(), Props, SignConfirmModal(), CustodialSignContext, CustodialSignContextValue (+13 more)
-
-### Community 15 - "Lease Lookup"
-Cohesion: 0.13
-Nodes (21): syncGasGrantEligibility, getLease(), leaseByPayment(), waitForLeaseAccess(), Handler, isOpenSshPubKey(), jobError(), JobInput (+13 more)
-
-### Community 16 - "Lease Data Types"
+### Community 12 - "routes.ts"
 Cohesion: 0.11
-Nodes (20): atomicPerHour(), Lease, LeaseStatus, proratedCost(), abandoned, cleaned, closing, earnsPayout() (+12 more)
+Nodes (28): addressFromSession(), AdminInfo, isCustodialSessionKind(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), sessionFromAuthHeader(), SessionInfo (+20 more)
 
-### Community 17 - "Root Package"
-Cohesion: 0.09
-Nodes (22): description, engines, node, name, overrides, lute-connect, private, scripts (+14 more)
+### Community 13 - "docker.ts"
+Cohesion: 0.12
+Nodes (22): containerName(), dockerNcpu(), ensureImage(), execFileP, getFreePort(), runInSandbox(), SANDBOX_CTX, SandboxEndpoint (+14 more)
 
-### Community 18 - "API Docs UI"
-Cohesion: 0.10
-Nodes (12): DOCS, Group, Heading, MdDocId, Section, Docs(), DocTab, MANUAL_TOC (+4 more)
+### Community 14 - "leases.ts"
+Cohesion: 0.13
+Nodes (27): abandonLease(), activateLease(), closeLease(), createLease(), earnsPayout(), expiredLeaseAction(), failLease(), fundedUntil() (+19 more)
 
-### Community 19 - "MCP Package"
-Cohesion: 0.09
-Nodes (21): bin, tendril-mcp, dependencies, algosdk, dotenv, @modelcontextprotocol/sdk, @tendril/shared, tsx (+13 more)
+### Community 15 - "admin/package.json"
+Cohesion: 0.07
+Nodes (29): dependencies, next, react, react-dom, react-router-dom, @tendril/shared, devDependencies, @types/node (+21 more)
 
-### Community 20 - "Contributor Sandbox Provider"
-Cohesion: 0.18
-Nodes (18): contexts, destroy(), exec(), id, start(), jupyterJson(), mediaTypes, notebookOutput() (+10 more)
+### Community 16 - "contributor.ts"
+Cohesion: 0.12
+Nodes (24): NewLease, RunJobResult, contributorProvider, destroy(), exec(), id, start(), providers (+16 more)
 
-### Community 21 - "Relay Client"
-Cohesion: 0.14
-Nodes (14): Context, relayClient, relayRequest(), Entry, exec, RelayOptions, run(), Slot (+6 more)
+### Community 17 - "src/api.ts"
+Cohesion: 0.16
+Nodes (26): signTransactions(), apiError(), createApiKey(), fetchApiKeys(), fetchExplorer(), fetchLease(), fetchMetrics(), fetchMyNodes() (+18 more)
 
-### Community 22 - "Admin Package"
-Cohesion: 0.10
-Nodes (19): dependencies, react, react-dom, react-router-dom, @tendril/shared, devDependencies, @types/react, @types/react-dom (+11 more)
-
-### Community 23 - "Modal Compute Provider"
-Cohesion: 0.17
-Nodes (19): destroy(), drop(), exec(), execText(), id, jupyterAccess(), jupyterCommand(), LIST_ARTIFACTS (+11 more)
-
-### Community 24 - "Contributor Package"
+### Community 18 - "registry.ts"
 Cohesion: 0.11
-Nodes (18): dependencies, algosdk, dotenv, nanoid, socket.io-client, @tendril/shared, tsx, devDependencies (+10 more)
+Nodes (25): toExplorer(), getLease(), heldLease(), leaseByPayment(), leasesForNode(), waitForLeaseAccess(), getNode(), listNodesByOwner() (+17 more)
 
-### Community 25 - "API Authentication Docs"
+### Community 19 - "custodialSign.ts"
+Cohesion: 0.13
+Nodes (22): checkExportRateLimit(), confirmCustodialSign(), exportLog, exportMnemonicForUser(), failPaid(), pending, PendingRequest, PrepareAction (+14 more)
+
+### Community 20 - "contributor/package.json"
+Cohesion: 0.07
+Nodes (26): dependencies, algosdk, dotenv, nanoid, socket.io-client, @tendril/shared, tsx, devDependencies (+18 more)
+
+### Community 21 - "example-buyer/package.json"
+Cohesion: 0.07
+Nodes (26): dependencies, algosdk, dotenv, @tendril/shared, tsx, @x402/avm, @x402/core, @x402/fetch (+18 more)
+
+### Community 22 - "McpModal.tsx"
+Cohesion: 0.12
+Nodes (20): DocsRedirect(), HashHero(), HashHeroProps, prefersReducedMotion(), randomGlyph(), randomHex(), ROWS, FAQ_ITEMS (+12 more)
+
+### Community 23 - "Session"
+Cohesion: 0.19
+Nodes (21): ApiKeyInfo, CreateApiKeyResponse, usdToAtomic(), WalletSummary, Session, Props, Props, Props (+13 more)
+
+### Community 24 - "scripts"
+Cohesion: 0.08
+Nodes (24): description, engines, node, name, overrides, lute-connect, private, scripts (+16 more)
+
+### Community 25 - "api.md"
 Cohesion: 0.13
 Nodes (18): Authentication credential model (session/API key/lease/payment), POST /auth/wallet-login, GET /auth/wallet-nonce, Authentication, Contributor, DELETE /keys/:id, `DELETE /x402/leases/:id`, `GET /keys` (+10 more)
 
-### Community 26 - "Database Layer"
-Cohesion: 0.14
-Nodes (15): [{ lease_id: replayId }], [{ n }], otherAfter, otherBefore, [{ s }], schemas, payoutContributor(), topUp() (+7 more)
-
-### Community 27 - "Buyer Package"
+### Community 26 - "example-buyer/src/index.ts"
 Cohesion: 0.11
-Nodes (17): dependencies, algosdk, dotenv, @tendril/shared, tsx, @x402/avm, @x402/core, @x402/fetch (+9 more)
+Nodes (18): config, repoRoot, Fetch, main(), MIN_RAM_MB, postJson(), REGISTRY, repoRoot (+10 more)
 
-### Community 28 - "Lease Lifecycle"
-Cohesion: 0.20
-Nodes (17): destroyForLease(), providerFor(), sandboxLifetimeMs(), fundedSeconds(), charges, newLease(), original, abandonLease() (+9 more)
+### Community 27 - "web/package.json"
+Cohesion: 0.09
+Nodes (22): @blockshake/defly-connect, buffer, lute-connect, @perawallet/connect, process, algosdk, next, react (+14 more)
 
-### Community 29 - "Web TypeScript Config"
-Cohesion: 0.11
-Nodes (17): compilerOptions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+9 more)
+### Community 28 - "NotebookSection.tsx"
+Cohesion: 0.18
+Nodes (19): RunJobResponse, runNotebook(), asText(), availabilityCopy(), cellsFrom(), clip(), downloadBlob(), fmtBytes() (+11 more)
 
-### Community 30 - "Admin Auth Config"
-Cohesion: 0.21
-Nodes (14): config, repoRoot, adminGoogleCallback(), adminGoogleStart(), adminSessionExchange(), disabled(), isAdminAuthEnabled(), usedExchangeJtis (+6 more)
+### Community 29 - "compilerOptions"
+Cohesion: 0.10
+Nodes (19): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+11 more)
 
-### Community 31 - "Balance Chart"
-Cohesion: 0.21
-Nodes (14): BalanceChart(), Props, Pt, formatAlgo(), OnchainAccountPanel(), OnchainPanelState, Props, WalletPanel() (+6 more)
-
-### Community 32 - "x402 Lease Docs"
+### Community 30 - "`POST /x402/run`"
 Cohesion: 0.18
 Nodes (17): `200 OK`, Billing, and how you can end up owing money, `DELETE /x402/leases/:id`, Endpoints, Example, Example — inside a lease you hold, Example — no lease, no setup, `GET /explorer` (+9 more)
 
-### Community 33 - "Notebook Section"
-Cohesion: 0.18
-Nodes (12): asText(), availabilityCopy(), cellsFrom(), clip(), NotebookSection(), outputsFrom(), PendingNotebook, Props (+4 more)
+### Community 31 - "modal.ts"
+Cohesion: 0.19
+Nodes (18): buildImage(), destroy(), drop(), ensureImage(), exec(), execText(), id, jupyterAccess() (+10 more)
 
-### Community 34 - "API Error Reference"
-Cohesion: 0.17
-Nodes (16): CORS, DELETE /x402/leases/:id (api.md), Error index, Paid endpoints, Reference, `400 Bad Request`, `402 Payment Required`, `502 Bad Gateway` (+8 more)
-
-### Community 35 - "Runtime Operations Guide"
+### Community 32 - "notebookRunner.ts"
 Cohesion: 0.16
-Nodes (16): Heartbeat runtime and capabilities, Contributor lease, Firecracker and jailer v1.12.1, Guest SSH, Jupyter and notebook execution, Per-guest namespace and TAP networking, Linux microVM runtime, Native contributor prerequisites, Neon-backed charge replay test (+8 more)
+Nodes (12): notebookToPayload(), parseNotebookRun(), execute(), executeNotebook(), notebook(), JOB_LOG_MAX_BYTES, JOB_RESULT_MAX_BYTES, NOTEBOOK_ARTIFACT_BYTES (+4 more)
 
-### Community 36 - "Web SPA Entry"
+### Community 33 - "`POST /topup`"
 Cohesion: 0.17
-Nodes (16): Bazaar scrapes title as service name, Favicon /favicon.svg, Google Fonts: JetBrains Mono, Newsreader, Plus Jakarta Sans, Module entry /src/main.tsx, React mount point #root, Rent sandboxed SSH by hour; x402 Algorand USDC, OG image https://tendrilhq.com/og.png, Open Graph metadata (+8 more)
+Nodes (14): CORS, DELETE /x402/leases/:id (api.md), Error index, Paid endpoints, Reference, `400 Bad Request`, `402 Payment Required`, `502 Bad Gateway` (+6 more)
 
-### Community 37 - "Wallet Connect Modal"
-Cohesion: 0.25
-Nodes (12): ConnectWalletModal(), Props, EmailAuthModal(), Props, short(), WalletBar(), fetchEmailEnabled(), fetchGoogleEnabled() (+4 more)
+### Community 34 - "Explore.tsx"
+Cohesion: 0.21
+Nodes (17): LeaseStatus, ActiveLease, releaseLease(), rentNode(), toActiveLease(), writeClipboard(), Explore(), copy() (+9 more)
 
-### Community 38 - "Provider Routing"
-Cohesion: 0.22
-Nodes (13): NotebookView, contributorProvider, providers, modalProvider, ComputeProvider, ExecArgs, ExecResult, StartArgs (+5 more)
+### Community 35 - "compilerOptions"
+Cohesion: 0.10
+Nodes (19): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+11 more)
 
-### Community 39 - "Metrics Board"
-Cohesion: 0.18
-Nodes (10): BoardTab, ChartRange, fmtUsdc(), LineCard(), Metrics(), monthStartMs(), windowSeries(), MetricPoint (+2 more)
+### Community 36 - "config"
+Cohesion: 0.16
+Nodes (15): config, hasOptedIn(), loadPlatformKey(), payContributor(), payoutsEnabled(), platformAddress(), platformBalances, sendAlgo() (+7 more)
 
-### Community 40 - "Google Auth"
+### Community 37 - "compilerOptions"
+Cohesion: 0.11
+Nodes (17): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+9 more)
+
+### Community 38 - "credit.ts"
 Cohesion: 0.29
-Nodes (13): issueGoogleExchangeCode(), issueGoogleSession(), verifyGoogleExchangeCode(), googleAuthEnabled(), createUser(), findUserByGoogleSub(), findUserById(), disabled() (+5 more)
+Nodes (15): inTransaction(), ledger(), [{ n }], otherAfter, otherBefore, [{ s }], schemas, addCredit() (+7 more)
 
-### Community 41 - "Base TypeScript Config"
-Cohesion: 0.14
-Nodes (13): compilerOptions, composite, declaration, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution (+5 more)
+### Community 39 - "backend/src/config.ts"
+Cohesion: 0.24
+Nodes (13): adminGoogleCallback(), adminGoogleStart(), adminSessionExchange(), disabled(), isAdminAuthEnabled(), usedExchangeJtis, issueAdminExchangeCode(), issueAdminSession() (+5 more)
 
-### Community 42 - "Cottage Painting"
+### Community 40 - "runAnywhere"
+Cohesion: 0.19
+Nodes (13): issueLeaseToken(), sandboxLifetimeMs(), hasLivePayerLease(), nodeBusy(), pickNotebookHost(), provision(), runAnywhere(), toRentResponse() (+5 more)
+
+### Community 41 - "emailAuth.ts"
+Cohesion: 0.31
+Nodes (13): issueEmailSession(), createEmailUser(), findUserByEmail(), isEmailAuthEnabled(), touchUserLogin(), disabled(), emailEnabled(), emailLogin() (+5 more)
+
+### Community 42 - "hosted.ts"
+Cohesion: 0.23
+Nodes (13): clampMarkup(), HOSTED_SKUS, hostedById(), hostedCatalog(), hostedHourlyUsd(), HostedSku, MODAL_CPU_USD_PER_CORE_HOUR, MODAL_GPU_USD_PER_HOUR (+5 more)
+
+### Community 43 - "painting1.jpg"
 Cohesion: 0.28
-Nodes (12): Dirt lane, Right fence post, Garden hedges, Main stone cottage, Side stone cottage, Cloudy sky, Brown tile roofs, Left tall tree (+4 more)
+Nodes (12): French farmhouse motif, Impressionist rural landscape, Dirt lane, Right fence post, Garden hedges, Main stone cottage, Side stone cottage, Cloudy sky (+4 more)
 
-### Community 43 - "Alpine Lake Painting"
+### Community 44 - "Alpine Mountain Lake Landscape Painting"
 Cohesion: 0.28
 Nodes (13): Alpine Lake, Alpine Mountain Lake Landscape Painting, Scattered Grey Boulders, Central Snow-Capped Mountain Peak, Cloud-Filled Blue Sky, Foreground Coniferous Pines, Flanking Rocky Mountain Ridges, Forested Midground Slopes (+5 more)
 
-### Community 44 - "Deploy Guide"
+### Community 45 - "3. Production deployment"
 Cohesion: 0.15
 Nodes (12): 1. Prerequisites, 2. Local setup, 3. Production deployment, 3a. Backend / registry (central API), 3b2. Admin app (static SPA), 3b. Web app (static SPA), 3c. Contributor agent (on each contributor's machine), 3d. Autonomous consumer agent (+4 more)
 
-### Community 45 - "Free Read Endpoints"
+### Community 46 - "Overview"
 Cohesion: 0.15
 Nodes (13): Free / read, `GET /explorer`, `GET /health`, `GET /metrics`, `GET /nodes`, `GET /platform`, Authentication, CORS (+5 more)
 
-### Community 46 - "Relay Manager"
-Cohesion: 0.19
-Nodes (4): RelayManager, serveRelay(), manager, resources
+### Community 47 - "dependencies"
+Cohesion: 0.13
+Nodes (15): dependencies, algosdk, @blockshake/defly-connect, buffer, lute-connect, next, @perawallet/connect, process (+7 more)
 
-### Community 47 - "Session Authentication Types"
-Cohesion: 0.18
-Nodes (12): addressFromSession(), AdminInfo, isCustodialSessionKind(), issueLeaseToken(), issueSession(), issueWalletNonce(), leaseIdFromAuthHeader(), sessionFromAuthHeader() (+4 more)
-
-### Community 48 - "Custodial Wallet"
-Cohesion: 0.28
-Nodes (11): accountFromUser(), CustodialAccount, decryptMnemonic(), encryptionKey(), encryptMnemonic(), generateCustodialAccount(), signTransactions(), custodialPayingFetch() (+3 more)
-
-### Community 49 - "Node Capability Registry"
-Cohesion: 0.19
-Nodes (9): capabilities(), listedOnDefaultExplore(), runtimeAdvertisement(), registryEffects, add(), hosted, peers, touchHeartbeat() (+1 more)
-
-### Community 50 - "Admin TypeScript Config"
-Cohesion: 0.17
-Nodes (11): compilerOptions, isolatedModules, jsx, lib, module, moduleResolution, noEmit, skipLibCheck (+3 more)
-
-### Community 51 - "Field Painting"
+### Community 48 - "Field landscape painting"
 Cohesion: 0.27
 Nodes (12): Field landscape painting, Horizontal landscape composition, Two seated figures, Rolling green hills, Wildflower meadow, Green-blue-cream palette, Dirt path, Artist signature (+4 more)
 
-### Community 52 - "Lime Field Painting"
-Cohesion: 0.24
-Nodes (12): lime-field-paint.jpg, Wide horizontal composition, Pastoral landscape genre, Serene rural mood, Impasto brushwork, Monochrome lime palette, Farmstead buildings, Open agricultural field (+4 more)
-
-### Community 53 - "x402 Client Recipes"
+### Community 50 - "x402-api.md"
 Cohesion: 0.17
 Nodes (11): Browser — same code, different signer, Client recipes, Configuration, Error index, Node — the whole flow, no sign-in, Reference, Table of contents, Tendril x402 API (+3 more)
 
-### Community 54 - "Email Auth Users"
-Cohesion: 0.39
-Nodes (11): issueEmailSession(), createEmailUser(), findUserByEmail(), isEmailAuthEnabled(), touchUserLogin(), disabled(), emailEnabled(), emailLogin() (+3 more)
-
-### Community 55 - "Custodial Signing"
-Cohesion: 0.20
-Nodes (10): checkExportRateLimit(), confirmCustodialSign(), exportLog, exportMnemonicForUser(), pending, PendingRequest, PrepareAction, prepareCustodialSign() (+2 more)
-
-### Community 56 - "Graphify Agent Rules"
+### Community 51 - "Full Pipeline"
 Cohesion: 0.20
 Nodes (11): Full Pipeline, God Nodes, graph.html, graph.json, GRAPH_REPORT.md, Graphify, Graphify Query, NetworkX (+3 more)
 
-### Community 57 - "Hills Smudge Painting"
-Cohesion: 0.38
-Nodes (11): hills-smudge-art.jpg, Layered depth composition, Alpine landscape painting, Serene wilderness mood, Impasto / smudge brushwork, Sage-green monochrome palette, Rocky meadow foreground, Coniferous forest slopes (+3 more)
+### Community 53 - "Docs.tsx"
+Cohesion: 0.23
+Nodes (12): ArchDiagram(), Docs(), copy(), onContentClick(), FeatureCards(), groups, searchIndex, Toc() (+4 more)
 
-### Community 58 - "Gas Grant Records"
-Cohesion: 0.33
-Nodes (9): GoogleAccountInfo, findGasRequestByAddress(), findGasRequestByUserId(), setGasGrantIneligible(), setWalletGasGrantIneligible(), canSubmitGasGrant(), shouldMarkGasGrantIneligible(), syncGoogleGasGrantEligibility() (+1 more)
+### Community 54 - "Metrics.tsx"
+Cohesion: 0.23
+Nodes (13): MetricPoint, Metrics, RankRow, Board(), BoardTab, ChartRange, fmtDur(), fmtUsdc() (+5 more)
 
-### Community 59 - "Desktop MCP Setup"
-Cohesion: 0.20
-Nodes (10): AVM_PRIVATE_KEY: base64 64-byte secret, claude_desktop_config.json, Client selector: Claude Desktop, Cursor, Claude Code, VS Code, Explore without a key: tendril_platform and tendril_list_nodes, Local MCP server via npx -y @tendril/mcp-server, Pay for compute with USDC-opted-in wallet, REGISTRY_URL=http://localhost:4000, MCP setup guide (+2 more)
-
-### Community 60 - "Mobile MCP Setup"
-Cohesion: 0.22
-Nodes (10): Claude Code, Explore without a key, Mobile MCP setup dialog, Pay for compute, Tendril MCP mobile setup screenshot, Read setup guide, Optional TENDRIL_MAX_ATOMIC spend cap, Claude Code stdio MCP configuration (+2 more)
-
-### Community 61 - "Shared Package"
-Cohesion: 0.20
-Nodes (9): exports, main, name, private, scripts, build, type, types (+1 more)
-
-### Community 62 - "Claude Perplexity Marks"
+### Community 55 - "perplexity.svg"
 Cohesion: 0.25
-Nodes (7): Claude starburst path, Claude (Anthropic), Perplexity, currentColor fill, logo path, svg root, web/public/assets
+Nodes (7): Claude (Anthropic), web/public/assets, Claude starburst path, Perplexity, currentColor fill, logo path, svg root
 
-### Community 63 - "Daisy Field Painting"
+### Community 56 - "painting2.jpg"
 Cohesion: 0.31
 Nodes (8): Clouded blue sky, White wildflower meadow, Distant village roofs, Impressionist pastoral landscape, Left tree cluster, Winding dirt path, Pastoral calm atmosphere, Seated pair on path
 
-### Community 64 - "Backend Boot"
-Cohesion: 0.25
-Nodes (8): main(), app, corsOrigin, startWatchdog(), router, initWs(), checkDiscoveryConfig(), checkFacilitator()
-
-### Community 65 - "Placement Tests"
-Cohesion: 0.22
-Nodes (7): address, app, contributor, modal, server, runEffects, PaidRequest
-
-### Community 66 - "AgentMesh Logo"
+### Community 57 - "agentmesh.svg"
 Cohesion: 0.32
 Nodes (7): AgentMesh brand/UI mark, currentColor fill, Display size 20x16, Filled path silhouette, Web public static asset, AgentMesh SVG icon, viewBox 2 5 58 44
 
-### Community 67 - "Cloudscape Painting"
+### Community 58 - "Clouds Painting"
 Cohesion: 0.43
 Nodes (8): Clouds Painting, Soft Atmospheric Mood, Panoramic Cloudscape, Cumulus Cloud Forms, Horizontal Banner Format, Impasto Oil Technique, Light and Shadow Cloud Modeling, Sage Green Monochrome Palette
 
-### Community 68 - "Grok USDC Marks"
+### Community 59 - "grok.svg"
 Cohesion: 0.29
-Nodes (7): Grok mark lower path, Grok mark upper path, USDC logo, Grok (xAI), currentColor fill, USDC (USD Coin), USDC compound path
+Nodes (7): Grok (xAI), currentColor fill, Grok mark lower path, Grok mark upper path, USDC logo, USDC (USD Coin), USDC compound path
 
-### Community 69 - "Backend TypeScript Config"
-Cohesion: 0.25
-Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
+### Community 60 - "CustodialSignContext.tsx"
+Cohesion: 0.22
+Nodes (11): SignPrepareResponse, Props, SignConfirmModal(), CustodialSignContext, CustodialSignContextValue, CustodialSignProvider(), approve(), PendingConfirm (+3 more)
 
-### Community 70 - "Explore Page"
-Cohesion: 0.32
-Nodes (7): Explore(), fmtCountdown(), fmtDuration(), Props, toActiveLease(), ExplorerNode, X402RentResponse
+### Community 61 - "compilerOptions"
+Cohesion: 0.14
+Nodes (13): compilerOptions, composite, declaration, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution (+5 more)
 
-### Community 71 - "Contributor TypeScript Config"
-Cohesion: 0.25
-Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
+### Community 62 - "ref_next"
+Cohesion: 0.15
+Nodes (4): nextConfig, metadata, nextConfig, metadata
 
-### Community 72 - "x402 Schemas"
+### Community 63 - "Common schemas"
 Cohesion: 0.25
 Nodes (8): AssetInfo, Common schemas, Error envelope, PaymentPayload, PaymentReceipt, PaymentRequired, SandboxAccess, SettleResponse
 
-### Community 73 - "Buyer TypeScript Config"
+### Community 64 - "googleAuth.ts"
+Cohesion: 0.31
+Nodes (12): issueGoogleExchangeCode(), issueGoogleSession(), verifyGoogleExchangeCode(), googleAuthEnabled(), createUser(), findUserByGoogleSub(), disabled(), googleCallback() (+4 more)
+
+### Community 65 - "ref_node_assert"
+Cohesion: 0.17
+Nodes (8): rate, simultaneous, hourly, mainnet, quote, rate, testnet, atomicPerHour()
+
+### Community 66 - "Tendril MCP"
 Cohesion: 0.25
-Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
+Nodes (8): AVM_PRIVATE_KEY, @tendril/mcp-server, TENDRIL_API_KEY, tendril_list_nodes, Tendril MCP, tendril_platform, Tendril registry, x402
 
-### Community 74 - "x402 Client Tests"
-Cohesion: 0.29
-Nodes (5): main(), serializeSigner(), SignTransactions, walletQueue, Wallet
+### Community 67 - "docs.ts"
+Cohesion: 0.18
+Nodes (11): pages, buildAnchors, DOC_PAGES, DocHeading, DocPage, DocsTab, legacyAnchors, markdownRoutes (+3 more)
 
-### Community 75 - "MCP TypeScript Config"
-Cohesion: 0.25
-Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
+### Community 68 - "gasGrant.ts"
+Cohesion: 0.32
+Nodes (10): googleAccountInfo, findGasRequestByAddress(), findGasRequestByUserId(), setGasGrantIneligible(), setWalletGasGrantIneligible(), canSubmitGasGrant(), shouldMarkGasGrantIneligible(), syncGasGrantEligibility (+2 more)
 
-### Community 76 - "P1 CI Workflow"
-Cohesion: 0.46
-Nodes (8): Default P1 CI verification, Default CI job, Guest image Docker build, Guest image smoke test, P1 runtime contracts workflow, npm run test:p1, npm run typecheck, npm run build -w web
+### Community 69 - "ArchDiagram.tsx"
+Cohesion: 0.17
+Nodes (11): compactEdges, compactNodes, Connection, EdgeId, edges, FlowMode, NodeId, nodes (+3 more)
 
-### Community 77 - "Contributor Payouts"
-Cohesion: 0.43
-Nodes (7): hasOptedIn(), loadPlatformKey(), payContributor(), payoutsEnabled(), platformAddress(), platformBalances, sendAlgo()
+### Community 70 - "Build on Tendril"
+Cohesion: 0.20
+Nodes (9): Autonomous Agent Tool Loop, Become a Provider, Best-Value Scoring Algorithm, Build on Tendril, Claude Desktop, Cursor, Claude Code, VS Code, Earnings & On-Chain Payouts, Installing & Running the Daemon, Model Context Protocol (MCP) (+1 more)
 
-### Community 78 - "P1 Test Config"
-Cohesion: 0.25
-Nodes (7): compilerOptions, outDir, rootDir, types, extends, include, references
-
-### Community 80 - "CORS Policy"
-Cohesion: 0.38
-Nodes (5): allowedOrigin(), corsPolicy(), isPayablePath(), PAYABLE_PATHS, X402_HEADERS
-
-### Community 81 - "ChatGPT Logo"
+### Community 71 - "Six-Petal Radial Hexagram"
 Cohesion: 0.47
 Nodes (6): 60° Rotational Instance Uses, currentColor Monochrome Fill, ChatGPT Logo Mark, OpenAI / ChatGPT Brand Identity, Shared Petal Path (#chatgpt-petal), Six-Petal Radial Hexagram
 
-### Community 82 - "CLI Rental Guide"
+### Community 73 - "Renting from the CLI"
 Cohesion: 0.33
 Nodes (6): Option A — the bundled agent, Option B — rent a box and SSH into it, Renting from the CLI, Things that bite, What `curl` can and cannot do, Working, then stopping
 
-### Community 83 - "Shared TypeScript Config"
-Cohesion: 0.33
-Nodes (5): compilerOptions, outDir, rootDir, extends, include
+### Community 74 - "shared/package.json"
+Cohesion: 0.20
+Nodes (9): exports, main, name, private, scripts, build, type, types (+1 more)
 
-### Community 84 - "Format Tests"
-Cohesion: 0.33
-Nodes (5): hourly, mainnet, quote, rate, testnet
+### Community 75 - "backend/tsconfig.json"
+Cohesion: 0.22
+Nodes (8): compilerOptions, outDir, rootDir, types, extends, include, ../tsconfig.base.json, references
 
-### Community 85 - "Wallet Signing"
-Cohesion: 0.60
-Nodes (4): algod, decodeSigned(), noteText(), verifyLoginSignature()
+### Community 76 - "contributor/tsconfig.json"
+Cohesion: 0.22
+Nodes (8): compilerOptions, outDir, rootDir, types, extends, include, ../tsconfig.base.json, references
 
-### Community 86 - "Open Graph Card"
+### Community 77 - "Tendril Open Graph Social Preview"
 Cohesion: 0.60
 Nodes (5): Three-dot Ellipsis Motif, The last mile of funding, Open Graph Social Card, Tendril Open Graph Social Preview, Tendril Wordmark
 
-### Community 87 - "Guest SSH Bridge"
-Cohesion: 0.60
-Nodes (3): bridge(), bridge_client(), start()
-
-### Community 88 - "Favicon Mark"
+### Community 78 - "favicon.svg"
 Cohesion: 0.67
 Nodes (3): Brand green #0B5D3A, Cream #F4F1EA, Serif T mark
 
-### Community 90 - "Docker Compose Services"
-Cohesion: 0.50
-Nodes (4): Docker Backend Service, Docker Buyer Service, Docker Contributor Service, Sibling Container Pattern
+### Community 79 - "example-buyer/tsconfig.json"
+Cohesion: 0.22
+Nodes (8): compilerOptions, outDir, rootDir, types, extends, include, ../tsconfig.base.json, references
 
-### Community 91 - "Public Favicon"
+### Community 80 - "Docker Backend Service"
+Cohesion: 0.50
+Nodes (3): Docker Backend Service, Docker Buyer Service, Docker Contributor Service
+
+### Community 81 - "Tendril Favicon Mark"
 Cohesion: 0.67
 Nodes (4): Tendril Brand Green (#0B5D3A), Tendril Brand Identity, Tendril Favicon Mark, Cream Serif 'T' Glyph
 
-### Community 92 - "Hardware Specs"
-Cohesion: 0.83
-Nodes (3): detectGpu(), detectSpecs(), execFileP
-
-### Community 94 - "Caveman Mode Rules"
+### Community 82 - "Caveman"
 Cohesion: 0.67
 Nodes (3): Auto-Clarity, Boundaries, Caveman
 
-### Community 95 - "Algorand Logo"
+### Community 83 - "Algorand logo"
 Cohesion: 0.67
-Nodes (3): Algorand, Algorand glyph path, Algorand logo
+Nodes (3): Algorand logo, Algorand, Algorand glyph path
+
+### Community 86 - "mcp/tsconfig.json"
+Cohesion: 0.22
+Nodes (8): compilerOptions, outDir, rootDir, types, extends, include, ../tsconfig.base.json, references
+
+### Community 87 - "components/Dashboard.tsx"
+Cohesion: 0.46
+Nodes (7): explorerAddrUrl(), explorerTxUrl(), BalanceChart(), Dashboard(), fmtDuration(), resolveStats(), short()
+
+### Community 88 - "One-shot Jobs"
+Cohesion: 0.29
+Nodes (6): Execute & collect output, Machine selection, Notebook jobs, One-shot Jobs, Request a quote, Sandbox lifetime
+
+### Community 89 - "Architecture & Flow"
+Cohesion: 0.29
+Nodes (6): Architecture & Flow, Core Architectural Pillars, Machine Lifecycle, Overview, Request Flow, Settlement Flow
+
+### Community 92 - "docs-runtime.tsx"
+Cohesion: 0.48
+Nodes (4): ClientShell(), DocsRuntime, DocsRuntime(), Page()
+
+### Community 93 - "shared/tsconfig.json"
+Cohesion: 0.29
+Nodes (6): compilerOptions, outDir, rootDir, extends, include, ../tsconfig.base.json
+
+### Community 94 - "devDependencies"
+Cohesion: 0.29
+Nodes (7): devDependencies, @tendril/shared, @types/node, @types/react, @types/react-dom, typescript, webpack
+
+### Community 95 - "x402Client.test.ts"
+Cohesion: 0.43
+Nodes (6): main(), serializeSigner(), SignTransactions, sleep(), waitForSlot(), walletQueue
+
+### Community 96 - "Algorand Settlement"
+Cohesion: 0.33
+Nodes (5): Algorand Settlement, Contributor withdrawals, Deposits & prepaid credit, Network & asset, Sponsored transaction fees
+
+### Community 97 - "Per-Second Metering"
+Cohesion: 0.33
+Nodes (5): Charged once, Grace window, One-shot jobs & payouts, Per-Second Metering, Usage calculation
+
+### Community 98 - "USDC with x402"
+Cohesion: 0.33
+Nodes (5): Integrate a client, Payment challenge, Sign & retry, USDC with x402, Verify → work → settle
+
+### Community 106 - "Security & Sandboxes"
+Cohesion: 0.33
+Nodes (5): Credentials, Isolation controls, Network access, Security & Sandboxes, Teardown & persistence
+
+### Community 107 - "SSH Access & Keys"
+Cohesion: 0.33
+Nodes (5): Connect to your sandbox, Host keys, Save work & release, SSH Access & Keys, Use a public key
+
+### Community 108 - "Getting started"
+Cohesion: 0.33
+Nodes (5): Connect & sign in, Getting started, Release your machine, Rent & SSH or run, Top up USDC
+
+### Community 109 - "Sandboxes & Bore Tunnels"
+Cohesion: 0.40
+Nodes (4): Connection details, Disposable execution, Outbound tunnel, Sandboxes & Bore Tunnels
+
+### Community 110 - "Algorand settlement basics"
+Cohesion: 0.40
+Nodes (4): Algorand settlement basics, Discover the network, Pay with sponsored fees, Prepare USDC
+
+### Community 111 - "BalanceChart.tsx"
+Cohesion: 0.60
+Nodes (4): Charge, TopUp, Props, Pt
+
+### Community 112 - "scripts"
+Cohesion: 0.40
+Nodes (5): scripts, build, dev, start, typecheck
+
+### Community 113 - "web/src/app/client-shell.tsx"
+Cohesion: 0.70
+Nodes (3): ClientShell(), WebRuntime, Page()
+
+### Community 114 - "admin/vercel.json"
+Cohesion: 0.50
+Nodes (3): framework, outputDirectory, $schema
+
+### Community 116 - "docs-web/vercel.json"
+Cohesion: 0.50
+Nodes (3): framework, outputDirectory, $schema
+
+### Community 117 - "Welcome to Tendril"
+Cohesion: 0.50
+Nodes (3): Choose your path, How Tendril fits together, Welcome to Tendril
+
+### Community 118 - "web/vercel.json"
+Cohesion: 0.50
+Nodes (3): framework, outputDirectory, $schema
 
 ## Knowledge Gaps
-- **511 isolated node(s):** `@opencode-ai/plugin`, `name`, `version`, `private`, `type` (+506 more)
-  These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **674 isolated node(s):** `nextConfig`, `name`, `version`, `private`, `type` (+669 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 746 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `formatUsdc()` connect `Balance Chart` to `Notebook Section`, `Marketplace and Dashboard`, `Wallet Connect Modal`, `Explore Page`, `Metrics Board`, `Shared Runtime Protocol`, `Wallet Account Client`, `Wallet Export and Bars`, `Lease Lookup`, `Format Tests`, `Custodial Signing`, `Database Layer`, `Lease Lifecycle`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `Fetch` connect `Admin App Shell` to `Backend Boot`, `Marketplace and Dashboard`, `Example Buyer Client`, `Wallet Connect Modal`, `Google Auth`, `Architecture and Top Ups`, `Wallet Account Client`, `Wallet Export and Bars`, `Admin Auth Config`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `SandboxAccess` connect `Compute Runtime Drivers` to `Provider Routing`, `Shared Runtime Protocol`, `Wallet Account Client`, `Lease Lookup`, `Lease Data Types`, `Contributor Sandbox Provider`, `Modal Compute Provider`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `Fetch` (e.g. with `main()` and `loginWithWallet()`) actually correct?**
-  _`Fetch` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `@opencode-ai/plugin`, `name`, `version` to the rest of the system?**
-  _522 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Compute Runtime Drivers` be split into smaller, more focused modules?**
-  _Cohesion score 0.06241519674355495 - nodes in this community are weakly interconnected._
-- **Should `Admin App Shell` be split into smaller, more focused modules?**
-  _Cohesion score 0.08469449485783424 - nodes in this community are weakly interconnected._
+- **Why does `api()` connect `tools.ts` to `docs.ts`?**
+  _High betweenness centrality (0.096) - this node is a cross-community bridge._
+- **What connects `nextConfig`, `name`, `version` to the rest of the system?**
+  _674 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `lib/api.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.0781387181738367 - nodes in this community are weakly interconnected._
+- **Why does `express` connect `server.ts` to `googleAuth.ts`, `backend/package.json`, `backend/src/config.ts`, `emailAuth.ts`, `db.ts`, `routes.ts`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Should `server.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.07792207792207792 - nodes in this community are weakly interconnected._
+- **Why does `Endpoints` connect ``POST /x402/run`` to ``POST /topup``, `x402-api.md`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Should `WalletBar.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.1027450980392157 - nodes in this community are weakly interconnected._

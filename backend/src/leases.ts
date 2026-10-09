@@ -15,18 +15,6 @@ import { config } from "./config.js";
  * used is billed once when the session ends.
  */
 const leases = new Map<string, Lease>();
-const closing = new Map<string, Promise<LeaseSettlement | null>>();
-const settlements = new Map<string, LeaseSettlement>();
-const abandoned = new Set<string>();
-const cleaned = new Set<string>();
-const funded = new Set<string>();
-
-export function confirmLeasePayment(id: string): void {
-  const lease = leases.get(id);
-  // Runs settle before (one-shot) or after (rent) the sandbox comes up.
-  if (!lease || (lease.status !== "starting" && lease.status !== "active")) throw new Error("lease stopped during settlement");
-  funded.add(id);
-}
 
 export interface NewLease {
   nodeId: string;
@@ -41,8 +29,6 @@ export interface NewLease {
   /** See `Lease.allowOverdraft`. Off unless the caller says otherwise. */
   allowOverdraft?: boolean;
   provider: ComputeProvider;
-  payoutBlocked?: boolean;
-  capabilities?: Lease["capabilities"];
 }
 
 export function createLease(args: NewLease): Lease {
@@ -52,7 +38,6 @@ export function createLease(args: NewLease): Lease {
     access: null,
     status: "starting",
     startedAt: 0,
-    endedAt: null,
     expiresAt: fundedUntil(now, args.fundingAtomic, args.rateAtomicPerHour),
     graceUntil: null,
     createdAt: now,
@@ -96,8 +81,8 @@ export function setLeaseStatus(id: string, status: LeaseStatus): void {
 export async function abandonLease(id: string): Promise<void> {
   const lease = leases.get(id);
   if (!lease) return;
-  abandoned.add(id);
-  await closeLease(id, "abandoned");
+  leases.delete(id);
+  await destroyForLease(lease);
 }
 
 /**
@@ -106,10 +91,10 @@ export async function abandonLease(id: string): Promise<void> {
  * caller is polling this id for status and must still find it afterward.
  */
 export async function failLease(id: string): Promise<void> {
-  // Same path as any close: the node stays reserved (`stopping`) until the
-  // guest acknowledges teardown, then the lease ends `failed`. It never became
-  // active (startedAt 0), so no usage is charged.
-  await closeLease(id, "provisioning-failed");
+  const lease = leases.get(id);
+  if (!lease || lease.status === "ended" || lease.status === "failed") return;
+  lease.status = "failed";
+  await destroyForLease(lease);
 }
 
 /** What an async run job (notebook path of `POST /x402/run`) finished with. */
@@ -173,7 +158,7 @@ export function getRunResult(leaseId: string): RunJobResult | undefined {
  * `expiresAt` is set from here, so a slow container start doesn't eat time the
  * renter paid for.
  */
-export function activateLease(id: string, access: SandboxAccess | null): boolean {
+export function activateLease(id: string, access: SandboxAccess): boolean {
   const lease = leases.get(id);
   if (!lease || (lease.status !== "starting" && lease.status !== "active")) return false;
   if (lease.status === "active") return true;
@@ -210,7 +195,7 @@ export function liveSessions(): { address: string; start: number; end: null }[] 
  * that was reserved and never used.
  */
 export function nodeBusy(nodeId: string): boolean {
-  return leasesForNode(nodeId).some((l) => l.status === "starting" || l.status === "active" || l.status === "stopping");
+  return leasesForNode(nodeId).some((l) => l.status === "starting" || l.status === "active");
 }
 
 /**
@@ -218,7 +203,7 @@ export function nodeBusy(nodeId: string): boolean {
  * container is reserved even before SSH is known.
  */
 export function heldLease(nodeId: string): Lease | undefined {
-  return leasesForNode(nodeId).find((l) => l.status === "starting" || l.status === "active" || l.status === "stopping");
+  return leasesForNode(nodeId).find((l) => l.status === "starting" || l.status === "active");
 }
 
 /** Live session opened by this gate-fee payment, if it is still up. */
@@ -282,30 +267,30 @@ export interface LeaseSettlement {
  * There is no refund step, because nothing was taken up front. The sandbox is
  * always torn down, even if the money side throws.
  */
-export function closeLease(
+export async function closeLease(
   leaseId: string,
   reason: string,
 ): Promise<LeaseSettlement | null> {
   const lease = leases.get(leaseId);
-  if (!lease) return Promise.resolve(null);
-  if (settlements.has(leaseId)) return Promise.resolve(settlements.get(leaseId)!);
-  const pending = closing.get(leaseId);
-  if (pending) return pending;
-  if (lease.status === "ended" || lease.status === "failed") return Promise.resolve(null);
-  lease.endedAt ??= Date.now();
-  lease.status = "stopping";
-  const task = Promise.resolve().then(async () => {
-    if (!cleaned.has(leaseId)) {
-      await leaseEffects.destroy(lease);
-      cleaned.add(leaseId);
-    }
-    if (abandoned.has(leaseId) || lease.startedAt === 0 || !funded.has(leaseId)) {
-      lease.status = "failed";
-      return null;
-    }
-    const usedSeconds = Math.max(0, Math.round((lease.endedAt! - lease.startedAt) / 1000));
-    const usedAtomic = proratedCost(lease.rateAtomicPerHour, usedSeconds);
-    const { charged, balance } = await leaseEffects.charge({
+  if (!lease) return null;
+  if (lease.status === "ended" || lease.status === "failed") return null;
+
+  const wasActive = lease.status === "active" && lease.startedAt > 0;
+  lease.status = "ended"; // claim it synchronously to prevent re-entry
+
+  try {
+    await destroyForLease(lease);
+  } catch (err) {
+    console.error(`[sandbox] teardown ${lease.id} failed:`, (err as Error).message);
+  }
+
+  const usedSeconds = wasActive
+    ? Math.max(0, Math.round((Date.now() - lease.startedAt) / 1000))
+    : 0;
+  const usedAtomic = proratedCost(lease.rateAtomicPerHour, usedSeconds);
+
+  try {
+    const { charged, balance } = await chargeUsage({
       address: lease.payerAddr,
       leaseId: lease.id,
       payToAddr: lease.payToAddr,
@@ -318,18 +303,13 @@ export function closeLease(
         `charged ${charged} to ${lease.payerAddr} (balance ${balance})`,
     );
     // Modal compute is platform inventory. The charge stays; no payout row.
-    if (charged > 0 && earnsPayout(lease.provider) && !lease.payoutBlocked) await leaseEffects.payout(lease, charged);
-    const result = { usedSeconds, usedAtomic, chargedAtomic: charged, balance };
-    settlements.set(leaseId, result);
-    lease.status = "ended";
-    return result;
-  }).finally(() => closing.delete(leaseId));
-  closing.set(leaseId, task);
-  return task;
+    if (charged > 0 && earnsPayout(lease.provider)) await payoutContributor(lease, charged);
+    return { usedSeconds, usedAtomic, chargedAtomic: charged, balance };
+  } catch (err) {
+    console.error(`[bill] failed to bill lease ${lease.id}:`, (err as Error).message);
+    return null;
+  }
 }
-
-/** Narrow effect seam used by lifecycle tests; production still uses the ledger. */
-export const leaseEffects = { destroy: destroyForLease, charge: chargeUsage, payout: payoutContributor };
 
 /** Contributor leases credit earnings. Hosted Modal leases do not. */
 export function earnsPayout(provider: ComputeProvider): boolean {
@@ -342,8 +322,8 @@ export function earnsPayout(provider: ComputeProvider): boolean {
  * Nothing goes on-chain per lease. A minute of compute is worth fractions of a
  * cent, and one ASA transfer per lease would spend more in fees and attention
  * than it moves — so the share accrues to a withdrawable balance the contributor
- * cashes out in one transfer (see `POST /withdraw`). A payoutBlocked lease
- * retains its renter charge but skips this earnings credit.
+ * cashes out in one transfer (see `POST /withdraw`). That also means an
+ * unopted-in address can still earn: the opt-in is only needed to withdraw.
  */
 async function payoutContributor(lease: Lease, chargedAtomic: number): Promise<void> {
   const fee = Math.floor((chargedAtomic * config.platformFeePct) / 100);
@@ -362,19 +342,14 @@ async function payoutContributor(lease: Lease, chargedAtomic: number): Promise<v
  * for it. No DB writes per tick.
  */
 export function startWatchdog(intervalMs = config.meterIntervalMs): NodeJS.Timeout {
-  return setInterval(() => void watchdogTick().catch((err) => console.error("[watchdog] close pending:", (err as Error).message)), intervalMs);
+  return setInterval(() => void watchdogTick(), intervalMs);
 }
 
 async function watchdogTick(): Promise<void> {
   pruneRunResults();
   const now = Date.now();
   for (const lease of leases.values()) {
-    if (lease.status === "stopping") {
-      await closeLease(lease.id, "cleanup-retry").catch(() => undefined);
-      continue;
-    }
     if (lease.status !== "active") continue;
-    if (lease.allowOverdraft || !funded.has(lease.id)) continue;
     if (now < lease.expiresAt) continue;
 
     // `expiresAt` is only a projection made at lease start, so before acting on

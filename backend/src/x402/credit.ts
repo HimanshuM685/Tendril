@@ -103,14 +103,8 @@ export async function chargeUsage(args: {
        RETURNING id`,
       [address, leaseId, payToAddr, charged, Number(config.assetId), usedSeconds, Date.now()],
     );
-    // Replay the original amount so a failed earnings credit can be retried.
-    // Never recalculate/debit using the payer's new balance on a replay.
-    if (ins.rowCount === 0) {
-      const prior = await client.query<{ amount_micro: string | number }>(
-        "SELECT amount_micro FROM charges WHERE lease_id = $1", [leaseId],
-      );
-      return { charged: Number(prior.rows[0]?.amount_micro ?? 0), balance };
-    }
+    // Already billed by a concurrent close — leave the balance alone.
+    if (ins.rowCount === 0) return { charged: 0, balance };
 
     if (charged <= 0) return { charged: 0, balance };
     return { charged, balance: await addCredit(client, address, -charged) };
@@ -215,4 +209,5 @@ async function addEarnings(
   );
   return Number(res.rows[0].amount_atomic);
 }
+
 

@@ -14,7 +14,7 @@ test("contributor exec sandbox has no tunnel, supports writable pip, and stops t
   const leaseId = `test-${randomUUID()}`;
   const name = `tendril-${leaseId}`;
   try {
-    const endpoint = await startSandbox(leaseId, image!, { cpus: 2, memory: "1g", gpus: "" }, null, null, true, undefined, undefined, 60_000);
+    const endpoint = await startSandbox(leaseId, image!, { cpus: 2, memory: "1g", gpus: "" }, null, null, "exec", 60_000);
     assert.equal(endpoint.port, 0);
     const { stdout } = await exec("docker", ["inspect", name]);
     const [container] = JSON.parse(stdout);

@@ -110,10 +110,6 @@ const overdrawn = await chargeUsage({
 });
 assert.equal(overdrawn.charged, 1600, "an overdraft run was clamped — it must bill in full");
 assert.equal(overdrawn.balance, -600, "balance did not go negative on an overdraft run");
-const [{ lease_id: replayId }] = await q<{ lease_id: string }>("SELECT lease_id FROM charges WHERE address = $1 AND amount_micro = 1600", [ADDR]);
-const replay = await chargeUsage({ address: ADDR, leaseId: replayId, payToAddr: "PAYTO", usedAtomic: 99999, usedSeconds: 999, allowOverdraft: true });
-assert.equal(replay.charged, 1600, "replay must preserve charge amount for an earnings retry");
-assert.equal(await creditBalance(ADDR), -600, "replay debited credit again");
 
 // ── the earnings ledger ──
 // A lease credits a withdrawable balance instead of sending on-chain, so two

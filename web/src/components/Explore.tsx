@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/shared";
-import { formatUsdc, listedOnDefaultExplore } from "@tendril/shared";
+import { formatUsdc } from "@tendril/shared";
 import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { NO_E2B_SIZES, NotebookSection, type E2bSizes } from "./NotebookSection";
@@ -59,7 +59,6 @@ export function Explore({
   const navigate = useNavigate();
   const { runCustodialAction } = useCustodialSign();
   const [nodes, setNodes] = useState<ExplorerNode[]>([]);
-  const [poolFilter, setPoolFilter] = useState<"microvm" | "all">("microvm");
   const [notebooks, setNotebooks] = useState(false);
   const [priority, setPriority] = useState(false);
   const [priorityUsdPerHour, setPriorityUsdPerHour] = useState<number | null>(null);
@@ -208,7 +207,6 @@ export function Explore({
   // Active lease timer
   const leaseRemainingMs = lease ? Math.max(0, lease.expiresAt - now) : 0;
   const recentCharges = wallet?.charges ?? [];
-  const shownNodes = poolFilter === "microvm" ? nodes.filter(listedOnDefaultExplore) : nodes;
 
   return (
     <div className="explore-dashboard">
@@ -489,22 +487,9 @@ export function Explore({
               <h3 className="card-head-title">Live Hardware Pool</h3>
               <p className="card-head-sub">Scored by (cores + RAM/4) / price</p>
             </div>
-            <div className="pool-filter">
-              <button
-                type="button"
-                className={`pool-filter-btn${poolFilter === "microvm" ? " is-on" : ""}`}
-                onClick={() => setPoolFilter("microvm")}
-              >
-                MicroVM
-              </button>
-              <button
-                type="button"
-                className={`pool-filter-btn${poolFilter === "all" ? " is-on" : ""}`}
-                onClick={() => setPoolFilter("all")}
-              >
-                All
-              </button>
-            </div>
+            <span className="card-head-sub">
+              {nodes.length} {nodes.length === 1 ? "node" : "nodes"} online
+            </span>
           </div>
 
           <div className="hardware-list">
@@ -512,8 +497,8 @@ export function Explore({
               <p className="muted small" style={{ padding: "20px 0" }}>
                 Scanning registry for active contributor nodes…
               </p>
-            ) : shownNodes.length > 0 ? (
-              shownNodes.map((n) => {
+            ) : nodes.length > 0 ? (
+              nodes.map((n) => {
                 const isAvailable = n.status === "online";
                 return (
                   <div className="hardware-item" key={n.id}>
@@ -538,12 +523,10 @@ export function Explore({
                       </div>
                       <div className="hw-meta">
                         {n.cpuCores} Cores &middot; {(n.ramMb / 1024).toFixed(0)}GB RAM &middot; ${n.pricePerHourUsd}/hr
-                        {n.runtime === "microvm" ? " · microVM" : n.runtime ? ` · ${n.runtime}` : ""}
                       </div>
                     </div>
                     <div className="hw-action">
                       {isAvailable ? (
-                        <>
                         <button
                           type="button"
                           className="hw-pill-btn pill-available"
@@ -558,11 +541,6 @@ export function Explore({
                                 : "Starting…"
                             : "Available"}
                         </button>
-                        {n.provider !== "modal" && n.capabilities?.jupyter && (
-                          <button type="button" className="btn-tiny" disabled={renting === n.id}
-                            onClick={() => rent(n.id, n.pricePerHourUsd, "jupyter")}>Rent lab</button>
-                        )}
-                        </>
                       ) : (
                         <span className="pill-badge pill-inuse">In Use</span>
                       )}
@@ -576,21 +554,10 @@ export function Explore({
                   <rect width="18" height="18" x="3" y="3" rx="2" />
                   <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
                 </svg>
-                <p className="empty-title">
-                  {poolFilter === "microvm" && nodes.length > 0
-                    ? "No microVM machines in the default list"
-                    : "No contributor nodes currently online"}
-                </p>
+                <p className="empty-title">No contributor nodes currently online</p>
                 <p className="empty-sub">
-                  {poolFilter === "microvm" && nodes.length > 0
-                    ? "A host without /dev/kvm is not listed here. Show all runtimes to rent Docker or hosted CPU."
-                    : "Start the contributor agent daemon on your PC or server to share compute and join the network."}
+                  Start the contributor agent daemon on your PC or server to share compute and join the network.
                 </p>
-                {poolFilter === "microvm" && nodes.length > 0 && (
-                  <button type="button" className="btn small" onClick={() => setPoolFilter("all")} style={{ marginTop: "12px" }}>
-                    Show all runtimes
-                  </button>
-                )}
                 <button
                   type="button"
                   className="btn small"

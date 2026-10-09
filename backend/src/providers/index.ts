@@ -21,5 +21,9 @@ export async function destroyForLease(lease: {
   nodeId: string;
   provider: ComputeProvider;
 }): Promise<void> {
-  await providerFor(lease.provider).destroy(lease.id, lease.nodeId);
+  try {
+    await providerFor(lease.provider).destroy(lease.id, lease.nodeId);
+  } catch (err) {
+    console.error(`[sandbox] destroy ${lease.id} failed:`, (err as Error).message);
+  }
 }

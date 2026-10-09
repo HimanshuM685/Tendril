@@ -139,9 +139,8 @@ curl -s $API/platform | jq
 
 ## `GET /explorer`
 
-Live inventory available to rent. Online, heartbeating contributors appear alongside configured
-hosted CPU rows. Explore's default UI filter shows only `runtime: "microvm"` with `kvm: true`;
-the API returns all inventory. Placement checks explicit surface capabilities.
+Live nodes available to rent. Free on purpose — an agent surveys the market before spending
+anything. Only nodes that are online and heartbeating appear.
 
 ```bash
 curl -s $API/explorer | jq
@@ -160,25 +159,16 @@ curl -s $API/explorer | jq
       "gpu": null,
       "pricePerHourUsd": 1.0,
       "status": "online",
-      "provider": "contributor",
-      "runtime": "microvm",
-      "kvm": true,
-      "capabilities": { "ssh": true, "python": true, "notebook": true, "jupyter": true },
       "payoutBlocked": false
     }
   ]
 }
 ```
 
-`{"nodes":[]}` with no contributor and no hosted configuration is normal.
+`{"nodes":[]}` with no contributor running is normal, not an error.
 
 `payoutBlocked: true` means the contributor's address has not opted into the payment ASA. The node
-still runs and charges renters, but its leases skip earnings credit. Opt in and reconnect before
-opening new leases. Every 402 payment recipient remains `PLATFORM_PAYTO`.
-
-Absent capability maps mean legacy SSH/Python; missing fields within a map are false.
-An eligible idle connected microVM peer wins automatic Python/notebook placement over Modal.
-Once a microVM lease is selected, boot failure does not retry Docker or Modal.
+still runs and still earns — the opt-in is only checked when they withdraw.
 
 Pick the cheapest node with enough RAM:
 
@@ -475,11 +465,8 @@ curl -s $API/lease/$LEASE -H "authorization: Bearer $LEASE_TOKEN" | jq
 }
 ```
 
-`status` is `starting` | `active` | `stopping` | `ended` | `failed`. `expiresAt` is when credit runs out at this
+`status` is `starting` | `active` | `ended` | `failed`. `expiresAt` is when credit runs out at this
 rate — top up and it moves out.
-
-`endedAt` is null until the first close signal, then freezes at that epoch-ms timestamp.
-`stopping` retains the contributor reservation while guest/relay cleanup and billing complete.
 
 Running out of credit does **not** disconnect you on the spot. `graceUntil` turns from `null` into a
 timestamp: `GRACE_ATOMIC` (default 1.00 USDC) of runtime **at your rate**, to save your work in. When
@@ -509,11 +496,6 @@ curl -s -X DELETE $API/x402/leases/$LEASE \
 
 Alias: `POST /lease/:id/release`.
 
-First Release freezes billing before teardown. `200` follows guest and relay destruction
-acknowledgements. If cleanup or billing is pending, response is `503 cleanup_pending`; retry
-Release. Retries share the same cutoff and return the original settlement without double debit
-or earnings credit. The node remains reserved while `stopping`.
-
 Without a valid token, both lease endpoints answer:
 
 ```json
@@ -532,7 +514,7 @@ guarantees and error semantics: **[x402-api.md](./x402-api.md)**.
 | Endpoint | Price | Buys |
 |---|---|---|
 | `POST /topup?amount=<atomic>` | what you ask for | credit on the **paying** address |
-| `POST /x402/rent` | `FLAT_RENT_ATOMIC` gate fee | a metered SSH or capable-node Jupyter session (`surface=jupyter`) |
+| `POST /x402/rent` | `FLAT_RENT_ATOMIC` gate fee | a metered SSH session |
 | `POST /x402/run` | `FLAT_RUN_ATOMIC` + execution time | one job on a machine Tendril picks — no lease needed |
 
 You can still get a **price quote** with plain `curl` — an unpaid request returns the `402`:
@@ -588,7 +570,6 @@ Every error is `{"error": "<code>"}`, some with `detail` or extra fields.
 | `500` | `metrics failed: …` | `/metrics` | Database unreachable. |
 | `502` | `facilitator_unavailable` | paid routes | Nothing submitted. |
 | `503` | `provisioning_failed` | `/rent` | Sandbox never came up — nothing settled. |
-| `503` | `cleanup_pending` | Release | Cutoff frozen; reservation retained; retry cleanup/billing. |
 
 ### CORS
 
