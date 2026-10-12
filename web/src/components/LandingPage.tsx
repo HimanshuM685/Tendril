@@ -90,6 +90,18 @@ export function LandingPage() {
   const mcpInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileNavOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     if (mcpInput) return;
 
     let promptIndex = 0;
@@ -284,43 +296,67 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/*  Mobile Drawer  */}
-        <div className={`mobile-nav ${mobileNavOpen ? "open" : ""}`} id="mobileNav">
-          <a
-            href="#how-it-works"
-            onClick={(e) => {
-              e.preventDefault();
-              setMobileNavOpen(false);
-              scrollToSection("how-it-works");
-            }}
-          >
-            How it works
-          </a>
-          <a
-            href="#faq"
-            onClick={(e) => {
-              e.preventDefault();
-              setMobileNavOpen(false);
-              scrollToSection("faq");
-            }}
-          >
-            FAQ
-          </a>
-          <a
-            href={docsUrl()}
-            onClick={() => setMobileNavOpen(false)}
-          >
-            Docs
-          </a>
+        {/*  Floating Mobile Menu Backdrop & Card  */}
+        <div
+          className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden={!mobileNavOpen}
+        />
+        <div
+          className={`mobile-floating-menu ${mobileNavOpen ? "open" : ""}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation Menu"
+          id="mobileNav"
+        >
+          <nav className="mobile-menu-links">
+            <a
+              href="#how-it-works"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileNavOpen(false);
+                scrollToSection("how-it-works");
+              }}
+            >
+              How it works
+            </a>
+            <a
+              href="#explore"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileNavOpen(false);
+                scrollToSection("explore");
+              }}
+            >
+              Features
+            </a>
+            <a
+              href="#faq"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileNavOpen(false);
+                scrollToSection("faq");
+              }}
+            >
+              FAQ
+            </a>
+          </nav>
+
+          <div className="mobile-menu-divider" />
+
           <button
             type="button"
             onClick={() => {
               setMobileNavOpen(false);
               navigate("/explore");
             }}
-            className="btn btn-dark"
+            className="mobile-cta-btn"
           >
-            Explore Marketplace
+            <span>Explore marketplace</span>
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="8" x2="13" y2="8" />
+              <polyline points="9 4 13 8 9 12" />
+            </svg>
           </button>
         </div>
       </header>
@@ -347,7 +383,7 @@ export function LandingPage() {
                   <span className="btn-arrow">→</span>
                 </button>
               </div>
-              <div className="hero-perks hero-perks-desktop">
+              <div className="hero-perks">
                 <span className="perk-item">
                   <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
                     <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
@@ -478,24 +514,6 @@ export function LandingPage() {
                 {/*  End hero floating card  */}
 
               </div>
-            </div>
-
-            {/* Mobile and Tablet Hero Perks (below LIVE COMPUTE REGISTRY card) */}
-            <div className="hero-perks hero-perks-mobile">
-              <span className="perk-item">
-                <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
-                  <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
-                  <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                No subscription or lock-in
-              </span>
-              <span className="perk-item">
-                <svg className="check-icon" viewBox="0 0 16 16" width="14" height="14" fill="none">
-                  <circle cx="8" cy="8" r="7" fill="#eaf3dc" />
-                  <path d="M5 8.2l2.2 2.2 4-4.4" stroke="#5b8c1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Zero ALGO needed (fees sponsored)
-              </span>
             </div>
           </div>
         </section>
