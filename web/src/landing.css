@@ -348,51 +348,67 @@ button {
   color: var(--text-primary);
 }
 
-.menu-toggle {
+.menu-toggle,
+.mobile-menu-toggle {
   display: none;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 5px;
-  width: 38px;
-  height: 38px;
-  padding: 6px;
+  justify-content: center;
+  padding: 4px 8px;
   background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border: none;
+  color: var(--text-primary);
   cursor: pointer;
   z-index: 1002;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 
-.menu-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+.menu-toggle:hover,
+.mobile-menu-toggle:hover {
+  opacity: 0.75;
 }
 
-.menu-toggle.open {
-  background-color: #eceee8;
-  border-color: #e0e3d8;
-}
-
-.menu-toggle span {
+.hamburger-svg {
   display: block;
-  width: 20px;
-  height: 2px;
-  background-color: var(--text-primary);
-  border-radius: 2px;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  overflow: visible;
 }
 
-.menu-toggle.open span:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
+
+.hamburger-line {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  will-change: transform, opacity;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.menu-toggle.open span:nth-child(2) {
+.hamburger-line--top {
+  transform: rotate(0deg) translate(0px, 0px);
+}
+
+.hamburger-line--mid {
+  transform: scaleX(1);
+  opacity: 1;
+  transition: opacity 0.14s ease 0.12s;
+}
+
+.hamburger-line--bot {
+  transform: rotate(0deg) translate(0px, 0px);
+}
+
+.menu-toggle.open .hamburger-line--top,
+.mobile-menu-toggle.open .hamburger-line--top {
+  transform: rotate(45deg) translate(0px, 6px);
+}
+
+.menu-toggle.open .hamburger-line--mid,
+.mobile-menu-toggle.open .hamburger-line--mid {
   opacity: 0;
+  transform: scaleX(0.2);
 }
 
-.menu-toggle.open span:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
+.menu-toggle.open .hamburger-line--bot,
+.mobile-menu-toggle.open .hamburger-line--bot {
+  transform: rotate(-45deg) translate(0px, -6px);
 }
 
 /* Background Blur Backdrop */
@@ -487,7 +503,7 @@ button {
   background-color: #151614;
   color: #ffffff;
   border: none;
-  border-radius: 9999px;
+  border-radius: 6px;
   padding: 13.5px 22px;
   font-size: 14.5px;
   font-weight: 600;
@@ -2707,16 +2723,17 @@ button {
 /* ============================================================
    RESPONSIVE DESIGN (TABLET & MOBILE BREAKPOINTS)
    ============================================================ */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
 
   .desktop-nav,
   .topbar-actions .nav-login,
   .topbar-actions .btn {
-    display: none;
+    display: none !important;
   }
 
-  .menu-toggle {
-    display: flex;
+  .menu-toggle,
+  .mobile-menu-toggle {
+    display: flex !important;
   }
 
   .hero-grid {
@@ -2849,8 +2866,9 @@ button {
     display: none;
   }
 
-  .menu-toggle {
-    display: flex;
+  .menu-toggle,
+  .mobile-menu-toggle {
+    display: flex !important;
   }
 
   .hero-section {
@@ -4533,6 +4551,49 @@ button {
       rgba(0, 0, 1) 60%,
       rgba(0, 0, 1) 100%);
 }
+
+@media (max-width: 1024px) {
+  .landing-wrapper .footer-landscape-banner {
+    height: 170px;
+    margin-top: -30px;
+  }
+
+  .landing-wrapper .footer-landscape-banner::before {
+    height: 60px;
+  }
+
+  .landing-wrapper .footer-landscape-banner img {
+    width: 1200px;
+    min-width: 1200px;
+    max-width: none;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    object-position: center 44%;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-wrapper .footer-landscape-banner {
+    height: 140px;
+    margin-top: -20px;
+  }
+
+  .landing-wrapper .footer-landscape-banner::before {
+    height: 48px;
+  }
+
+  .landing-wrapper .footer-landscape-banner img {
+    width: 1200px;
+    min-width: 1200px;
+    max-width: none;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    object-position: center 46%;
+  }
+}
+
 
 .landing-wrapper .trusted-inner {
   flex-direction: column;

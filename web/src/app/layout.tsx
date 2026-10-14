@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter, Newsreader } from "next/font/google";
 import "../styles.css";
+import "../landing.css";
 
 const serif = Newsreader({
   subsets: ["latin"],

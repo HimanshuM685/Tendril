@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { docsUrl } from "../lib/docsLinks";
-import "../landing.css";
 
 const MCP_ANIMATED_PROMPTS = [
   "Find available GPU nodes for running my AI model",
@@ -284,14 +283,26 @@ export function LandingPage() {
             <button type="button" onClick={() => navigate("/explore")} className="btn btn-dark btn-sm">Explore Marketplace</button>
             <button
               type="button"
-              className={`menu-toggle ${mobileNavOpen ? "open" : ""}`}
-              aria-label="Toggle navigation menu"
+              className={`mobile-menu-toggle menu-toggle ${mobileNavOpen ? "open" : ""}`}
+              aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
               id="menuToggle"
               onClick={() => setMobileNavOpen((prev) => !prev)}
             >
-              <span></span>
-              <span></span>
-              <span></span>
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="hamburger-svg"
+              >
+                <line x1="3" y1="6" x2="21" y2="6" className="hamburger-line hamburger-line--top" />
+                <line x1="3" y1="12" x2="21" y2="12" className="hamburger-line hamburger-line--mid" />
+                <line x1="3" y1="18" x2="21" y2="18" className="hamburger-line hamburger-line--bot" />
+              </svg>
             </button>
           </div>
         </div>
@@ -339,6 +350,14 @@ export function LandingPage() {
               }}
             >
               FAQ
+            </a>
+            <a
+              href={docsUrl()}
+              onClick={() => {
+                setMobileNavOpen(false);
+              }}
+            >
+              Docs
             </a>
           </nav>
 
