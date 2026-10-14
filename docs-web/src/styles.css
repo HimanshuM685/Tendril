@@ -10,7 +10,7 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --docs-header-height: 64px;
   --docs-subnav-height: 46px;
-  --docs-reading-top: calc(var(--docs-header-height) + var(--docs-subnav-height) + 24px);
+  --docs-reading-top: calc(var(--docs-header-height) + var(--docs-subnav-height) + 16px);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -63,7 +63,7 @@ img, svg { max-width: 100%; }
 .docs-nav-link-item:hover { background: #f4f5ee; }
 .docs-nav-link-item.active { background: rgba(11,93,58,.08); color: var(--brand-green); font-weight: 600; }
 .docs-main-content { min-width: 0; }
-.docs-article { max-width: 880px; overflow-wrap: anywhere; }
+.docs-article { max-width: 880px; overflow-wrap: anywhere; padding-bottom: 50vh; }
 .docs-eyebrow { font-size: 12px; color: var(--brand-green); text-transform: uppercase; font-weight: 700; letter-spacing: .04em; margin: 0 0 10px; }
 .docs-title { font-size: clamp(28px, 3vw, 38px); line-height: 1.2; font-weight: 800; letter-spacing: -.03em; margin: 0 0 24px; }
 .docs-title, .docs-markdown-body [id], #docs-main { scroll-margin-top: var(--docs-reading-top); }
