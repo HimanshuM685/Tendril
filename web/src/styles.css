@@ -142,7 +142,8 @@ img {
   z-index: 90;
 }
 
-.sidebar-brand {
+.sidebar-brand,
+.brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -153,6 +154,9 @@ img {
   color: var(--text-primary);
   cursor: pointer;
   user-select: none;
+}
+
+.sidebar-brand {
   padding: 0 6px 20px;
 }
 
@@ -1832,6 +1836,18 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
     z-index: 100;
   }
 
+  .mobile-header .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .mobile-header .brand-text {
+    white-space: nowrap;
+  }
+
   .mobile-menu-toggle {
     font-size: 22px;
     padding: 4px 8px;
@@ -3472,7 +3488,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   background-color: var(--brand-green);
   color: #ffffff;
   padding: 9px 20px;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   font-family: var(--font-sans);
   font-size: 13.5px;
   font-weight: 600;
@@ -3553,7 +3569,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   background-color: var(--brand-green, #0B5D3A);
   color: #ffffff;
   padding: 7px 14px;
-  border-radius: var(--radius-md, 10px);
+  border-radius: 6px;
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 600;

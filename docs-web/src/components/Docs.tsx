@@ -61,6 +61,129 @@ function FeatureCards({ build = false }: { build?: boolean }) {
   );
 }
 
+function useDocsScrollSpy(
+  page: (typeof pages)[0] | undefined,
+  contentRef: React.RefObject<HTMLElement | null>,
+  setActiveHeading: (id: string) => void,
+) {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!page || !page.toc || page.toc.length === 0) {
+      setActiveHeading("");
+      return;
+    }
+
+    const firstHeadingId = page.toc[0]?.id ?? "";
+    const hashId = location.hash ? decodeURIComponent(location.hash.slice(1)) : "";
+
+    // Sync on initial load / route change
+    if (!hashId || window.scrollY <= 10) {
+      setActiveHeading(firstHeadingId);
+    } else {
+      setActiveHeading(hashId);
+    }
+
+    const getNavBottom = () => {
+      const nav = document.querySelector(".docs-subnav-bar");
+      return nav ? nav.getBoundingClientRect().bottom : 110;
+    };
+
+    let ticking = false;
+
+    const recalculate = () => {
+      ticking = false;
+      const article = contentRef.current;
+      if (!article) return;
+
+      const headingElements = [...article.querySelectorAll<HTMLElement>("h2[id], h3[id]")];
+      if (headingElements.length === 0) {
+        setActiveHeading(firstHeadingId);
+        return;
+      }
+
+      // Top of page: always first section
+      if (window.scrollY <= 10) {
+        setActiveHeading(firstHeadingId);
+        return;
+      }
+
+      // Absolute bottom of scrollable page: select lowest visible heading
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      const isScrollable = scrollHeight > clientHeight + 40;
+      const atBottom = isScrollable && window.scrollY + clientHeight >= scrollHeight - 8;
+
+      if (atBottom) {
+        let lowest = headingElements[0];
+        for (const el of headingElements) {
+          if (el.getBoundingClientRect().top < clientHeight) {
+            lowest = el;
+          }
+        }
+        setActiveHeading(lowest.id);
+        return;
+      }
+
+      // Detection line just below the sticky navbar
+      const detectionPoint = getNavBottom() + 16;
+      let active = headingElements[0];
+      for (const el of headingElements) {
+        if (el.getBoundingClientRect().top <= detectionPoint) {
+          active = el;
+        }
+      }
+      setActiveHeading(active.id);
+    };
+
+    const scheduleRecalculate = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(recalculate);
+      }
+    };
+
+    const rafId = requestAnimationFrame(recalculate);
+
+    // IntersectionObserver observing all headings in the article
+    const navBottom = getNavBottom();
+    const rootMarginTop = -Math.round(navBottom);
+    const rootMarginBottom = -Math.round(Math.max(0, window.innerHeight - navBottom - 60));
+
+    let observer: IntersectionObserver | null = null;
+    try {
+      observer = new IntersectionObserver(
+        () => {
+          // Re-evaluate in strict document order when any intersection changes
+          scheduleRecalculate();
+        },
+        {
+          rootMargin: `${rootMarginTop}px 0px ${rootMarginBottom}px 0px`,
+          threshold: [0, 1],
+        }
+      );
+
+      const article = contentRef.current;
+      if (article) {
+        const headingElements = article.querySelectorAll<HTMLElement>("h2[id], h3[id]");
+        headingElements.forEach((el) => observer?.observe(el));
+      }
+    } catch {
+      // Fallback to scroll/resize events
+    }
+
+    window.addEventListener("scroll", scheduleRecalculate, { passive: true });
+    window.addEventListener("resize", scheduleRecalculate, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener("scroll", scheduleRecalculate);
+      window.removeEventListener("resize", scheduleRecalculate);
+    };
+  }, [page, location.pathname, location.hash, contentRef, setActiveHeading]);
+}
+
 export function Docs() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,27 +267,7 @@ export function Docs() {
     return () => cancelAnimationFrame(frame);
   }, [location.pathname, location.hash, location.key, page, redirect]);
 
-  useEffect(() => {
-    const headings = [...(contentRef.current?.querySelectorAll<HTMLElement>("h2[id], h3[id]") ?? [])];
-    let frame = 0;
-    const measure = () => {
-      frame = 0;
-      const readingLine = (document.querySelector(".docs-subnav-bar")?.getBoundingClientRect().bottom ?? 110) + 28;
-      let current = headings[0];
-      for (const heading of headings) {
-        if (heading.getBoundingClientRect().top > readingLine) break;
-        current = heading;
-      }
-      setActiveHeading(current?.id ?? "");
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(measure); };
-    measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [page]);
+  useDocsScrollSpy(page, contentRef, setActiveHeading);
 
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
 

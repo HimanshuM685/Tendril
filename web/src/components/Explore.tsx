@@ -220,15 +220,6 @@ export function Explore({
             Here's your live compute fleet and balance at a glance.
           </p>
         </div>
-        {!activeAddress && (
-          <button
-            type="button"
-            className="explore-connect-btn"
-            onClick={onOpenConnectWallet}
-          >
-            Connect Wallet
-          </button>
-        )}
       </div>
 
       {error && (
