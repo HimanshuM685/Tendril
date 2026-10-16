@@ -180,6 +180,8 @@ export const config = {
 
   // ─────────────────────── Admin portal ───────────────────────
   gasGrantMicroAlgos: Number(process.env.GAS_GRANT_MICRO_ALGOS ?? 260_000), // 0.26 ALGO
+  // New Google accounts get the gas grant + USDC opt-in automatically. "false" turns it off.
+  signupGasGrant: process.env.SIGNUP_GAS_GRANT !== "false",
   adminEmails: (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
