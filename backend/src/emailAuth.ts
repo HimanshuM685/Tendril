@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
 import { issueEmailSession } from "./auth.js";
 import { generateCustodialAccount } from "./custodialWallet.js";
+import { ensureCustodialGasRequest } from "./gasGrant.js";
 import {
   createEmailUser,
   findUserByEmail,
@@ -65,6 +66,8 @@ export async function emailRegister(req: Request, res: Response) {
     encryptedMnemonic,
   });
 
+  await ensureCustodialGasRequest(user);
+
   const body: EmailSessionResponse = {
     token: issueEmailSession(user.id, user.address, user.email),
     address: user.address,
@@ -98,6 +101,8 @@ export async function emailLogin(req: Request, res: Response) {
 
   await touchUserLogin(user.id);
   const fresh = (await findUserById(user.id))!;
+
+  await ensureCustodialGasRequest(fresh);
 
   const body: EmailSessionResponse = {
     token: issueEmailSession(fresh.id, fresh.address, fresh.email),

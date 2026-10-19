@@ -12,9 +12,11 @@ import {
   countGasRequestsByStatus,
   countGoogleUsers,
   findGasRequestById,
+  findUserById,
   listGasRequests,
   listGoogleUsers,
   metrics,
+  recordGasRequestDelivery,
   resolveGasRequest,
   isEmailAuthEnabled,
   setEmailAuthEnabled,
@@ -22,7 +24,15 @@ import {
   type GasRequestStatus,
 } from "./db.js";
 import { liveSessions } from "./leases.js";
-import { payoutsEnabled, platformBalances, sendAlgo } from "./payout.js";
+import {
+  algoBalance,
+  hasOptedInStrict,
+  payoutsEnabled,
+  platformBalances,
+  sendAlgo,
+  sendUsdcOptIn,
+} from "./payout.js";
+import { shouldSendGasGrant } from "./gasGrant.js";
 
 export const adminRouter = Router();
 
@@ -96,9 +106,6 @@ adminRouter.get("/gas-requests", guard(async (req, res) => {
 adminRouter.post("/gas-requests/:id/accept", guard(async (req, res) => {
   const admin = requireAdmin(req, res);
   if (!admin) return;
-  if (!payoutsEnabled()) {
-    return res.status(503).json({ error: "PLATFORM_PRIVATE_KEY not configured" });
-  }
 
   const row = await findGasRequestById(req.params.id);
   if (!row) return res.status(404).json({ error: "request not found" });
@@ -106,16 +113,57 @@ adminRouter.post("/gas-requests/:id/accept", guard(async (req, res) => {
     return res.status(409).json({ error: `request already ${row.status}` });
   }
 
-  const treasury = await platformBalances();
-  if (treasury.algoMicro < row.amount_micro + 10_000) {
-    return res.status(502).json({
-      error: "platform wallet has insufficient ALGO for this grant",
-    });
-  }
-
   try {
-    const txid = await sendAlgo(row.address, row.amount_micro);
-    const updated = await resolveGasRequest(row.id, "accepted", admin.email, { txid });
+    const user = await findUserById(row.user_id);
+    const custodial = user?.address === row.address;
+    const optedIn = await hasOptedInStrict(row.address);
+
+    // Already ready for USDC: accept without touching treasury or sending ALGO.
+    if (optedIn) {
+      const updated = await resolveGasRequest(row.id, "accepted", admin.email, {
+        txid: row.txid ?? undefined,
+        note: "USDC already opted in; no ALGO sent",
+      });
+      if (!updated) return res.status(409).json({ error: "request already resolved" });
+      return res.json({ request: toAdminGasRequest(updated) });
+    }
+
+    // A delivery txid survives a failed opt-in. Balance closes the crash window
+    // between chain confirmation and recording that txid in Postgres.
+    const balance = await algoBalance(row.address);
+    let gasTxid = row.txid;
+    if (shouldSendGasGrant(false, gasTxid, balance, row.amount_micro)) {
+      if (!payoutsEnabled()) {
+        return res.status(503).json({ error: "PLATFORM_PRIVATE_KEY not configured" });
+      }
+      const treasury = await platformBalances();
+      if (treasury.algoMicro < row.amount_micro + 10_000) {
+        return res.status(502).json({
+          error: "platform wallet has insufficient ALGO for this grant",
+        });
+      }
+      gasTxid = await sendAlgo(row.address, row.amount_micro);
+      await recordGasRequestDelivery(row.id, gasTxid);
+    }
+
+    if (custodial) {
+      // Only custodial accounts have a server-held private key. Keep request
+      // pending if opt-in fails so the next Accept retries opt-in, not gas.
+      const optInTxid = await sendUsdcOptIn(user!);
+      const updated = await resolveGasRequest(row.id, "accepted", admin.email, {
+        txid: gasTxid ?? undefined,
+        note: optInTxid ? `USDC opt-in confirmed (${optInTxid})` : "USDC opt-in confirmed",
+      });
+      if (!updated) return res.status(409).json({ error: "request already resolved" });
+      return res.json({ request: toAdminGasRequest(updated) });
+    }
+
+    // Connected-wallet requests retain their old behavior: gas can be sent,
+    // but the backend cannot sign an opt-in without the wallet's private key.
+    const updated = await resolveGasRequest(row.id, "accepted", admin.email, {
+      txid: gasTxid ?? undefined,
+      note: "ALGO sent; wallet must opt in to USDC",
+    });
     if (!updated) return res.status(409).json({ error: "request already resolved" });
     res.json({ request: toAdminGasRequest(updated) });
   } catch (e) {
