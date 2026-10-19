@@ -25,6 +25,7 @@ const SESSION_KEY = "tendril.session";
 const Marketplace = lazy(() => import("./components/Marketplace").then(({ Marketplace }) => ({ default: Marketplace })));
 const LandingPage = lazy(() => import("./components/LandingPage").then(({ LandingPage }) => ({ default: LandingPage })));
 const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ DocsRedirect }) => ({ default: DocsRedirect })));
+const Legal = lazy(() => import("./components/Legal").then(({ Legal }) => ({ default: Legal })));
 const Dashboard = lazy(() => import("./components/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
 const Metrics = lazy(() => import("./components/Metrics").then(({ Metrics }) => ({ default: Metrics })));
 const GoogleCallback = lazy(() => import("./components/GoogleCallback").then(({ GoogleCallback }) => ({ default: GoogleCallback })));
@@ -84,6 +85,7 @@ export function App() {
   const path = location.pathname;
   const isLanding = path === "/";
   const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
+  const isLegal = path === "/terms" || path === "/refunds";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -98,12 +100,14 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-"/explore": "Explore",
+      "/explore": "Explore",
       "/contribute": "Contribute",
       "/dashboard": "Dashboard",
       "/metrics": "Metrics",
       "/api": "API",
       "/docs": "Docs",
+      "/terms": "Terms of Service",
+      "/refunds": "Refund Policy",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
@@ -182,6 +186,18 @@ export function App() {
           <LandingPage />
         </Suspense>
       </div>
+    );
+  }
+
+  // Legal pages render independently without authenticated app chrome.
+  if (isLegal) {
+    return (
+      <Suspense fallback={<p className="muted">Loading legal page…</p>}>
+        <Routes>
+          <Route path="/terms" element={<Legal document="terms" />} />
+          <Route path="/refunds" element={<Legal document="refund" />} />
+        </Routes>
+      </Suspense>
     );
   }
 
