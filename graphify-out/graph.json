@@ -20197,7 +20197,7 @@
       "file_type": "concept",
       "norm_label": "painting1.jpg",
       "source_file": "web/public/assets/painting1.jpg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting1.jpg",
+      "source_location": "./web/public/assets/painting1.jpg",
       "type": "asset"
     },
     {
@@ -20461,7 +20461,7 @@
       "description": "Classic rural idyll composition: farm, trees, open land, distant hills; calm agricultural mood.",
       "file_type": "concept",
       "norm_label": "pastoral landscape genre",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20473,7 +20473,7 @@
       "description": "Cluster of farm buildings near center horizon: main house/barn with pitched roof and chimney-like form, adjacent shed/barn with gable roof, smaller outbuildings.",
       "file_type": "concept",
       "norm_label": "farmstead buildings",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20485,7 +20485,7 @@
       "description": "Entire image rendered in single hue family: lime/sage greens from near-white sky to darker foliage and roof shadows; no other colors.",
       "file_type": "concept",
       "norm_label": "monochrome lime palette",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20497,7 +20497,7 @@
       "description": "Foreground and midground: broad tilled/pasture field with soft undulations, brush-textured grass/crops, path-like darker strokes left-center.",
       "file_type": "concept",
       "norm_label": "open agricultural field",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20509,7 +20509,7 @@
       "description": "Monochrome lime-green oil/acrylic landscape painting of rural farmland with farmstead, scattered trees, open field, and distant hills under pale sky; strong impasto brush texture.",
       "file_type": "concept",
       "norm_label": "lime-field-paint.jpg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "image"
     },
     {
@@ -20521,7 +20521,7 @@
       "description": "Multiple rounded-canopy trees: small ones left, medium mid-left near farm, larger fuller trees right foreground/midground; painted with dabbed foliage texture.",
       "file_type": "concept",
       "norm_label": "scattered deciduous trees",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20533,7 +20533,7 @@
       "description": "Panoramic/banner aspect ratio; horizon roughly mid-lower third; farmstead as central focal anchor; trees frame left and right.",
       "file_type": "concept",
       "norm_label": "wide horizontal composition",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20545,7 +20545,7 @@
       "description": "Quiet, still, peaceful atmosphere; no figures or animals; soft light; contemplative farmland scene.",
       "file_type": "concept",
       "norm_label": "serene rural mood",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20557,7 +20557,7 @@
       "description": "Soft low mountain/hill range on far horizon behind farmstead, slightly cooler/darker green than field.",
       "file_type": "concept",
       "norm_label": "distant rolling hills",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20569,7 +20569,7 @@
       "description": "Upper half: nearly empty pale lime sky with horizontal impasto strokes, no clouds distinctly rendered.",
       "file_type": "concept",
       "norm_label": "pale green sky",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20581,7 +20581,7 @@
       "description": "Visible thick paint strokes and directional texture across sky, field, and foliage; painterly rather than photorealistic.",
       "file_type": "concept",
       "norm_label": "impasto brushwork",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20593,7 +20593,7 @@
       "description": "Wide pastoral scene: open green field, farm buildings mid-horizon, trees left/center/right, rolling hills far background, pale green sky.",
       "file_type": "concept",
       "norm_label": "rural lime-green landscape",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/lime-field-paint.jpg",
+      "source_location": "./web/public/assets/lime-field-paint.jpg",
       "type": "concept"
     },
     {
@@ -20605,7 +20605,7 @@
       "description": "Calm mid-ground body of water nestled in forested valley; cool grey-green surface reflecting sky",
       "file_type": "concept",
       "norm_label": "alpine lake",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "visual_subject"
     },
     {
@@ -20617,7 +20617,7 @@
       "description": "Classical mountain-lake-forest composition; impressionistic rather than photorealistic rendering",
       "file_type": "concept",
       "norm_label": "alpine landscape painting",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "art_genre"
     },
     {
@@ -20629,7 +20629,7 @@
       "description": "Dense evergreen forest covering left and right valley walls and lake shore; vertical pine/fir silhouettes",
       "file_type": "concept",
       "norm_label": "coniferous forest slopes",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "visual_subject"
     },
     {
@@ -20641,7 +20641,7 @@
       "description": "Dominant jagged alpine peak with pale snow/ice near summit; steep rocky faces in layered greens and greys; center-background focal point",
       "file_type": "concept",
       "norm_label": "central snow-capped mountain peak",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "visual_subject"
     },
     {
@@ -20653,7 +20653,7 @@
       "description": "Foreground meadow \u2192 mid-ground lake and trees \u2192 background mountain and sky; V-shaped valley framing peak",
       "file_type": "concept",
       "norm_label": "layered depth composition",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "art_composition"
     },
     {
@@ -20665,7 +20665,7 @@
       "description": "Grassy clearing with scattered pale rocks, fallen logs/driftwood, sparse wildflowers; leads eye toward lake",
       "file_type": "concept",
       "norm_label": "rocky meadow foreground",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "visual_subject"
     },
     {
@@ -20677,7 +20677,7 @@
       "description": "Impressionistic oil landscape painting: alpine mountain valley with lake, dense conifers, snow-capped peak; thick smudged/impasto brushwork; muted sage-green monochrome palette",
       "file_type": "concept",
       "norm_label": "hills-smudge-art.jpg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "image_asset"
     },
     {
@@ -20689,7 +20689,7 @@
       "description": "Near-monochrome harmony of olive, sage, forest green, muted grey-green; limited warm accents on rocks and snow",
       "file_type": "concept",
       "norm_label": "sage-green monochrome palette",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "art_technique"
     },
     {
@@ -20701,7 +20701,7 @@
       "description": "Quiet, remote, contemplative alpine atmosphere; soft overcast light without harsh contrast",
       "file_type": "concept",
       "norm_label": "serene wilderness mood",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "aesthetic_quality"
     },
     {
@@ -20713,7 +20713,7 @@
       "description": "Soft broken cloud cover in pale olive-cream tones; diffuse light over mountain range",
       "file_type": "concept",
       "norm_label": "overcast cloudy sky",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "visual_subject"
     },
     {
@@ -20725,7 +20725,7 @@
       "description": "Visible thick directional strokes and paint texture; painterly smudge aesthetic matching filename hills-smudge-art",
       "file_type": "concept",
       "norm_label": "impasto / smudge brushwork",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/hills-smudge-art.jpg",
+      "source_location": "./web/public/assets/hills-smudge-art.jpg",
       "type": "art_technique"
     },
     {
@@ -20870,7 +20870,7 @@
       "file_type": "concept",
       "norm_label": "painting2.jpg",
       "source_file": "web/public/assets/painting2.jpg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/painting2.jpg",
+      "source_location": "./web/public/assets/painting2.jpg",
       "type": "asset"
     },
     {
@@ -21051,7 +21051,7 @@
       "file_type": "concept",
       "norm_label": "usdc (usd coin)",
       "source_file": "web/public/assets/usdc.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "source_location": "./web/public/assets/usdc.svg",
       "type": "concept"
     },
     {
@@ -21100,7 +21100,7 @@
       "file_type": "concept",
       "norm_label": "usdc logo",
       "source_file": "web/public/assets/usdc.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg",
+      "source_location": "./web/public/assets/usdc.svg",
       "type": "asset"
     },
     {
@@ -21137,7 +21137,7 @@
       "file_type": "concept",
       "norm_label": "usdc compound path",
       "source_file": "web/public/assets/usdc.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/usdc.svg:2",
+      "source_location": "./web/public/assets/usdc.svg:2",
       "type": "shape"
     },
     {
@@ -21198,7 +21198,7 @@
       "file_type": "concept",
       "norm_label": "algorand",
       "source_file": "web/public/assets/algorand.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/algorand.svg",
+      "source_location": "./web/public/assets/algorand.svg",
       "type": "concept"
     },
     {
@@ -21211,7 +21211,7 @@
       "file_type": "concept",
       "norm_label": "algorand logo",
       "source_file": "web/public/assets/algorand.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/algorand.svg",
+      "source_location": "./web/public/assets/algorand.svg",
       "type": "asset"
     },
     {
@@ -21224,7 +21224,7 @@
       "file_type": "concept",
       "norm_label": "algorand glyph path",
       "source_file": "web/public/assets/algorand.svg",
-      "source_location": "/Users/fusion/Code/GitRepos/Tendril/web/public/assets/algorand.svg:2",
+      "source_location": "./web/public/assets/algorand.svg:2",
       "type": "shape"
     },
     {

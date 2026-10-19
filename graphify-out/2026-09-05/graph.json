@@ -14,7 +14,7 @@
         "relation": "participate_in",
         "confidence": "EXTRACTED",
         "confidence_score": 1,
-        "source_file": "/Users/fusion/Code/GitRepos/Tendril/docker-compose.yml"
+        "source_file": "./docker-compose.yml"
       },
       {
         "id": "auth_credential_model_group",
@@ -28,7 +28,7 @@
         "relation": "form",
         "confidence": "EXTRACTED",
         "confidence_score": 1.0,
-        "source_file": "/Users/fusion/Code/GitRepos/Tendril/docs/api.md"
+        "source_file": "./docs/api.md"
       },
       {
         "id": "x402_payment_flow_participants",
@@ -42,7 +42,7 @@
         "relation": "participate_in",
         "confidence": "INFERRED",
         "confidence_score": 0.85,
-        "source_file": "/Users/fusion/Code/GitRepos/Tendril/docs/x402-api.md"
+        "source_file": "./docs/x402-api.md"
       },
       {
         "id": "public_hero_art_composition",
@@ -55,7 +55,7 @@
         "relation": "conceptually_related_to",
         "confidence": "EXTRACTED",
         "confidence_score": 1.0,
-        "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/hero-art.jpg",
+        "source_file": "./web/public/hero-art.jpg",
         "source_location": null,
         "weight": 1.0
       }
@@ -29170,7 +29170,7 @@
       "relation": "participate_in",
       "confidence": "EXTRACTED",
       "confidence_score": 1,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/docker-compose.yml"
+      "source_file": "./docker-compose.yml"
     },
     {
       "id": "auth_credential_model_group",
@@ -29184,7 +29184,7 @@
       "relation": "form",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/docs/api.md"
+      "source_file": "./docs/api.md"
     },
     {
       "id": "x402_payment_flow_participants",
@@ -29198,7 +29198,7 @@
       "relation": "participate_in",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/docs/x402-api.md"
+      "source_file": "./docs/x402-api.md"
     },
     {
       "id": "public_hero_art_composition",
@@ -29211,7 +29211,7 @@
       "relation": "conceptually_related_to",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "/Users/fusion/Code/GitRepos/Tendril/web/public/hero-art.jpg",
+      "source_file": "./web/public/hero-art.jpg",
       "source_location": null,
       "weight": 1.0
     }
