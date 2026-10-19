@@ -1,0 +1,234 @@
+{
+  "nodes": [
+    {
+      "id": "landing_page_assets_lime_field_paint",
+      "label": "Lime field landscape painting",
+      "file_type": "image",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_pastoral_farmland",
+      "label": "Pastoral farmland",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_furrowed_fields",
+      "label": "Furrowed agricultural fields",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_farmstead",
+      "label": "Farmstead cluster",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_scattered_trees",
+      "label": "Scattered trees",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_rolling_hills",
+      "label": "Rolling distant hills",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_lime_green_palette",
+      "label": "Lime-green landscape palette",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_panorama",
+      "label": "Panoramic composition",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "landing_page_assets_lime_field_paint_painterly_texture",
+      "label": "Painterly textured style",
+      "file_type": "concept",
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_pastoral_farmland",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_furrowed_fields",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_farmstead",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_scattered_trees",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_rolling_hills",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_lime_green_palette",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_panorama",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint",
+      "target": "landing_page_assets_lime_field_paint_painterly_texture",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint_pastoral_farmland",
+      "target": "landing_page_assets_lime_field_paint_furrowed_fields",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint_pastoral_farmland",
+      "target": "landing_page_assets_lime_field_paint_farmstead",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "landing_page_assets_lime_field_paint_panorama",
+      "target": "landing_page_assets_lime_field_paint_rolling_hills",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "landing_page_assets_lime_field_paint_pastoral_scene",
+      "label": "Pastoral agricultural scene",
+      "nodes": [
+        "landing_page_assets_lime_field_paint_pastoral_farmland",
+        "landing_page_assets_lime_field_paint_furrowed_fields",
+        "landing_page_assets_lime_field_paint_farmstead",
+        "landing_page_assets_lime_field_paint_scattered_trees",
+        "landing_page_assets_lime_field_paint_rolling_hills"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/Users/fusion/Code/GitRepos/Tendril/landing-page/assets/lime-field-paint.jpg"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
