@@ -1,6 +1,6 @@
 # One-shot Jobs
 
-`POST /x402/run` executes a script without an interactive SSH lease. Tendril selects the best-value idle machine, runs the workload in a disposable sandbox, returns its result, and tears down the container.
+`POST /x402/run` executes a script without an interactive SSH lease. Tendril selects the best-value idle machine, runs the workload in a disposable sandbox, returns its result, and tears down the container. Notebook requests may include bounded per-run `runtime.env`, `runtime.pipPackages`, and `runtime.timeoutMs` settings.
 
 ## Request a quote
 

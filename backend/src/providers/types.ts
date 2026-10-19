@@ -4,6 +4,7 @@ import type {
   RunArtifact,
   SandboxAccess,
   SandboxLimits,
+  NotebookRuntimeOptions,
 } from "@tendril/shared";
 
 /** HTTP `surface` plus the internal one-shot path, which never opens a tunnel. */
@@ -28,6 +29,7 @@ export interface ExecArgs {
   timeoutMs: number;
   payload?: string;
   notebook?: Record<string, unknown>;
+  notebookRuntime?: NotebookRuntimeOptions;
 }
 
 export interface ExecResult {

@@ -687,9 +687,26 @@ at the prepaid budget and cannot overdraw execution credit.
 | `notebook` | object | one of payload/notebook | Python nbformat 4 notebook, up to 1.5 MB and 500 cells. |
 | `lane` | `contributor`, `priority` or `e2b` | no | Notebook only. Omitted prefers priority when Modal is configured, then e2b when E2B is configured; otherwise contributor. |
 | `e2b` | `{ "vCpu": 1\|2\|4\|6\|8, "memGiB": 1\|2\|4\|8 }` | no | `e2b` lane only. Sandbox size; default 2 vCPU · 4 GiB. Priced per size (see `GET /explorer` `e2bPrices`). |
+| `runtime` | object | no | Notebook only. Per-run environment, pip packages, timeout, and an approved custom image. |
+
+`runtime` fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `env` | object of strings | Up to 32 variables. Names must be valid shell identifiers; sandbox control variables cannot be overridden. |
+| `pipPackages` | string[] | Up to 32 package requirements, installed into an isolated per-run directory before the kernel starts. Package names, extras, and version constraints are accepted. |
+| `timeoutMs` | number | Requested notebook timeout. Server, 15-minute global, and prepaid-credit caps still apply. |
+| `image` | string | Optional image reference allowed by server configuration. Not supported on E2B or an already-rented lease. |
 
 ```jsonc
-{ "payload": "print(sum(range(100)))" }
+{ "notebook": { "nbformat": 4, "metadata": {}, "cells": [] },
+  "lane": "priority",
+  "runtime": {
+    "env": { "DATASET": "demo" },
+    "pipPackages": ["seaborn", "openpyxl==3.1.5"],
+    "timeoutMs": 180000
+  }
+}
 ```
 
 ### Asynchronous notebook response

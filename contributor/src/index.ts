@@ -13,7 +13,14 @@ import {
 } from "@tendril/shared";
 import { config } from "./config.js";
 import { detectSpecs } from "./specs.js";
-import { runInSandbox, startSandbox, stopSandbox } from "./docker.js";
+import {
+  ensureImage,
+  runInSandbox,
+  startSandbox,
+  stopSandbox,
+  stopWarmExecPool,
+  warmExecPool,
+} from "./docker.js";
 
 if (!config.apiKey) {
   console.error(
@@ -27,7 +34,18 @@ const activeLeases = new Set<string>();
 let nodeId: string | undefined;
 
 async function main() {
+  // Build the bundled sandbox before registering. A first paid lease should
+  // not spend its registry timeout waiting for an image build.
+  await ensureImage(config.sandbox.image);
   const specs = await detectSpecs();
+  // Keep only a couple of pristine, exact-profile exec containers ready. SSH
+  // containers never enter this pool, and a failed warm-up does not block
+  // registration; the first lease falls back to the normal cold path.
+  await warmExecPool(config.sandbox.image, {
+    cpus: Math.min(specs.cpuCores, 4),
+    memory: config.sandbox.memory,
+    gpus: specs.gpu ? "all" : "",
+  }).catch((err) => console.error(`[agent] exec warm pool failed: ${(err as Error).message}`));
   console.log(`[agent] registry: ${config.registryUrl}`);
   console.log(`[agent] specs: ${specs.cpuCores} CPU, ${specs.ramMb}MB RAM, GPU=${specs.gpu ?? "none"}`);
   console.log(`[agent] price: $${config.pricePerHourUsd}/hr`);
@@ -128,6 +146,7 @@ async function handleRun(socket: Socket, msg: RunJobMsg) {
 
 async function shutdown() {
   await Promise.all([...activeLeases].map((leaseId) => handleDestroy(leaseId)));
+  await stopWarmExecPool();
 }
 
 main().catch((err) => {

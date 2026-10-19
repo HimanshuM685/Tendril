@@ -8,6 +8,7 @@ import type {
   WithdrawResponse,
   X402RentResponse,
   X402TopUpResponse,
+  NotebookRuntimeOptions,
 } from "@tendril/shared";
 import { NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
 import {
@@ -57,6 +58,7 @@ export async function runNotebook(
   notebook: Record<string, unknown>,
   lane?: "contributor" | "priority" | "e2b",
   e2b?: { vCpu: number; memGiB: number },
+  runtime?: NotebookRuntimeOptions,
 ): Promise<RunJobResponse> {
   const invalid = notebookError(notebook);
   if (invalid) throw new Error(invalid);
@@ -66,7 +68,7 @@ export async function runNotebook(
   return (await paidJson(`${api()}/x402/run`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ notebook, lane, ...(e2b ? { e2b } : {}) }),
+    body: JSON.stringify({ notebook, lane, ...(e2b ? { e2b } : {}), ...(runtime ? { runtime } : {}) }),
   })) as RunJobResponse;
 }
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { JOB_RESULT_MAX_BYTES, notebookError } from "@tendril/shared";
+import { JOB_RESULT_MAX_BYTES, notebookError, notebookRuntimeOptionsError, type NotebookRuntimeOptions } from "@tendril/shared";
 import { notebookToPayload, parseNotebookRun } from "./notebookRunner.js";
 
 function notebook(sources: string[]) {
@@ -19,6 +19,25 @@ test("notebook validation accepts Python magics but rejects unsupported structur
   assert.match(notebookError(notebook(Array(501).fill("pass")))!, /500 cells/);
 });
 
+test("runtime options validate bounded env vars and pip specs", () => {
+  assert.equal(notebookRuntimeOptionsError({ env: { TENDRIL_FLAG: "yes" }, pipPackages: ["numpy>=1.26,<2"], timeoutMs: 2_000 }), null);
+  assert.match(notebookRuntimeOptionsError({ env: { PATH: "/tmp" } })!, /invalid.*env name/);
+  assert.match(notebookRuntimeOptionsError({ env: { "not-valid": "x" } })!, /invalid.*env name/);
+  assert.match(notebookRuntimeOptionsError({ pipPackages: ["--index-url=https://evil.invalid"] })!, /invalid.*package/);
+  assert.match(notebookRuntimeOptionsError({ timeoutMs: "fast" })!, /timeoutMs/);
+});
+
+test("notebook payload carries runtime settings through safe Python data and argv", () => {
+  const payload = notebookToPayload(notebook(["print('ok')"]), {
+    env: { TENDRIL_VALUE: "quoted ' value" }, pipPackages: ["demo-package==1.2.3"], timeoutMs: 3_000,
+  });
+  assert.match(payload, /RUN_ENV = json\.loads/);
+  assert.match(payload, /os\.environ\.update\(RUN_ENV\)/);
+  assert.match(payload, /\*PIP_PACKAGES/);
+  assert.match(payload, /deadline = time\.monotonic\(\) \+ 3/);
+  assert.doesNotMatch(payload, /pip install .*demo-package==1\.2\.3.*;/);
+});
+
 test("result marker handles trimmed legacy output and never leaks a raw frame", () => {
   const nb = notebook(["print(1)"]);
   const parsed = parseNotebookRun(`__TENDRIL_NB__\n${JSON.stringify({ ok: false, notebook: nb })}`);
@@ -31,20 +50,28 @@ test("result marker handles trimmed legacy output and never leaks a raw frame", 
 });
 
 const image = process.env.TENDRIL_NOTEBOOK_TEST_IMAGE;
-function executeNotebook(nb: Record<string, unknown>, timeoutMs = 30_000) {
+function executeNotebook(nb: Record<string, unknown>, timeoutMs = 30_000, runtime?: NotebookRuntimeOptions) {
   const process = spawnSync("docker", ["run", "--rm", "-i", "--read-only", "--network", "none",
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "1g", "--cpus", "2", "--pids-limit", "256",
     "--tmpfs", "/work:rw,nosuid,nodev,size=256m,mode=1777", "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m,mode=1777",
     "-e", "HOME=/work", "-e", "MPLBACKEND=Agg", "-e", "PYTHONDONTWRITEBYTECODE=1",
     "-e", "OPENBLAS_NUM_THREADS=2", "--entrypoint", "python3", image!, "-"], {
-    input: notebookToPayload(nb, timeoutMs), encoding: "utf8", timeout: 60_000, maxBuffer: JOB_RESULT_MAX_BYTES,
+    input: notebookToPayload(nb, timeoutMs, runtime), encoding: "utf8", timeout: 60_000, maxBuffer: JOB_RESULT_MAX_BYTES,
   });
   assert.equal(process.status, 0, process.stderr || String(process.error));
   return parseNotebookRun(process.stdout);
 }
-function execute(sources: string[], timeoutMs = 30_000) {
-  return executeNotebook(notebook(sources), timeoutMs);
+function execute(sources: string[], timeoutMs = 30_000, runtime?: NotebookRuntimeOptions) {
+  return executeNotebook(notebook(sources), timeoutMs, runtime);
 }
+
+test("runtime environment reaches notebook code without overriding kernel controls", { skip: !image }, () => {
+  const result = execute(["import os\nprint(os.environ['TENDRIL_TEST_VALUE'])"], 30_000, {
+    env: { TENDRIL_TEST_VALUE: "runtime works" },
+  });
+  assert.equal(result.ok, true, result.log);
+  assert.ok(JSON.stringify(result.notebook).includes("runtime works"));
+});
 
 test("real kernel runs magics, shell cells, rich plots, await, process pools, and artifacts", { skip: !image }, () => {
   const result = execute([

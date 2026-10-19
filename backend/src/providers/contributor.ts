@@ -28,7 +28,7 @@ export async function exec(args: ExecArgs): Promise<ExecResult> {
       args.nodeId,
       args.leaseId,
       args.jobId,
-      notebookToPayload(args.notebook, args.timeoutMs),
+      notebookToPayload(args.notebook, args.timeoutMs, args.notebookRuntime),
       args.timeoutMs,
     );
     const parsed = parseNotebookRun(msg.result);

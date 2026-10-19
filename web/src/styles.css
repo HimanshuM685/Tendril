@@ -853,6 +853,50 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   cursor: not-allowed;
 }
 
+.notebook-advanced {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.notebook-advanced summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.notebook-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.notebook-advanced-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.notebook-advanced-grid textarea,
+.notebook-advanced-grid input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  padding: 7px 8px;
+  resize: vertical;
+}
+
+.notebook-advanced-grid textarea {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .notebook-run-btn {
   align-self: flex-start;
 }
@@ -1891,6 +1935,10 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   }
 
   .notebook-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .notebook-advanced-grid {
     grid-template-columns: 1fr;
   }
 

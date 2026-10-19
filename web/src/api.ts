@@ -7,6 +7,7 @@ import type {
   LeaseBilling,
   LeaseCloseResponse,
   Metrics,
+  NotebookRuntimeOptions,
   PlatformInfo,
   RunJobResponse,
   RunResponse,
@@ -281,6 +282,7 @@ export async function runNotebook(
   lane: "contributor" | "priority" | "e2b",
   onStage?: (stage: PayStage) => void,
   e2bSize?: E2bSize,
+  runtime?: NotebookRuntimeOptions,
 ): Promise<RunJobResponse> {
   const res = await payingFetch(address, sign, onStage)(`${REGISTRY_URL}/x402/run`, {
     method: "POST",
@@ -288,7 +290,12 @@ export async function runNotebook(
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ notebook, lane, ...(lane === "e2b" && e2bSize ? { e2b: e2bSize } : {}) }),
+    body: JSON.stringify({
+      notebook,
+      lane,
+      ...(lane === "e2b" && e2bSize ? { e2b: e2bSize } : {}),
+      ...(runtime ? { runtime } : {}),
+    }),
   });
   if (!res.ok) throw await apiError(res, "run");
   return res.json();

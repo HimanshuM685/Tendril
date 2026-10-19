@@ -1,5 +1,5 @@
 import { CommandExitError, Sandbox, Template } from "e2b";
-import type { SandboxAccess } from "@tendril/shared";
+import type { NotebookRuntimeOptions, SandboxAccess } from "@tendril/shared";
 import { JOB_RESULT_MAX_BYTES } from "@tendril/shared";
 import { config } from "../config.js";
 import { e2bSizeId, type E2bSize } from "../hosted.js";
@@ -172,8 +172,13 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
   }
 }
 
-async function runNotebook(sb: Sandbox, notebook: Record<string, unknown>, timeoutMs: number): Promise<ExecResult> {
-  await sb.files.write("/work/.tendril-runner.py", notebookToPayload(notebook, timeoutMs), { user: "root" });
+async function runNotebook(
+  sb: Sandbox,
+  notebook: Record<string, unknown>,
+  timeoutMs: number,
+  runtime?: NotebookRuntimeOptions,
+): Promise<ExecResult> {
+  await sb.files.write("/work/.tendril-runner.py", notebookToPayload(notebook, timeoutMs, runtime), { user: "root" });
   const ran = await runText(sb, "python3 /work/.tendril-runner.py", timeoutMs);
   bounded(ran, sb);
   const parsed = parseNotebookRun(ran.stdout);
@@ -199,7 +204,7 @@ async function runPython(sb: Sandbox, payload: string, timeoutMs: number): Promi
 export async function exec(args: ExecArgs): Promise<ExecResult> {
   const sb = sandboxes.get(args.leaseId);
   if (!sb) throw new Error("sandbox not running");
-  if (args.notebook) return runNotebook(sb, args.notebook, args.timeoutMs);
+  if (args.notebook) return runNotebook(sb, args.notebook, args.timeoutMs, args.notebookRuntime);
   if (typeof args.payload !== "string") throw new Error("payload (string) required");
   return runPython(sb, args.payload, args.timeoutMs);
 }
