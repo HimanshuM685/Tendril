@@ -20,7 +20,7 @@ const termsContent = String.raw`
 
 Tendril is a best-effort, per-second compute marketplace. Depending on the deployment, compute may come from hosted infrastructure such as Modal or from nodes operated by independent contributors. Hosted notebook capacity and contributor-run nodes may have different surfaces, availability, prices, and limits.
 
-Tendril is not a bank, payment account, custodian of user investment funds, or provider of guaranteed compute capacity. The service does not pay interest on balances and a credit balance is not a deposit.
+Tendril is not a bank, investment account, or provider of guaranteed compute capacity. The service does not pay interest and does not maintain segregated deposit accounts. For custodial accounts, Tendril holds and signs with a platform-managed Algorand wallet. Prepaid credit is an off-chain service ledger, not a bank balance or an investment product.
 
 ## 2. Identity and accounts
 
@@ -46,13 +46,13 @@ Prices are shown by the applicable API response or UI and may vary by node, prov
 - 0.10 USDC on-chain fee to mint a contributor API key; and
 - contributor node time at the node's advertised rate, less a 1% platform fee on collected usage by default.
 
-For a metered session, the gate fee is separate from usage. Tendril starts the meter when the sandbox is ready and closes it on release, watchdog close, or another terminal event. The close calculation uses the seconds the sandbox actually ran, prorated at the node rate. A session charge is capped by available credit; a one-shot run can be charged for its actual execution and may leave a negative credit balance that must be topped up before further use.
+For a metered session, the gate fee is separate from usage. Tendril starts the meter when the sandbox is ready and closes it on release, watchdog close, or another terminal event. The close calculation uses the seconds the sandbox actually ran, prorated at the node rate. A session charge is capped by available credit; a leaseless code run can be charged for its actual execution and may leave a negative credit balance that must be topped up before further use.
 
 When credit runs out, an idle watchdog may allow a grace window worth 1.00 USDC at that node's rate before force-closing the sandbox, subject to deployment configuration. Grace is not purchased credit or a promise of additional free capacity. It exists to save work. Only seconds the sandbox actually runs enter the close calculation, and a session cannot be charged beyond the credit the ledger permits.
 
 ## 5. Contributor earnings
 
-For contributor-run nodes, collected usage is credited to the contributor's earnings ledger when the lease closes. Earnings are not sent on-chain per lease. The contributor may withdraw the full available balance once it reaches the 5.00 USDC minimum and the payout address has opted into the payment asset. A failed on-chain send restores the debited earnings balance; a successful send is recorded with its transaction id.
+For contributor-run nodes, collected usage is credited to the contributor's earnings ledger when the lease closes. Earnings are not sent on-chain per lease. The contributor may withdraw the full available balance once it reaches the 5.00 USDC minimum and the payout address has opted into the payment asset, if withdrawals are enabled for the deployment. If Tendril determines that an on-chain send failed before completion, it restores the debited earnings balance and records the failed attempt. A confirmed send is recorded with its transaction id, but a process failure or uncertain chain result may require manual reconciliation and is not guaranteed to restore automatically.
 
 Contributors must operate only software and hardware they control, keep their daemon and runtime supported, accurately advertise capacity and price, protect their API key, maintain required network connectivity, and avoid tampering with or accessing renter workloads. Tendril may suspend a node or account for abuse, material misrepresentation, security risk, or non-payment risk.
 
@@ -80,15 +80,15 @@ To the maximum extent permitted by law, Tendril and its operators will not be li
 
 Tendril may change these Terms, prices, limits, providers, or features. The updated version will carry a new last-updated date. Continued use after an effective update means you accept the updated Terms to the extent allowed by law.
 
-Contact: [legal@tendrilhq.com](mailto:legal@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril).
+Contact: [legal@tendrilhq.com](mailto:legal@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril). Confirm that this mailbox is monitored before publication.
 `;
 
 const privacyContent = String.raw`
 ## 1. Overview and scope
 
-This Privacy Policy explains how Tendril ("Tendril", "we", "our", or "the platform") collects, uses, retains, and protects information when you use our website, compute marketplace, APIs, CLI, contributor daemon, and related services.
+This Privacy Policy explains how Tendril ("Tendril", "we", "our", or "the platform") collects, uses, retains, and protects information when you use our website, compute marketplace, APIs, CLI, contributor daemon, and related services. It describes current application behavior; deployment providers and legal requirements may add obligations. It is not legal advice.
 
-Tendril is designed as a developer-first compute network with minimal data retention. We do not sell your personal data, and we do not run third-party advertising trackers.
+Tendril is designed as a developer-first compute network with limited application retention. We do not sell your personal data, and the web application contains no third-party advertising or analytics trackers. Hosting, identity, payment, and execution providers may process information as described below.
 
 ## 2. Information we collect
 
@@ -96,14 +96,14 @@ Depending on how you interact with Tendril, we collect the following categories 
 
 - **Public blockchain data:** When you connect a non-custodial wallet (such as Pera, Defly, or Lute), your Algorand wallet address, transaction IDs, payment amounts, and on-chain timestamps are processed to verify payments and credit balances. Because blockchains are public ledgers, this data is public by nature.
 - **Account information:** If you register using email or Google sign-in, we store your email address, display name, account creation timestamp, and platform-managed Algorand address. Passwords are cryptographically hashed; plain-text passwords are never stored.
-- **Prepaid ledger and usage records:** We record your off-chain prepaid credit balance, top-up history, active leases, one-shot run jobs, execution durations, gate fees, and compute charges.
+- **Prepaid ledger and usage records:** We record your off-chain prepaid credit balance, top-up history, active leases, one-shot run jobs, execution durations, gate fees, and compute charges. Live leases and some run results are held in memory and are not durable database records.
 - **Workload inputs and outputs:** To run your workloads, our servers and contributor nodes receive the code, container commands, notebook cells, environment variables, and output streams you submit. Workloads run inside ephemeral sandboxes and outputs are retained temporarily for retrieval.
-- **Contributor daemon data:** If you run a contributor node, we receive daemon heartbeat status, advertised hardware specifications (CPU, RAM, GPU, disk), port tunnel bindings, and uptime statistics.
-- **Technical and diagnostic logs:** When you access the platform, our infrastructure logs standard HTTP/WebSocket request details, including IP address, user-agent string, request path, timestamp, and error traces for performance monitoring and threat prevention.
+- **Contributor daemon data:** If you run a contributor node, we receive daemon heartbeat status, advertised hardware specifications (CPU, RAM, and GPU), node identity, tunnel connection details, and uptime information while the daemon is connected. The live node registry is in memory.
+- **Technical and diagnostic logs:** Depending on deployment, reverse proxies, hosting providers, and application infrastructure may log request or connection metadata such as IP address, user-agent string, request path, timestamp, node connection details, and error information for performance monitoring and threat prevention. Exact fields and retention depend on deployment configuration.
 
 ## 3. How we use your information
 
-We use the collected information exclusively to operate and secure the compute marketplace:
+We use the collected information to operate and secure the compute marketplace:
 
 - Authenticating your identity and managing sessions;
 - Crediting settled Algorand USDC payments to your Tendril balance;
@@ -118,15 +118,15 @@ We use the collected information exclusively to operate and secure the compute m
 Tendril coordinates compute between renters and independent contributor nodes or hosted providers:
 
 - **Contributor sandboxes:** Contributor nodes execute workloads inside isolated, unprivileged Docker containers with restricted capabilities, resource caps (CPU, memory, PID), and no host filesystem mounts. However, code and inputs you send to a contributor node are processed on hardware owned by that contributor. Do not include unencrypted private keys, sensitive secrets, or proprietary data in workloads sent to third-party nodes.
-- **Hosted runners:** Where configured, workloads may run on automated hosted infrastructure (such as Modal or dedicated sandboxes) governed by their respective operational security controls.
-- **Tunneling:** When interactive ports or notebook servers are exposed via tunneling tools (such as bore), network traffic through the tunnel is relayed through platform-managed endpoints to establish end-to-end connectivity.
+- **Hosted runners:** Where configured, workloads may run on automated hosted infrastructure such as Modal or E2B, governed by their respective operational controls and terms.
+- **Tunneling:** When interactive ports or notebook servers are exposed through a tunneling tool such as Bore, traffic passes through the configured Bore relay. The default deployment uses the public \`bore.pub\` relay; operators may configure a self-hosted relay. Do not send sensitive data through third-party relay infrastructure unless you accept that risk.
 
 ## 5. Information sharing and disclosure
 
-We do not sell, rent, or trade your personal information. We disclose information only under the following limited circumstances:
+We do not sell, rent, or trade your personal information. We disclose or transmit information only as needed to operate the service, under applicable law, or in the following circumstances:
 
 - **Public ledger records:** Any on-chain payment, top-up transaction, or contributor withdrawal is recorded immutably on the Algorand blockchain.
-- **Service providers:** We use trusted infrastructure providers for cloud database hosting (such as Neon Postgres), cloud storage, and server hosting. These providers process data solely on our behalf and under confidentiality obligations.
+- **Service providers:** Depending on deployment and selected execution lane, information may be processed by Neon/Postgres, Google OAuth, Modal, E2B, an x402 payment facilitator, Bore relay infrastructure, and hosting providers. Their own terms and privacy practices may also apply. Do not treat a provider as acting solely on Tendril's behalf unless the applicable deployment agreement says so.
 - **Contributor nodes:** When you rent a contributor's node, that node receives the necessary execution payload (container image, commands, environment variables) to perform the requested compute task.
 - **Legal and safety requirements:** We may disclose information if required by valid law, subpoena, regulation, or legal process, or to investigate and prevent imminent harm, fraud, or violations of our Terms of Service.
 
@@ -134,39 +134,39 @@ We do not sell, rent, or trade your personal information. We disclose informatio
 
 Tendril does not use third-party tracking, analytics, or behavioral advertising cookies.
 
-We use browser **Local Storage** (localStorage) strictly for functional session management:
-- tendril.session: Stores your local authentication token, active address, and session metadata so you remain signed in across page reloads.
-- Client-side UI preferences (such as dismissed notices or prompt templates).
+We use browser **Local Storage** for functional session management:
+- \`tendril.session\`: Stores your local authentication token, active address, and session metadata so you remain signed in across page reloads;
+- Client-side UI state or preferences where implemented.
 
 You can clear your browser storage at any time through your browser settings, which will sign you out of your current session.
 
 ## 7. Data retention and deletion
 
 - **Prepaid ledger and billing history:** Maintained as long as your account remains active or as required for accounting, tax, and audit compliance.
-- **Workload outputs and artifacts:** Retained for a limited polling and download window following job completion, after which ephemeral sandbox files are purged.
-- **Server logs:** Standard technical and diagnostic logs are rotated and deleted on a regular rolling schedule.
-- **Account deletion:** You may request deletion of your custodial account and associated personal data by contacting us. Note that public blockchain transactions cannot be modified or deleted.
+- **Workload outputs and artifacts:** Retained in memory for a limited polling and download window following job completion. Current run-result retention is approximately one hour, subject to bounded cache limits, after which results are purged.
+- **Server logs:** Retention and rotation of technical and diagnostic logs depend on the hosting and deployment configuration.
+- **Account closure and deletion requests:** You may contact us to ask about closing a custodial account and deleting eligible personal data. Tendril currently has no self-service account-deletion endpoint. Financial, security, fraud-prevention, tax, and audit records may need to be retained, and public blockchain transactions cannot be modified or deleted.
 
 ## 8. Security measures
 
-We implement reasonable technical and organizational measures to safeguard your data, including TLS encryption in transit, cryptographic password hashing, scoped API tokens, and container capability restrictions for sandboxed workloads. However, no internet transmission or distributed system is completely secure, and we cannot guarantee absolute security.
+We implement reasonable technical and organizational measures to safeguard your data, including deployment-dependent TLS encryption in transit, cryptographic password hashing, owner-bound and revocable API keys, and container capability restrictions for contributor sandbox workloads. Hosted execution providers and relay operators apply their own controls. However, no internet transmission or distributed system is completely secure, and we cannot guarantee absolute security.
 
 ## 9. Your rights and choices
 
 Depending on your jurisdiction, you may have rights under applicable privacy laws (such as GDPR or CCPA), including the right to:
 - Access and inspect personal data we hold about you;
 - Request correction of inaccurate information;
-- Request deletion of your custodial account records;
+- Ask us to review deletion of eligible custodial account records, subject to retention requirements;
 - Disconnect your Algorand wallet at any time; and
-- Export cryptographic keys for platform-managed accounts.
+- Export recovery credentials for platform-managed accounts where that feature is enabled.
 
-To exercise these rights, please contact our support team.
+To exercise these rights, contact our support team. Confirm the applicable deployment and account type when making a request.
 
 ## 10. Changes and contact
 
 We may update this Privacy Policy periodically to reflect changes in our service, legal obligations, or technical architecture. The revised policy will be posted with an updated "Last updated" date.
 
-Contact: [privacy@tendrilhq.com](mailto:privacy@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril).
+Contact: [privacy@tendrilhq.com](mailto:privacy@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril). Confirm that this mailbox is monitored before publication.
 `;
 
 const refundContent = String.raw`
@@ -186,9 +186,9 @@ For a notebook job, the same ordering means a provisioning failure after gate fe
 
 ## 3. Run failures and actual usage
 
-Execution failure, timeout, or a failed program is not automatically a refund when compute actually ran. Tendril closes the run and bills the seconds the sandbox actually ran at the selected node's rate. A failed result can therefore include an execution charge. A run that fails before execution starts does not receive an execution-time charge; its already-settled gate fee, if any, is not automatically reversed.
+Execution failure, timeout, or a failed program is not automatically a refund when compute actually ran. For a leaseless run, Tendril closes the temporary sandbox and bills the seconds it actually ran at the selected node's rate. A failed result can therefore include an execution charge. A run that fails before execution starts does not receive an execution-time charge; its already-settled gate fee, if any, is not automatically reversed.
 
-For a job executed inside an existing lease, the job's gate payment is settled after execution succeeds. If execution fails before that settlement, the job gate fee is not settled, while the existing lease remains governed by its own meter and close rules.
+For a job executed inside an existing lease, the job's gate payment is settled after the provider returns a result, including a result reporting a failed program. If the provider fails before returning a result, the job gate fee is not settled. The existing lease remains active and is governed by its own meter and close rules; its accumulated usage is charged when that lease is later closed.
 
 ## 4. Grace and lease close
 
@@ -200,11 +200,11 @@ Releasing a session bills actual elapsed sandbox seconds once. If nothing was ta
 
 Contributor earnings accrue at lease close and are withdrawn in one on-chain transfer after the 5.00 USDC minimum is met. Tendril debits the earnings ledger before sending to prevent double payment. If the on-chain send is known to have failed, Tendril restores the debited balance and records the failed attempt.
 
-If a transfer is confirmed on-chain, Tendril cannot promise reversal. Verify the destination address and asset opt-in before withdrawing.
+If a transfer is confirmed on-chain, Tendril cannot promise reversal. A withdrawal also requires the deployment's payout configuration, the minimum balance, and asset opt-in. Verify the destination address and asset opt-in before withdrawing.
 
 ## 6. Contact and disputes
 
-For a suspected duplicate charge, incorrect usage duration, failed provisioning outcome, or withdrawal problem, preserve the request id, job or lease id, transaction id, and response, then contact [support@tendrilhq.com](mailto:support@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril). Do not send private keys, seed phrases, API keys, or other secrets in a support request.
+For a suspected duplicate charge, incorrect usage duration, failed provisioning outcome, or withdrawal problem, preserve the request id, job or lease id, transaction id, and response, then contact [support@tendrilhq.com](mailto:support@tendrilhq.com) or reach out via [GitHub](https://github.com/HimanshuM685/Tendril). Confirm that this mailbox is monitored before publication. Do not send private keys, seed phrases, API keys, or other secrets in a support request.
 `;
 
 const documentContent: Record<LegalDocument, string> = {
@@ -214,9 +214,9 @@ const documentContent: Record<LegalDocument, string> = {
 };
 
 const documentMeta: Record<LegalDocument, { title: string; eyebrow: string; updated: string }> = {
-  terms: { title: "Terms of Service", eyebrow: "LEGAL", updated: "October 19, 2026" },
-  privacy: { title: "Privacy Policy", eyebrow: "LEGAL", updated: "October 19, 2026" },
-  refund: { title: "Refund Policy", eyebrow: "LEGAL", updated: "October 19, 2026" },
+  terms: { title: "Terms of Service", eyebrow: "LEGAL", updated: "October 20, 2026" },
+  privacy: { title: "Privacy Policy", eyebrow: "LEGAL", updated: "October 20, 2026" },
+  refund: { title: "Refund Policy", eyebrow: "LEGAL", updated: "October 20, 2026" },
 };
 
 function toSlug(text: string): string {
@@ -393,7 +393,7 @@ export function Legal({ document: docType }: LegalProps) {
           <header className="legal-intro">
             <span className="legal-eyebrow">{meta.eyebrow}</span>
             <h1 id="legal-title" className="legal-title">{meta.title}</h1>
-            <p className="legal-updated">Last updated: <time dateTime="2026-10-19">{meta.updated}</time></p>
+            <p className="legal-updated">Last updated: <time dateTime="2026-10-20">{meta.updated}</time></p>
           </header>
 
           <article className="legal-body" aria-labelledby="legal-title">
