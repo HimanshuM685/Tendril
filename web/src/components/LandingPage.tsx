@@ -184,6 +184,15 @@ export function LandingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const hash = window.location.hash.toLowerCase();
+    if (hash === "#privacy") {
+      navigate("/privacy");
+    } else if (hash === "#terms" || hash === "#tnc") {
+      navigate("/terms");
+    }
+  }, [navigate]);
+
   const scrollToSection = (id: string) => {
     if (id === "top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -727,6 +736,15 @@ export function LandingPage() {
                       </svg>
                     </span>
                     <span>Terms of Service</span>
+                  </Link>
+                  <Link to="/privacy" className="sf-item">
+                    <span className="sf-icon">
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </span>
+                    <span>Privacy Policy</span>
                   </Link>
                   <Link to="/refunds" className="sf-item">
                     <span className="sf-icon">
@@ -1566,8 +1584,8 @@ export function LandingPage() {
             <ul className="footer-link-list">
               <li><a href="https://github.com/HimanshuM685/Tendril" target="_blank" rel="noopener">GitHub Repository</a></li>
               <li><a href={docsUrl("/docs/build#daemon-install")}>Contributor Daemon</a></li>
-              <li><a href="#privacy">Privacy Policy</a></li>
               <li><Link to="/terms">Terms of Service</Link></li>
+              <li><Link to="/privacy">Privacy Policy</Link></li>
               <li><Link to="/refunds">Refund Policy</Link></li>
             </ul>
           </div>

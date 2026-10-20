@@ -85,7 +85,14 @@ export function App() {
   const path = location.pathname;
   const isLanding = path === "/";
   const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
-  const isLegal = path === "/terms" || path === "/refunds";
+  const isLegal =
+    path === "/terms" ||
+    path === "/tnc" ||
+    path === "/terms-and-conditions" ||
+    path === "/privacy" ||
+    path === "/privacy-policy" ||
+    path === "/refunds" ||
+    path === "/refund";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -107,7 +114,12 @@ export function App() {
       "/api": "API",
       "/docs": "Docs",
       "/terms": "Terms of Service",
+      "/tnc": "Terms & Conditions",
+      "/terms-and-conditions": "Terms & Conditions",
+      "/privacy": "Privacy Policy",
+      "/privacy-policy": "Privacy Policy",
       "/refunds": "Refund Policy",
+      "/refund": "Refund Policy",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
@@ -195,7 +207,12 @@ export function App() {
       <Suspense fallback={<p className="muted">Loading legal page…</p>}>
         <Routes>
           <Route path="/terms" element={<Legal document="terms" />} />
+          <Route path="/tnc" element={<Legal document="terms" />} />
+          <Route path="/terms-and-conditions" element={<Legal document="terms" />} />
+          <Route path="/privacy" element={<Legal document="privacy" />} />
+          <Route path="/privacy-policy" element={<Legal document="privacy" />} />
           <Route path="/refunds" element={<Legal document="refund" />} />
+          <Route path="/refund" element={<Legal document="refund" />} />
         </Routes>
       </Suspense>
     );

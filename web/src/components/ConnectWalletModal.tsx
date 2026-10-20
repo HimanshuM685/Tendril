@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import type { EmailSessionResponse, GoogleSessionResponse } from "@tendril/shared";
 import { fetchEmailEnabled, fetchGoogleEnabled, googleLoginUrl } from "../lib/custodialClient";
@@ -239,7 +240,9 @@ export function ConnectWalletModal({ onClose, onCustodialSession, onWalletConnec
 
         {/* Footer Note matching connect-wallet-layout.png */}
         <p className="cw-modal-foot">
-          Connecting prompts a one-time signature to sign in.
+          Connecting prompts a one-time signature to sign in. By connecting, you agree to our{" "}
+          <Link to="/terms" onClick={onClose}>Terms</Link> and{" "}
+          <Link to="/privacy" onClick={onClose}>Privacy Policy</Link>.
         </p>
       </div>
     </div>
