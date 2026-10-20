@@ -38,7 +38,7 @@ export function OnchainAccountPanel({
 
   const needsAlgo = account.algoMicro < MIN_ALGO_MICRO;
   const canRequestGas =
-    account.gasGrantEligible && account.algoMicro === 0 && gasRequest === null;
+    account.gasGrantEligible && account.algoMicro === 0 && account.usdcAtomic === 0 && gasRequest === null;
   const grantAlgo = gasRequest?.amountMicro
     ? formatAlgo(gasRequest.amountMicro)
     : grantAlgoLabel;

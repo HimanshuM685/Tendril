@@ -314,9 +314,9 @@ router.post("/auth/google/gas-request", guard(async (req: Request, res: Response
     return res.status(403).json({ error: "not eligible for gas grant" });
   }
 
-  const { algoMicro } = await googleAccountInfo(session.address);
-  if (algoMicro !== 0) {
-    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(session.address);
+  if (algoMicro !== 0 || usdcAtomic !== 0) {
+    return res.status(409).json({ error: "gas grant requires an unfunded ALGO and USDC balance" });
   }
 
   const row = await createGasRequest({
@@ -376,9 +376,9 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
     return res.status(403).json({ error: "not eligible for gas grant" });
   }
 
-  const { algoMicro } = await googleAccountInfo(session.address);
-  if (algoMicro !== 0) {
-    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(session.address);
+  if (algoMicro !== 0 || usdcAtomic !== 0) {
+    return res.status(409).json({ error: "gas grant requires an unfunded ALGO and USDC balance" });
   }
 
   const row = await createGasRequest({

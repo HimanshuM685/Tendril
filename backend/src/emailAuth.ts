@@ -102,8 +102,6 @@ export async function emailLogin(req: Request, res: Response) {
   await touchUserLogin(user.id);
   const fresh = (await findUserById(user.id))!;
 
-  await ensureCustodialGasRequest(fresh);
-
   const body: EmailSessionResponse = {
     token: issueEmailSession(fresh.id, fresh.address, fresh.email),
     address: fresh.address,

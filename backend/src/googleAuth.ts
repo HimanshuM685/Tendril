@@ -10,12 +10,13 @@ import { generateCustodialAccount } from "./custodialWallet.js";
 import { ensureCustodialGasRequest } from "./gasGrant.js";
 import {
   createUser,
+  findUserByEmail,
   findUserByGoogleSub,
   findUserById,
+  linkGoogleSub,
   touchUserLogin,
 } from "./db.js";
 import { creditBalance } from "./x402/credit.js";
-import { onboardGoogleUser } from "./onboarding.js";
 import type { GoogleSessionResponse } from "@tendril/shared";
 
 const usedExchangeJtis = new Set<string>();
@@ -81,20 +82,26 @@ export async function googleCallback(req: Request, res: Response) {
 
     let user = await findUserByGoogleSub(profile.sub);
     if (!user) {
-      const { address, encryptedMnemonic } = generateCustodialAccount();
-      user = await createUser({
-        id: nanoid(),
-        googleSub: profile.sub,
-        email: profile.email,
-        name: profile.name ?? null,
-        address,
-        encryptedMnemonic,
-      });
-      // Signup only: fund gas + opt into USDC in the background (two on-chain
-      // confirmations would otherwise stall the redirect).
-      const created = user;
-      void onboardGoogleUser(created).catch((e) =>
-        console.error(`[onboarding] ${created.address}: ${(e as Error).message}`));
+      const existingByEmail = await findUserByEmail(profile.email);
+      if (existingByEmail) {
+        // Google has verified same email: reuse existing custodial wallet instead
+        // of creating a second wallet for one person.
+        user = await linkGoogleSub(existingByEmail.id, profile.sub, profile.name ?? existingByEmail.name);
+        if (!user) throw new Error("could not link Google account");
+      } else {
+        const { address, encryptedMnemonic } = generateCustodialAccount();
+        user = await createUser({
+          id: nanoid(),
+          googleSub: profile.sub,
+          email: profile.email,
+          name: profile.name ?? null,
+          address,
+          encryptedMnemonic,
+        });
+        // Signup only: create one pending admin request. Admin acceptance owns
+        // both ALGO delivery and the custodial USDC opt-in.
+        await ensureCustodialGasRequest(user);
+      }
     } else {
       await touchUserLogin(user.id);
     }
@@ -123,8 +130,6 @@ export async function googleSessionExchange(req: Request, res: Response) {
 
   const user = await findUserById(parsed.userId);
   if (!user) return res.status(404).json({ error: "user not found" });
-
-  await ensureCustodialGasRequest(user);
 
   const body: GoogleSessionResponse = {
     token: issueGoogleSession(user.id, user.address, user.email),

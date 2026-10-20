@@ -324,6 +324,22 @@ export async function findUserByEmail(email: string): Promise<DbUser | null> {
   return rows[0] ?? null;
 }
 
+/** Link verified Google identity to an existing email account without changing its wallet. */
+export async function linkGoogleSub(
+  userId: string,
+  googleSub: string,
+  name?: string | null,
+): Promise<DbUser | null> {
+  const rows = await q<DbUser>(
+    `UPDATE users
+     SET google_sub = $2, name = COALESCE(name, $3), last_login_at = $4
+     WHERE id = $1 AND (google_sub IS NULL OR google_sub = $2)
+     RETURNING *`,
+    [userId, googleSub, name ?? null, Date.now()],
+  );
+  return rows[0] ?? null;
+}
+
 export async function createUser(row: {
   id: string;
   googleSub: string;
