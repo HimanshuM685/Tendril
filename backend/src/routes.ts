@@ -7,6 +7,9 @@ import {
   NOTEBOOK_MAX_BYTES,
   boundedRunTimeoutMs,
   notebookError,
+  notebookRuntimeOptionsError,
+  notebookTimeoutMs,
+  type NotebookRuntimeOptions,
   type CreateApiKeyResponse,
   type LeaseCloseResponse,
   type PlatformInfo,
@@ -981,13 +984,14 @@ router.post("/lease/:id/release", guard(releaseLease));
 const RUN_DESCRIPTION =
   `Run code on a rented Linux machine and get its stdout back. Flat ` +
   `${formatUsdc(config.flatRunAtomic)} per job. POST \`{"payload": "<python>"}\` or ` +
-  `\`{"notebook": <ipynb>}\` and, with no lease token, Tendril picks the best-value idle machine, ` +
+  `\`{"notebook": <ipynb>, "runtime": {"env": {}, "pipPackages": [], "timeoutMs": 120000}}\` and, with no lease token, Tendril picks the best-value idle machine, ` +
   `executes it in a throwaway sandbox and bills the seconds it took from your credit. Send a lease ` +
   `token instead to run it inside a machine you already hold.`;
 
 interface JobInput {
   payload?: string;
   notebook?: Record<string, unknown>;
+  runtime?: NotebookRuntimeOptions;
   /** Notebook only. Omitted keeps the old Modal path when hosted CPU is configured. */
   lane?: "contributor" | "priority" | "e2b";
   /** e2b lane only: sandbox size. Defaults to E2B's 2 vCPU · 4 GiB. */
@@ -1032,6 +1036,13 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
     });
     return;
   }
+  if (job.runtime?.image) {
+    res.status(400).json({
+      error: "notebook_image_unsupported",
+      detail: "custom notebook images apply only when Tendril provisions a new notebook sandbox",
+    });
+    return;
+  }
 
   const paid = await requirePayment(req, res, "run", config.flatRunAtomic, RUN_DESCRIPTION, ROUTES.run);
   if (!paid) return;
@@ -1043,9 +1054,10 @@ async function runInLease(req: Request, res: Response, job: JobInput): Promise<v
       leaseId: lease.id,
       nodeId: lease.nodeId,
       jobId,
-      timeoutMs: config.runTimeoutMs,
+      timeoutMs: effectiveNotebookTimeoutMs(job.runtime),
       payload: job.payload,
       notebook: job.notebook,
+      notebookRuntime: job.runtime,
     });
   } catch (err) {
     // Nothing ran, so nothing settles.
@@ -1132,6 +1144,13 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
       });
       return;
     }
+    if (job.notebook && lane === "e2b" && job.runtime?.image) {
+      res.status(400).json({
+        error: "notebook_image_unsupported",
+        detail: "custom notebook images are not supported on the E2B lane",
+      });
+      return;
+    }
     const freePeer = (id: string) => isNodeConnected(id) && !nodeBusy(id);
     const node = !job.notebook || lane === "contributor" ? pickBestValueNode(freePeer)
       : lane === "e2b" ? freeE2bNode(job.e2b ?? E2B_DEFAULT_SIZE)
@@ -1162,7 +1181,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
     // Settle before the sandbox starts. The signed group is only valid for a
     // handful of rounds; a notebook that runs past that window comes back
     // "txn dead" if we settle after exec.
-    const runLimitMs = boundedRunTimeoutMs(config.runTimeoutMs);
+    const runLimitMs = effectiveNotebookTimeoutMs(job.runtime);
     const budgetMs = job.notebook ? Math.min(runLimitMs, (funded ?? runLimitMs / 1000) * 1000) : runLimitMs;
     // Reserve before awaiting settlement, so two paid requests cannot both
     // provision a node that looked idle or reuse the same credit window.
@@ -1211,7 +1230,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         leaseId: lease.id,
         node,
         surface: "exec",
-        image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+        image: job.runtime?.image ?? process.env.DEFAULT_SANDBOX_IMAGE ?? "",
         limits: {
           memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
           cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
@@ -1242,6 +1261,7 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
         jobId,
         timeoutMs: budgetMs,
         payload: job.payload,
+        notebookRuntime: job.runtime,
       });
     } catch (err) {
       const settled = await closeLease(lease.id, "run-stopped");
@@ -1310,7 +1330,7 @@ async function runNotebookJob(
       leaseId,
       node,
       surface: "exec",
-      image: process.env.DEFAULT_SANDBOX_IMAGE ?? "",
+      image: job.runtime?.image ?? process.env.DEFAULT_SANDBOX_IMAGE ?? "",
       limits: {
         memory: process.env.DEFAULT_SANDBOX_MEMORY ?? "2g",
         cpus: Math.min(node.cpuCores, isHosted(node.provider) ? node.cpuCores : 4),
@@ -1349,6 +1369,7 @@ async function runNotebookJob(
       timeoutMs: budgetMs,
       payload: job.payload,
       notebook: job.notebook,
+      notebookRuntime: job.runtime,
     }), budgetMs);
   } catch (err) {
     const settled = await closeLease(leaseId, "run-stopped");
@@ -1446,11 +1467,15 @@ function readSurface(req: Request): "ssh" | "jupyter" | null {
 }
 
 function readJob(body: unknown): JobInput | null {
-  const b = body as { payload?: unknown; notebook?: unknown } | null;
+  const b = body as { payload?: unknown; notebook?: unknown; runtime?: unknown } | null;
   const hasPayload = typeof b?.payload === "string";
   const notebook = b?.notebook;
   const hasNotebook = notebook !== undefined && notebook !== null;
   if (hasPayload === hasNotebook) return null;
+  if (b?.runtime !== undefined && notebookRuntimeOptionsError(b.runtime)) return null;
+  const runtime = b?.runtime as NotebookRuntimeOptions | undefined;
+  if (runtime?.image && !isAllowedNotebookImage(runtime.image)) return null;
+  if (hasPayload && runtime) return null;
   if (hasNotebook) {
     if (notebookError(notebook)) return null;
     if (Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return null;
@@ -1460,20 +1485,42 @@ function readJob(body: unknown): JobInput | null {
     const e2b = sizeRaw && isE2bSize(sizeRaw.vCpu, sizeRaw.memGiB)
       ? { vCpu: sizeRaw.vCpu as number, memGiB: sizeRaw.memGiB as number }
       : undefined;
-    return { notebook: notebook as Record<string, unknown>, lane, ...(e2b ? { e2b } : {}) };
+    return {
+      notebook: notebook as Record<string, unknown>,
+      lane,
+      ...(e2b ? { e2b } : {}),
+      ...(runtime ? { runtime } : {}),
+    };
   }
   return { payload: b?.payload as string };
 }
 
 function jobError(body: unknown): string {
-  const b = body as { payload?: unknown; notebook?: unknown } | null;
+  const b = body as { payload?: unknown; notebook?: unknown; runtime?: unknown } | null;
   const hasPayload = typeof b?.payload === "string";
   const notebook = b?.notebook;
   const hasNotebook = notebook !== undefined && notebook !== null;
   if (hasPayload && hasNotebook) return "pass payload or notebook, not both";
+  if (b?.runtime !== undefined) {
+    const runtimeError = notebookRuntimeOptionsError(b.runtime);
+    if (runtimeError) return runtimeError;
+    const runtime = b.runtime as NotebookRuntimeOptions;
+    if (runtime.image && !isAllowedNotebookImage(runtime.image)) return "notebook image is not allowed";
+    if (hasPayload) return "runtime options are supported for notebooks only";
+  }
   if (hasNotebook && notebookError(notebook)) return notebookError(notebook)!;
   if (hasNotebook && Buffer.byteLength(JSON.stringify(notebook)) > NOTEBOOK_MAX_BYTES) return "notebook_too_large";
   return "payload (string) or notebook (object) required";
+}
+
+function isAllowedNotebookImage(image: string): boolean {
+  const defaultImage = process.env.DEFAULT_SANDBOX_IMAGE?.trim();
+  return image === defaultImage || config.notebookAllowedImages.includes(image);
+}
+
+function effectiveNotebookTimeoutMs(runtime?: NotebookRuntimeOptions): number {
+  const configured = boundedRunTimeoutMs(config.runTimeoutMs);
+  return Math.min(configured, runtime ? notebookTimeoutMs(runtime) : configured);
 }
 
 /** The session address (from `Authorization: Bearer <session>`), or 401. */

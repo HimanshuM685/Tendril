@@ -7,7 +7,7 @@
 #   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 #     --env-file .env -e REGISTRY_URL=http://localhost:4000 tendril-contributor
 # (Add --network host only if you use TUNNEL_MODE=local for same-machine SSH.)
-FROM node:20-slim
+FROM node:20.19.1-bookworm-slim
 
 WORKDIR /app
 

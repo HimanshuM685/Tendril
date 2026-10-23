@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createConnection, createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
@@ -10,6 +10,36 @@ import { JOB_RESULT_MAX_BYTES, boundedRunTimeoutMs, RUN_MAX_TIMEOUT_MS } from "@
 import { config } from "./config.js";
 
 const execFileP = promisify(execFile);
+
+const WARM_EXEC_POOL_LIMIT = 2;
+const WARM_EXEC_LIFETIME_MS = RUN_MAX_TIMEOUT_MS + 300_000;
+const DEPENDENCY_PROBE =
+  "import nbclient, nbformat, ipykernel, numpy, pandas, matplotlib, requests, scipy, sklearn, PIL, psutil";
+
+type ExecProfile = {
+  image: string;
+  memory: string;
+  cpus: string;
+  gpus: string;
+};
+
+type WarmExec = ExecProfile & { name: string; createdAt: number };
+
+const warmExecs: WarmExec[] = [];
+const leaseContainers = new Map<string, string>();
+
+function dockerLog(event: string, fields: Record<string, unknown> = {}): void {
+  console.log(`[docker] ${JSON.stringify({ event, ...fields })}`);
+}
+
+function dockerFailure(event: string, startedAt: number, err: unknown, fields: Record<string, unknown> = {}): void {
+  dockerLog(event, {
+    ...fields,
+    ok: false,
+    elapsedMs: Date.now() - startedAt,
+    error: err instanceof Error ? err.message : String(err),
+  });
+}
 
 /** The endpoint a renter SSHes into, once the sandbox is up. */
 export interface SandboxEndpoint {
@@ -84,7 +114,8 @@ function sandboxTag(): string | null {
  * used, which may differ from `image` when we substitute a content-tagged build
  * of the bundled sandbox.
  */
-async function ensureImage(image: string): Promise<string> {
+export async function ensureImage(image: string): Promise<string> {
+  const startedAt = Date.now();
   // An explicitly configured SANDBOX_IMAGE is the operator's to manage: we only
   // check it exists and never rebuild it from our context.
   const bundled = image === config.sandbox.image && existsSync(join(SANDBOX_CTX, "Dockerfile"));
@@ -92,15 +123,163 @@ async function ensureImage(image: string): Promise<string> {
 
   try {
     await execFileP("docker", ["image", "inspect", tag]);
+    dockerLog("image.reused", { image: tag, elapsedMs: Date.now() - startedAt });
     return tag;
   } catch {
     /* not present */
   }
   if (!bundled) return tag; // nothing we can build; `docker run` will report it
 
-  console.log(`[docker] building sandbox image ${tag} from ${SANDBOX_CTX}…`);
-  await execFileP("docker", ["build", "-t", tag, SANDBOX_CTX], { maxBuffer: 50 * 1024 * 1024 });
+  console.log(`[docker] building sandbox image ${tag} (streamed context)…`);
+  // The contributor may run in a container while Docker uses the host daemon.
+  // A path build would ask that daemon for /app/contributor/sandbox-ssh, which
+  // does not exist on the host. Stream the local context through stdin instead.
+  try {
+    await execFileP(
+      "sh",
+      ["-c", "tar -C \"$1\" -czf - . | docker build -t \"$2\" -", "tendril-build", SANDBOX_CTX, tag],
+      { maxBuffer: 50 * 1024 * 1024 },
+    );
+  } catch (err) {
+    dockerFailure("image.failed", startedAt, err, { image: tag });
+    throw err;
+  }
+  dockerLog("image.ready", { image: tag, elapsedMs: Date.now() - startedAt });
   return tag;
+}
+
+function execProfile(image: string, memory: string, cpus: number, gpus: string): ExecProfile {
+  return { image, memory, cpus: String(cpus), gpus };
+}
+
+function sameProfile(a: ExecProfile, b: ExecProfile): boolean {
+  return a.image === b.image && a.memory === b.memory && a.cpus === b.cpus && a.gpus === b.gpus;
+}
+
+function execRunArgs(profile: ExecProfile, name: string, lifetimeMs = WARM_EXEC_LIFETIME_MS): string[] {
+  return [
+    "run",
+    "-d",
+    "--rm",
+    "--name",
+    name,
+    "--memory",
+    profile.memory,
+    "--memory-swap",
+    profile.memory,
+    "--cpus",
+    profile.cpus,
+    "--pids-limit",
+    "256",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--init",
+    "--read-only",
+    "--tmpfs",
+    "/work:rw,nosuid,nodev,size=256m,mode=1777",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,size=64m,mode=1777",
+    "--ulimit",
+    "fsize=134217728:134217728",
+    "-e",
+    "HOME=/work",
+    "-e",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "-e",
+    "PIP_NO_CACHE_DIR=1",
+    "-e",
+    "MPLBACKEND=Agg",
+    "-e",
+    `OMP_NUM_THREADS=${Math.max(1, Math.ceil(Number(profile.cpus)))}`,
+    "-e",
+    `OPENBLAS_NUM_THREADS=${Math.max(1, Math.ceil(Number(profile.cpus)))}`,
+    ...(profile.gpus ? ["--gpus", profile.gpus] : []),
+    "--entrypoint",
+    "sleep",
+    profile.image,
+    String(Math.ceil(Math.min(RUN_MAX_TIMEOUT_MS + 300_000, lifetimeMs) / 1000)),
+  ];
+}
+
+function probeArgs(): string[] {
+  const probe = JSON.stringify(DEPENDENCY_PROBE);
+  return [
+    "sh",
+    "-c",
+    `if [ -x /work/.venv/bin/python ]; then exec /work/.venv/bin/python -c ${probe}; else exec python3 -c ${probe}; fi`,
+  ];
+}
+
+async function prepareExecContainer(name: string, startedAt = Date.now()): Promise<void> {
+  await execFileP(
+    "docker",
+    ["exec", name, "python3", "-m", "venv", "--system-site-packages", "/work/.venv"],
+    { timeout: 30_000 },
+  );
+  const probe = await execFileP("docker", ["exec", name, ...probeArgs()], { timeout: 30_000 });
+  dockerLog("sandbox.dependencies_ready", {
+    container: name,
+    elapsedMs: Date.now() - startedAt,
+    probe: probe.stdout.trim().split("\n").at(-1) || "ok",
+  });
+}
+
+function takeWarmExec(profile: ExecProfile): WarmExec | undefined {
+  const index = warmExecs.findIndex((entry) => sameProfile(entry, profile));
+  if (index < 0) return undefined;
+  return warmExecs.splice(index, 1)[0];
+}
+
+async function removeContainer(name: string): Promise<void> {
+  try {
+    await execFileP("docker", ["rm", "-f", name]);
+  } catch {
+    /* already gone */
+  }
+}
+
+/** Fill a small pool of pristine exec containers; only exact resource matches are reused. */
+export async function warmExecPool(
+  imageOverride: string,
+  limits: Pick<SandboxLimits, "memory" | "cpus" | "gpus">,
+): Promise<void> {
+  const startedAt = Date.now();
+  const image = await ensureImage(imageOverride || config.sandbox.image);
+  let cpus = Number(limits.cpus || config.sandbox.cpus);
+  const ncpu = await dockerNcpu();
+  if (ncpu > 0 && cpus > ncpu) cpus = ncpu;
+  const profile = execProfile(image, limits.memory || config.sandbox.memory, cpus, limits.gpus || config.sandbox.gpus);
+  const needed = Math.max(0, WARM_EXEC_POOL_LIMIT - warmExecs.length);
+  for (let i = 0; i < needed; i++) {
+    const name = `tendril-warm-${randomUUID()}`;
+    const itemStartedAt = Date.now();
+    try {
+      await execFileP("docker", execRunArgs(profile, name), { maxBuffer: 10 * 1024 * 1024 });
+      await prepareExecContainer(name, itemStartedAt);
+      warmExecs.push({ ...profile, name, createdAt: Date.now() });
+      dockerLog("sandbox.warm_ready", {
+        container: name,
+        poolSize: warmExecs.length,
+        elapsedMs: Date.now() - itemStartedAt,
+      });
+    } catch (err) {
+      dockerFailure("sandbox.warm_failed", itemStartedAt, err, { container: name });
+      await removeContainer(name);
+    }
+  }
+  dockerLog("sandbox.warm_complete", {
+    poolSize: warmExecs.length,
+    requested: WARM_EXEC_POOL_LIMIT,
+    elapsedMs: Date.now() - startedAt,
+  });
+}
+
+export async function stopWarmExecPool(): Promise<void> {
+  const pending = warmExecs.splice(0).map(({ name }) => removeContainer(name));
+  await Promise.all(pending);
+  if (pending.length) dockerLog("sandbox.warm_stopped", { count: pending.length });
 }
 
 /**
@@ -122,6 +301,7 @@ export async function startSandbox(
   surface: "ssh" | "exec" = "ssh",
   lifetimeMs = RUN_MAX_TIMEOUT_MS + 300_000,
 ): Promise<SandboxEndpoint> {
+  const startedAt = Date.now();
   const image = imageOverride || config.sandbox.image;
   const runImage = await ensureImage(image);
   const name = containerName(leaseId);
@@ -140,36 +320,56 @@ export async function startSandbox(
   const local = config.tunnelMode === "local";
   const execOnly = surface === "exec";
 
-  const args = [
-    "run",
-    "-d",
-    "--rm",
-    "--name",
-    name,
-    "--memory",
-    memory,
-    "--memory-swap",
-    memory,
-    "--cpus",
-    cpus,
-    "--pids-limit",
-    "256",
-    "--cap-drop",
-    "ALL",
-    "--security-opt",
-    "no-new-privileges",
-  ];
   if (execOnly) {
-    args.push(
-      "--init", "--read-only",
-      "--tmpfs", "/work:rw,nosuid,nodev,size=256m,mode=1777",
-      "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m,mode=1777",
-      "--ulimit", "fsize=134217728:134217728",
-      "-e", "HOME=/work", "-e", "PYTHONDONTWRITEBYTECODE=1",
-      "-e", "PIP_NO_CACHE_DIR=1", "-e", "MPLBACKEND=Agg",
-      "-e", `OMP_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
-      "-e", `OPENBLAS_NUM_THREADS=${Math.max(1, Math.ceil(cpusNum))}`,
-    );
+    const profile = execProfile(runImage, memory, cpusNum, gpus);
+    const warm = takeWarmExec(profile);
+    if (warm) {
+      try {
+        const requestedLifetime = Math.min(WARM_EXEC_LIFETIME_MS, lifetimeMs);
+        if (Date.now() - warm.createdAt + requestedLifetime > WARM_EXEC_LIFETIME_MS) {
+          throw new Error("warm sandbox lifetime would exceed its safety cap");
+        }
+        await execFileP("docker", ["inspect", warm.name], { timeout: 10_000 });
+        await execFileP("docker", ["exec", warm.name, ...probeArgs()], { timeout: 30_000 });
+        leaseContainers.set(leaseId, warm.name);
+        dockerLog("sandbox.reused", {
+          leaseId,
+          container: warm.name,
+          warmAgeMs: Date.now() - warm.createdAt,
+          elapsedMs: Date.now() - startedAt,
+        });
+        return { leaseId, containerName: warm.name, host: "", port: 0 };
+      } catch (err) {
+        dockerFailure("sandbox.warm_unusable", startedAt, err, { leaseId, container: warm.name });
+        await removeContainer(warm.name);
+      }
+    }
+  }
+
+  const args = execOnly
+    ? execRunArgs(execProfile(runImage, memory, cpusNum, gpus), name, lifetimeMs)
+    : [
+      "run",
+      "-d",
+      "--rm",
+      "--name",
+      name,
+      "--memory",
+      memory,
+      "--memory-swap",
+      memory,
+      "--cpus",
+      cpus,
+      "--pids-limit",
+      "256",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+    ];
+  if (execOnly) {
+    // execRunArgs already carries read-only root, tmpfs workspaces, caps, and
+    // bounded process/thread settings for both cold and warm containers.
   } else {
     args.push(
       // The few caps sshd needs to accept a root password login under PAM.
@@ -209,35 +409,49 @@ export async function startSandbox(
     // bore (client) authenticates to a self-hosted server via BORE_SECRET.
     if (config.sandbox.boreSecret) args.push("-e", `BORE_SECRET=${config.sandbox.boreSecret}`);
   }
-  if (gpus) args.push("--gpus", gpus);
-  if (execOnly) args.push("--entrypoint", "sleep");
-  args.push(runImage);
-  if (execOnly) args.push(String(Math.ceil(Math.min(RUN_MAX_TIMEOUT_MS + 300_000, lifetimeMs) / 1000)));
+  if (!execOnly && gpus) args.push("--gpus", gpus);
+  if (!execOnly) args.push(runImage);
 
   console.log(
     `[docker] starting ${execOnly ? "exec" : "SSH"} sandbox ${name} (${runImage})` +
       (execOnly ? "" : local ? ` on 127.0.0.1:${hostPort}` : ` via bore (${config.sandbox.boreServer})`),
   );
-  await execFileP("docker", args, { maxBuffer: 10 * 1024 * 1024 });
+  try {
+    await execFileP("docker", args, { maxBuffer: 10 * 1024 * 1024 });
+  } catch (err) {
+    dockerFailure("sandbox.start_failed", startedAt, err, { leaseId, surface, container: name });
+    throw err;
+  }
+  leaseContainers.set(leaseId, name);
 
   if (execOnly) {
     // A venv on bounded writable storage allows %pip without changing the
     // read-only image or the contributor host. The kernel uses this interpreter.
     try {
-      await execFileP("docker", ["exec", name, "python3", "-m", "venv", "--system-site-packages", "/work/.venv"], { timeout: 30_000 });
+      await prepareExecContainer(name, startedAt);
+      dockerLog("sandbox.ready", { leaseId, surface, container: name, elapsedMs: Date.now() - startedAt });
     } catch (err) {
+      dockerFailure("sandbox.prepare_failed", startedAt, err, { leaseId, surface, container: name });
       await stopSandbox(leaseId);
       throw err;
     }
     return { leaseId, containerName: name, host: "", port: 0 };
   }
 
-  if (local) {
-    await waitForPort(hostPort);
-    return { leaseId, containerName: name, host: "127.0.0.1", port: hostPort };
+  try {
+    if (local) {
+      await waitForPort(hostPort);
+      dockerLog("sandbox.ready", { leaseId, surface, container: name, elapsedMs: Date.now() - startedAt });
+      return { leaseId, containerName: name, host: "127.0.0.1", port: hostPort };
+    }
+    const { host, port } = await waitForBoreEndpoint(name);
+    dockerLog("sandbox.ready", { leaseId, surface, container: name, elapsedMs: Date.now() - startedAt });
+    return { leaseId, containerName: name, host, port };
+  } catch (err) {
+    dockerFailure("sandbox.readiness_failed", startedAt, err, { leaseId, surface, container: name });
+    await stopSandbox(leaseId);
+    throw err;
   }
-  const { host, port } = await waitForBoreEndpoint(name);
-  return { leaseId, containerName: name, host, port };
 }
 
 /** Poll a TCP port until it accepts a connection (local-mode readiness). */
@@ -301,7 +515,8 @@ export function runInSandbox(
   payload: string,
   timeoutMs = 120_000,
 ): Promise<{ ok: boolean; output: string }> {
-  const name = containerName(leaseId);
+  const name = leaseContainers.get(leaseId) ?? containerName(leaseId);
+  const startedAt = Date.now();
   return new Promise((resolve) => {
     const duration = boundedRunTimeoutMs(timeoutMs);
     // timeout runs INSIDE the container and terminates the process group.
@@ -334,11 +549,20 @@ export function runInSandbox(
       const stderr = Buffer.concat(err).toString();
       const timedOut = code === 124 || code === 137;
       if (timedOut) void stopSandbox(leaseId);
+      dockerLog("job.complete", {
+        leaseId,
+        ok: !failure && code === 0,
+        exitCode: code,
+        timedOut,
+        bytes,
+        elapsedMs: Date.now() - startedAt,
+      });
       resolve({ ok: !failure && code === 0, output: failure || (timedOut ? "Job timed out; sandbox stopped." : code === 0 ? stdout : `${stdout}\n${stderr}`.trim()) });
     });
     child.stdin.on("error", () => { /* process exited before consuming payload */ });
     child.on("error", (e) => {
       clearTimeout(timer);
+      dockerFailure("job.failed", startedAt, e, { leaseId, bytes });
       resolve({ ok: false, output: String(e) });
     });
     child.stdin.write(payload);
@@ -348,10 +572,12 @@ export function runInSandbox(
 
 /** Forcibly remove the sandbox container (idempotent). */
 export async function stopSandbox(leaseId: string): Promise<void> {
-  const name = containerName(leaseId);
+  const name = leaseContainers.get(leaseId) ?? containerName(leaseId);
+  leaseContainers.delete(leaseId);
+  const startedAt = Date.now();
   try {
     await execFileP("docker", ["rm", "-f", name]);
-    console.log(`[docker] removed sandbox ${name}`);
+    dockerLog("sandbox.stopped", { leaseId, container: name, elapsedMs: Date.now() - startedAt });
   } catch {
     /* already gone */
   }

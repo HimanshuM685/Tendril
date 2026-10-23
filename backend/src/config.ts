@@ -129,6 +129,11 @@ export const config = {
   // Hard ceiling on one `/x402/run` job. It is also the cost ceiling on a
   // leaseless run, since the sandbox is destroyed the moment the job ends.
   runTimeoutMs: Number(process.env.RUN_TIMEOUT_MS ?? 120_000),
+  /** Optional custom notebook images. Empty means only the default image is allowed. */
+  notebookAllowedImages: (process.env.NOTEBOOK_ALLOWED_IMAGES ?? "")
+    .split(",")
+    .map((image) => image.trim())
+    .filter(Boolean),
   // How often the watchdog checks active leases for expiry (ms).
   meterIntervalMs: Number(process.env.METER_INTERVAL_MS ?? 10_000),
   // Runtime handed to a renter whose credit has run out, so they can save their

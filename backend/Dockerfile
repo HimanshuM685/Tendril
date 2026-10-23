@@ -2,7 +2,7 @@
 #   docker build -f backend/Dockerfile -t tendril-backend .
 #   docker run -p 4000:4000 --env-file .env tendril-backend
 # State lives in Neon (Postgres) via DATABASE_URL — no local volume needed.
-FROM node:20-slim
+FROM node:20.19.1-bookworm-slim
 
 WORKDIR /app
 

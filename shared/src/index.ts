@@ -3,6 +3,8 @@
  * the contributor agent, and the autonomous consumer agent.
  */
 
+import type { NotebookRuntimeOptions } from "./notebook.js";
+
 // ───────────────────────────── Domain models ─────────────────────────────
 
 export type NodeStatus = "online" | "offline";
@@ -460,6 +462,8 @@ export interface RunRequest {
   payload?: string;
   /** Jupyter notebook (nbformat JSON). Omit when `payload` is set. */
   notebook?: Record<string, unknown>;
+  /** Per-run notebook environment, packages, and timeout overrides. */
+  runtime?: NotebookRuntimeOptions;
 }
 
 export interface RunResponse {

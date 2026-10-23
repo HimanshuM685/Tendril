@@ -48,7 +48,7 @@ export function GasRequests() {
   }, [load]);
 
   async function onAccept(id: string) {
-    if (!token || !confirm("Send ALGO grant from platform wallet?")) return;
+    if (!token || !confirm("Accept request? If wallet is not opted into USDC, send ALGO gas and complete USDC opt-in automatically.")) return;
     setBusy(id);
     setErr(null);
     try {
@@ -81,7 +81,7 @@ export function GasRequests() {
     <>
       <header className="admin-header">
         <h1>Gas requests</h1>
-        <p className="kicker muted">One-time ALGO grant per Google account</p>
+        <p className="kicker muted">One-time onboarding grant per custodial account</p>
       </header>
 
       {err && <p className="error">{err}</p>}

@@ -113,6 +113,13 @@ For compute-focused checks, use [the bounded benchmark](example-buyer/notebooks/
 Local execution tests:
 
 ```bash
+npm test
+```
+
+The optional Docker sandbox integration test needs a built notebook image and a running Docker
+daemon; it is not part of `npm test` so clean Linux builds stay offline and deterministic:
+
+```bash
 docker build -t tendril-notebook-test contributor/sandbox-ssh
 TENDRIL_NOTEBOOK_TEST_IMAGE=tendril-notebook-test npx tsx --test backend/src/providers/notebookRunner.test.ts backend/src/runLimits.test.ts backend/src/leases.lifecycle.test.ts contributor/tests/docker.test.ts
 ```
@@ -181,6 +188,38 @@ CORS only ever constrained browsers; a headless agent was never subject to it.
 
 > **Full setup, account prep, and production deployment (registry / web / agent) live in
 > [DEPLOY.md](./DEPLOY.md).** The quick start below is for local dev.
+
+## Rebuild from scratch on Linux
+
+Clean checkout needs only Git, Node.js `20.19.1` (selected by `.nvmrc`), npm, and Docker for
+container builds. `package-lock.json` is authoritative; use `npm ci`, not `npm install`, for a
+repeatable dependency tree.
+
+```bash
+git clone <repository-url> tendril
+cd tendril
+nvm install                 # reads .nvmrc; use Node 20.19.1
+nvm use
+npm ci
+cp .env.example .env       # fill required deployment values; never commit .env
+npm run build               # builds root Docker image: tendril-backend
+npm test                    # offline unit/self-check suite; no DB, Docker daemon, or network needed
+```
+
+Run backend from host:
+
+```bash
+npm run backend             # http://localhost:4000; requires configured DATABASE_URL and platform values
+```
+
+Run same backend in Docker:
+
+```bash
+docker run --rm --name tendril-backend --env-file .env -p 4000:4000 tendril-backend
+```
+
+`.env.example` contains settings and placeholders only. Put credentials in ignored `.env`; never put
+database URLs, private keys, API keys, or tokens in tracked files.
 
 ## Quick start
 

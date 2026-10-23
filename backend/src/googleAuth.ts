@@ -7,6 +7,7 @@ import {
 } from "./auth.js";
 import { config, googleAuthEnabled } from "./config.js";
 import { generateCustodialAccount } from "./custodialWallet.js";
+import { ensureCustodialGasRequest } from "./gasGrant.js";
 import {
   createUser,
   findUserByGoogleSub,
@@ -122,6 +123,8 @@ export async function googleSessionExchange(req: Request, res: Response) {
 
   const user = await findUserById(parsed.userId);
   if (!user) return res.status(404).json({ error: "user not found" });
+
+  await ensureCustodialGasRequest(user);
 
   const body: GoogleSessionResponse = {
     token: issueGoogleSession(user.id, user.address, user.email),

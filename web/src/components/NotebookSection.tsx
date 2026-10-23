@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { LeaseStatus, RunArtifact, RunJobResponse } from "@tendril/shared";
+import type { LeaseStatus, NotebookRuntimeOptions, RunArtifact, RunJobResponse } from "@tendril/shared";
 import { formatUsdc, NOTEBOOK_MAX_BYTES, notebookError } from "@tendril/shared";
 import { e2bSizeKey, pollRunJob, runNotebook, type E2bPreset, type E2bSize } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
@@ -220,6 +220,10 @@ export function NotebookSection({
   const [lane, setLane] = useState<TrainLane>("contributor");
   const [e2bSize, setE2bSize] = useState<E2bSize>(DEFAULT_E2B_SIZE);
   const [e2bCustom, setE2bCustom] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const [runtimeEnv, setRuntimeEnv] = useState("");
+  const [runtimePackages, setRuntimePackages] = useState("");
+  const [runtimeTimeout, setRuntimeTimeout] = useState("");
   const e2bPrice = e2bSizes.prices[e2bSizeKey(e2bSize)] ?? e2bUsdPerHour;
   const laneOpen: Record<TrainLane, boolean> = { contributor: peers, priority, e2b };
   useEffect(() => {
@@ -265,6 +269,13 @@ export function NotebookSection({
       setError("Sign in to run a notebook.");
       return;
     }
+    let runtime: NotebookRuntimeOptions | undefined;
+    try {
+      runtime = readRuntimeOptions();
+    } catch (e) {
+      setError((e as Error).message);
+      return;
+    }
     setUploading(true);
     setError(null);
     setView(null);
@@ -277,9 +288,10 @@ export function NotebookSection({
         setStage("confirming");
         res = (await runCustodialAction(session.token, {
           action: "run",
-          notebook: pending.notebook,
-          lane,
-          ...(lane === "e2b" ? { e2b: e2bSize } : {}),
+            notebook: pending.notebook,
+            lane,
+            ...(lane === "e2b" ? { e2b: e2bSize } : {}),
+            ...(runtime ? { runtime } : {}),
         })) as RunJobResponse;
       } else {
         res = await runNotebook(
@@ -290,6 +302,7 @@ export function NotebookSection({
           lane,
           setStage,
           lane === "e2b" ? e2bSize : undefined,
+          runtime,
         );
       }
       // Payment is settled; the job itself can still take minutes (cold Modal
@@ -302,6 +315,24 @@ export function NotebookSection({
       setUploading(false);
       setStage(null);
     }
+  }
+
+  function readRuntimeOptions(): NotebookRuntimeOptions | undefined {
+    const env: Record<string, string> = {};
+    for (const line of runtimeEnv.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {
+      const separator = line.indexOf("=");
+      if (separator <= 0) throw new Error(`Environment variable must use KEY=VALUE: ${line}`);
+      const key = line.slice(0, separator).trim();
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) throw new Error(`Invalid environment variable name: ${key}`);
+      env[key] = line.slice(separator + 1);
+    }
+    const pipPackages = runtimePackages.split(/[,\n]/).map((value) => value.trim()).filter(Boolean);
+    const timeoutMs = runtimeTimeout.trim() ? Number(runtimeTimeout) * 1_000 : undefined;
+    if (timeoutMs !== undefined && (!Number.isFinite(timeoutMs) || timeoutMs <= 0)) {
+      throw new Error("Timeout must be a positive number of seconds.");
+    }
+    if (Object.keys(env).length === 0 && pipPackages.length === 0 && timeoutMs === undefined) return undefined;
+    return { ...(Object.keys(env).length ? { env } : {}), ...(pipPackages.length ? { pipPackages } : {}), ...(timeoutMs !== undefined ? { timeoutMs } : {}) };
   }
 
   // Once the job is running server-side, poll for its result instead of
@@ -577,6 +608,44 @@ export function NotebookSection({
               )}
             </div>
           )}
+
+          <details className="notebook-advanced" open={advanced} onToggle={(event) => setAdvanced(event.currentTarget.open)}>
+            <summary>Advanced runtime settings</summary>
+            <div className="notebook-advanced-grid">
+              <label>
+                Extra pip packages
+                <textarea
+                  value={runtimePackages}
+                  disabled={uploading}
+                  onChange={(event) => setRuntimePackages(event.target.value)}
+                  placeholder="seaborn\nopenpyxl==3.1.5"
+                  rows={3}
+                />
+              </label>
+              <label>
+                Environment variables
+                <textarea
+                  value={runtimeEnv}
+                  disabled={uploading}
+                  onChange={(event) => setRuntimeEnv(event.target.value)}
+                  placeholder="DATASET=demo\nMODEL_VARIANT=small"
+                  rows={3}
+                />
+              </label>
+              <label>
+                Timeout (seconds)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={runtimeTimeout}
+                  disabled={uploading}
+                  onChange={(event) => setRuntimeTimeout(event.target.value)}
+                  placeholder="Server default"
+                />
+              </label>
+            </div>
+          </details>
 
           <button
             type="button"

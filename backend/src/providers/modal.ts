@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { ModalClient, type Image, type Sandbox } from "modal";
-import type { JupyterAccess, SandboxAccess } from "@tendril/shared";
+import type { JupyterAccess, NotebookRuntimeOptions, SandboxAccess } from "@tendril/shared";
 import { JOB_RESULT_MAX_BYTES } from "@tendril/shared";
 import { config } from "../config.js";
 import { notebookToPayload, parseNotebookRun } from "./notebookRunner.js";
@@ -9,6 +9,11 @@ import type { ComputeProvider, ExecArgs, ExecResult, StartArgs } from "./types.j
 const JUPYTER_PORT = 8888;
 /** python:3.12-slim's default CMD is `python3`, which exits when stdin closes. */
 const KEEP_ALIVE = ["python3", "-c", "import time; time.sleep(2**31)"];
+const DEPENDENCY_PROBE = [
+  "python3",
+  "-c",
+  "import nbclient, nbformat, ipykernel, numpy, pandas, matplotlib, requests, scipy, sklearn, PIL, psutil",
+];
 
 const sandboxes = new Map<string, Sandbox>();
 
@@ -17,6 +22,19 @@ let builtImage: Image | null = null;
 let building: Promise<Image> | null = null;
 
 export const id = "modal" as const;
+
+function modalLog(event: string, fields: Record<string, unknown> = {}): void {
+  console.log(`[modal] ${JSON.stringify({ event, ...fields })}`);
+}
+
+function modalFailure(event: string, startedAt: number, err: unknown, fields: Record<string, unknown> = {}): void {
+  modalLog(event, {
+    ...fields,
+    ok: false,
+    elapsedMs: Date.now() - startedAt,
+    error: err instanceof Error ? err.message : String(err),
+  });
+}
 
 function modalClient(): ModalClient {
   if (!config.modalTokenId || !config.modalTokenSecret) {
@@ -53,16 +71,22 @@ async function buildImage(): Promise<Image> {
 }
 
 function ensureImage(): Promise<Image> {
-  if (builtImage) return Promise.resolve(builtImage);
+  if (builtImage) {
+    modalLog("image.reused");
+    return Promise.resolve(builtImage);
+  }
   if (!building) {
+    const startedAt = Date.now();
     const pending = buildImage()
       .then((image) => {
         builtImage = image;
+        modalLog("image.ready", { elapsedMs: Date.now() - startedAt });
         return image;
       })
       .catch((err) => {
         if (building === pending) building = null;
         noteModalError(err);
+        modalFailure("image.failed", startedAt, err);
         throw err;
       });
     building = pending;
@@ -161,6 +185,15 @@ async function waitForJupyter(baseUrl: string, token: string, deadline: number):
   throw new Error("jupyter did not become ready");
 }
 
+async function probeDependencies(sb: Sandbox, deadline: number): Promise<void> {
+  if (Date.now() >= deadline) throw new Error("sandbox dependency probe timed out");
+  const timeoutMs = Math.max(1_000, Math.min(30_000, deadline - Date.now()));
+  const probe = await execText(sb, DEPENDENCY_PROBE, timeoutMs);
+  if (probe.code !== 0) {
+    throw new Error(`sandbox dependencies are not ready: ${probe.stderr.trim().slice(-500) || `exit ${probe.code}`}`);
+  }
+}
+
 function jupyterAccess(tunnelUrl: string, token: string): JupyterAccess {
   const url = new URL("/", tunnelUrl);
   url.searchParams.set("token", token);
@@ -176,11 +209,15 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
   const physical = Math.max(0.125, args.node.cpuCores / 2);
   const memoryMiB = args.node.ramMb;
   const token = args.surface === "jupyter" ? randomBytes(18).toString("base64url") : "";
+  const startedAt = Date.now();
   const deadline = Date.now() + config.modalReadyTimeoutMs;
+  const image = args.image
+    ? modal.images.fromRegistry(args.image)
+    : await ensureImage();
 
   let sb: Sandbox | null = null;
   try {
-    sb = await modal.sandboxes.create(app, await ensureImage(), {
+    sb = await modal.sandboxes.create(app, image, {
       cpu: physical,
       cpuLimit: physical,
       memoryMiB,
@@ -193,9 +230,16 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
       env: args.surface === "jupyter" ? { JUPYTER_TOKEN: token, SHELL: "/bin/bash" } : undefined,
     });
     sandboxes.set(args.leaseId, sb);
-    console.log(`[modal] sandbox ${sb.sandboxId} for lease ${args.leaseId} (${args.surface})`);
+    modalLog("sandbox.created", {
+      leaseId: args.leaseId,
+      sandboxId: sb.sandboxId,
+      surface: args.surface,
+      elapsedMs: Date.now() - startedAt,
+    });
 
     if (args.surface !== "jupyter") {
+      await probeDependencies(sb, deadline);
+      modalLog("sandbox.ready", { leaseId: args.leaseId, surface: args.surface, elapsedMs: Date.now() - startedAt });
       return {
         kind: "ssh",
         host: "modal",
@@ -211,18 +255,26 @@ export async function start(args: StartArgs): Promise<SandboxAccess> {
     const tunnel = tunnels[JUPYTER_PORT];
     if (!tunnel?.url) throw new Error("jupyter tunnel missing");
     await waitForJupyter(tunnel.url, token, deadline);
+    await probeDependencies(sb, deadline);
+    modalLog("sandbox.ready", { leaseId: args.leaseId, surface: args.surface, elapsedMs: Date.now() - startedAt });
     return jupyterAccess(tunnel.url, token);
   } catch (err) {
     noteModalError(err);
+    modalFailure("sandbox.failed", startedAt, err, { leaseId: args.leaseId, surface: args.surface });
     await drop(args.leaseId, sb);
     throw err;
   }
 }
 
-async function runNotebook(sb: Sandbox, notebook: Record<string, unknown>, timeoutMs: number): Promise<ExecResult> {
+async function runNotebook(
+  sb: Sandbox,
+  notebook: Record<string, unknown>,
+  timeoutMs: number,
+  runtime?: NotebookRuntimeOptions,
+): Promise<ExecResult> {
   // One execution engine for both providers: real IPython magics/rich output,
   // private IPC kernel, syntax preflight, and bounded result/artifact collection.
-  await sb.filesystem.writeText(notebookToPayload(notebook, timeoutMs), "/work/.tendril-runner.py");
+  await sb.filesystem.writeText(notebookToPayload(notebook, timeoutMs, runtime), "/work/.tendril-runner.py");
   const ran = await execText(
     sb,
     ["python3", "/work/.tendril-runner.py"],
@@ -250,7 +302,7 @@ export async function exec(args: ExecArgs): Promise<ExecResult> {
   const sb = sandboxes.get(args.leaseId);
   if (!sb) throw new Error("sandbox not running");
   try {
-    if (args.notebook) return await runNotebook(sb, args.notebook, args.timeoutMs);
+    if (args.notebook) return await runNotebook(sb, args.notebook, args.timeoutMs, args.notebookRuntime);
     if (typeof args.payload !== "string") throw new Error("payload (string) required");
     return await runPython(sb, args.payload, args.timeoutMs);
   } catch (err) {

@@ -1,15 +1,25 @@
 import {
   JOB_LOG_MAX_BYTES, JOB_RESULT_MAX_BYTES, NOTEBOOK_ARTIFACT_BYTES,
-  NOTEBOOK_OUTPUT_BYTES, boundedRunTimeoutMs, notebookError,
+  NOTEBOOK_OUTPUT_BYTES, normalizeNotebookRuntimeOptions, notebookError,
 } from "@tendril/shared";
-import type { RunArtifact } from "@tendril/shared";
+import type { NotebookRuntimeOptions, RunArtifact } from "@tendril/shared";
 
 const SENTINEL = "__TENDRIL_NB__";
 
 /** This code runs ONLY inside a disposable sandbox, never in the registry. */
-export function notebookToPayload(notebook: Record<string, unknown>, timeoutMs = 120_000): string {
+export function notebookToPayload(
+  notebook: Record<string, unknown>,
+  timeoutOrOptions: number | NotebookRuntimeOptions = 120_000,
+  additionalOptions?: NotebookRuntimeOptions,
+): string {
+  const options = typeof timeoutOrOptions === "number"
+    ? normalizeNotebookRuntimeOptions({ ...(additionalOptions ?? {}), timeoutMs: timeoutOrOptions })
+    : normalizeNotebookRuntimeOptions(timeoutOrOptions);
   const encoded = Buffer.from(JSON.stringify(notebook), "utf8").toString("base64");
-  return `import asyncio, base64, json, os, subprocess, sys, tempfile, time, stat, mimetypes
+  // JSON is embedded as a Python string, never interpolated as shell source.
+  const encodedEnv = JSON.stringify(JSON.stringify(options.env));
+  const encodedPipPackages = JSON.stringify(JSON.stringify(options.pipPackages));
+  return `import asyncio, base64, json, os, shutil, subprocess, sys, tempfile, time, stat, mimetypes
 from pathlib import Path
 import nbformat
 from nbclient import NotebookClient
@@ -20,6 +30,9 @@ import ast
 
 os.makedirs("/work", exist_ok=True)
 os.chdir("/work")
+RUN_ENV = json.loads(${encodedEnv})
+os.environ.update(RUN_ENV)
+PIP_PACKAGES = json.loads(${encodedPipPackages})
 nb = nbformat.reads(base64.b64decode(${JSON.stringify(encoded)}).decode(), as_version=4)
 for cell in nb.cells:
     if cell.cell_type == "code":
@@ -31,7 +44,7 @@ nb.metadata.kernelspec = {"name": "tendril-python3", "display_name": "Python 3",
 nb.metadata.pop("widgets", None)
 OUTPUT_CAP = ${NOTEBOOK_OUTPUT_BYTES}
 ARTIFACT_CAP = ${NOTEBOOK_ARTIFACT_BYTES}
-deadline = time.monotonic() + ${boundedRunTimeoutMs(timeoutMs) / 1000}
+deadline = time.monotonic() + ${options.timeoutMs / 1000}
 notices = []
 ok = False
 failure = ""
@@ -67,7 +80,22 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
     client = BoundedClient(nb, km=km, kernel_name="tendril-python3", allow_errors=False,
         force_raise_errors=True, timeout_func=cell_timeout, startup_timeout=30,
         resources={"metadata": {"path": "/work"}}, store_widget_state=False)
+    package_dir = None
     try:
+        if PIP_PACKAGES:
+            remaining = max(1, int(deadline - time.monotonic()))
+            package_dir = Path("/work") / f".tendril-packages-{os.getpid()}"
+            package_dir.mkdir(parents=True, exist_ok=True)
+            pip = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-cache-dir", "--target", str(package_dir), *PIP_PACKAGES],
+                cwd="/work", env=os.environ.copy(), capture_output=True, text=True, timeout=remaining,
+            )
+            if pip.returncode:
+                detail = (pip.stderr or pip.stdout or "").strip()[-1000:]
+                raise RuntimeError(f"pip install failed (exit {pip.returncode})" + (f": {detail}" if detail else ""))
+            kernel_spec = json.loads((kernel / "kernel.json").read_text())
+            kernel_spec["env"]["PYTHONPATH"] = str(package_dir)
+            (kernel / "kernel.json").write_text(json.dumps(kernel_spec))
         # Catch syntax mistakes before earlier, expensive cells run. IPython's
         # transformer supports %pip, !commands, %%bash, and top-level await.
         transformer = TransformerManager()
@@ -86,7 +114,7 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
         failure = (f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__)[-4000:]
         # Per-cell timeouts here only ever come from the run deadline (credit or cap).
         if type(exc).__name__ == "CellTimeoutError" or time.monotonic() >= deadline - 1:
-            failure = (f"Stopped at the ${boundedRunTimeoutMs(timeoutMs) / 1000}s limit "
+            failure = (f"Stopped at the ${options.timeoutMs / 1000}s limit "
                        f"(credit-funded time or job cap). " + failure)[-4000:]
         if "Kernel died" in failure:
             # nbclient only says the kernel died. Launch the same command by hand to
@@ -111,6 +139,8 @@ with tempfile.TemporaryDirectory(prefix=".tendril-", dir="/work") as runtime:
             asyncio.run(cleanup())
         except Exception:
             pass
+        if package_dir is not None:
+            shutil.rmtree(package_dir, ignore_errors=True)
 
 # Preserve useful partial output. Failures are concise; full cell errors stay
 # in the executed notebook. Uploaded source is never automatically rewritten.

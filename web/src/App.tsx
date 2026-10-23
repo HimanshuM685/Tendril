@@ -26,6 +26,7 @@ const Marketplace = lazy(() => import("./components/Marketplace").then(({ Market
 const LandingPage = lazy(() => import("./components/LandingPage").then(({ LandingPage }) => ({ default: LandingPage })));
 const BrandGuidelinesPage = lazy(() => import("./components/BrandGuidelinesPage").then(({ BrandGuidelinesPage }) => ({ default: BrandGuidelinesPage })));
 const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ DocsRedirect }) => ({ default: DocsRedirect })));
+const Legal = lazy(() => import("./components/Legal").then(({ Legal }) => ({ default: Legal })));
 const Dashboard = lazy(() => import("./components/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
 const Metrics = lazy(() => import("./components/Metrics").then(({ Metrics }) => ({ default: Metrics })));
 const GoogleCallback = lazy(() => import("./components/GoogleCallback").then(({ GoogleCallback }) => ({ default: GoogleCallback })));
@@ -86,6 +87,14 @@ export function App() {
   const isLanding = path === "/";
   const isBrand = path === "/brand";
   const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
+  const isLegal =
+    path === "/terms" ||
+    path === "/tnc" ||
+    path === "/terms-and-conditions" ||
+    path === "/privacy" ||
+    path === "/privacy-policy" ||
+    path === "/refunds" ||
+    path === "/refund";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -100,12 +109,19 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-"/explore": "Explore",
+      "/explore": "Explore",
       "/contribute": "Contribute",
       "/dashboard": "Dashboard",
       "/metrics": "Metrics",
       "/api": "API",
       "/docs": "Docs",
+      "/terms": "Terms of Service",
+      "/tnc": "Terms & Conditions",
+      "/terms-and-conditions": "Terms & Conditions",
+      "/privacy": "Privacy Policy",
+      "/privacy-policy": "Privacy Policy",
+      "/refunds": "Refund Policy",
+      "/refund": "Refund Policy",
       "/brand": "Brand Guidelines",
     };
     const page = titles[path];
@@ -185,6 +201,23 @@ export function App() {
           <LandingPage />
         </Suspense>
       </div>
+    );
+  }
+
+  // Legal pages render independently without authenticated app chrome.
+  if (isLegal) {
+    return (
+      <Suspense fallback={<p className="muted">Loading legal page…</p>}>
+        <Routes>
+          <Route path="/terms" element={<Legal document="terms" />} />
+          <Route path="/tnc" element={<Legal document="terms" />} />
+          <Route path="/terms-and-conditions" element={<Legal document="terms" />} />
+          <Route path="/privacy" element={<Legal document="privacy" />} />
+          <Route path="/privacy-policy" element={<Legal document="privacy" />} />
+          <Route path="/refunds" element={<Legal document="refund" />} />
+          <Route path="/refund" element={<Legal document="refund" />} />
+        </Routes>
+      </Suspense>
     );
   }
 

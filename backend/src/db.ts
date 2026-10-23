@@ -486,6 +486,21 @@ export async function resolveGasRequest(
   return rows[0] ?? null;
 }
 
+/** Record a confirmed ALGO delivery while request remains pending for custodial opt-in. */
+export async function recordGasRequestDelivery(
+  id: string,
+  txid: string,
+): Promise<DbGasRequest | null> {
+  const rows = await q<DbGasRequest>(
+    `UPDATE gas_requests
+     SET txid = $2
+     WHERE id = $1 AND status = 'pending' AND txid IS NULL
+     RETURNING *`,
+    [id, txid],
+  );
+  return rows[0] ?? (await findGasRequestById(id));
+}
+
 export async function listGoogleUsers(limit = 50, offset = 0): Promise<DbUser[]> {
   return q<DbUser>(
     "SELECT * FROM users ORDER BY last_login_at DESC LIMIT $1 OFFSET $2",

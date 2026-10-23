@@ -1,5 +1,7 @@
 import algosdk from "algosdk";
 import { config } from "./config.js";
+import { accountFromUser, type CustodialAccount } from "./custodialWallet.js";
+import type { DbUser } from "./db.js";
 import { algod } from "./wallet.js";
 
 /**
@@ -82,6 +84,32 @@ export async function sendAlgo(toAddr: string, microAlgos: number): Promise<stri
   return txid;
 }
 
+/** Current native balance, used to recover after a send succeeded before DB update. */
+export async function algoBalance(address: string): Promise<number> {
+  const info = await algod.accountInformation(address).do();
+  return Number(info.amount);
+}
+
+/** Sign and confirm the USDC opt-in from a custodial user's account. */
+export async function sendUsdcOptIn(user: DbUser): Promise<string> {
+  const account: CustodialAccount = accountFromUser(user);
+  if (await hasOptedInStrict(account.address)) {
+    return "";
+  }
+  const suggestedParams = await algod.getTransactionParams().do();
+  const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+    sender: account.address,
+    receiver: account.address,
+    assetIndex: Number(config.assetId),
+    amount: 0,
+    suggestedParams,
+  });
+  const signed = txn.signTxn(account.secretKey);
+  const { txid } = await algod.sendRawTransaction(signed).do();
+  await algosdk.waitForConfirmation(algod, txid, 8);
+  return txid;
+}
+
 export interface PlatformBalances {
   address: string;
   algoMicro: number;
@@ -121,11 +149,20 @@ export async function platformBalances(): Promise<PlatformBalances> {
  */
 export async function hasOptedIn(address: string): Promise<boolean> {
   try {
+    return await hasOptedInStrict(address);
+  } catch {
+    return true;
+  }
+}
+
+/** Strict variant for grant acceptance: transient algod errors must be retried. */
+export async function hasOptedInStrict(address: string): Promise<boolean> {
+  try {
     await algod.accountAssetInformation(address, Number(config.assetId)).do();
     return true;
   } catch (err) {
     const status = (err as { status?: number }).status;
     if (status === 404) return false;
-    return true;
+    throw err;
   }
 }

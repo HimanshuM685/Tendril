@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import algosdk from "algosdk";
 import { formatUsdc } from "@tendril/shared";
-import type { SignPrepareResponse } from "@tendril/shared";
+import type { NotebookRuntimeOptions, SignPrepareResponse } from "@tendril/shared";
 import { issueGoogleSession } from "./auth.js";
 import { config } from "./config.js";
 import { accountFromUser } from "./custodialWallet.js";
@@ -23,7 +23,7 @@ export type PrepareAction =
   | { action: "topup"; amountAtomic: number }
   | { action: "optin" }
   | { action: "rent"; nodeId: string; sshPubKey?: string | null; surface?: "ssh" | "jupyter" }
-  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number; lane?: "contributor" | "priority" | "e2b"; e2b?: { vCpu: number; memGiB: number } }
+  | { action: "run"; code?: string; notebook?: Record<string, unknown>; minRamMb?: number; lane?: "contributor" | "priority" | "e2b"; e2b?: { vCpu: number; memGiB: number }; runtime?: NotebookRuntimeOptions }
   | { action: "release"; leaseId: string; leaseToken: string }
   | { action: "mintkey"; label?: string };
 
@@ -123,7 +123,7 @@ export async function prepareCustodialSign(
       details = `Execute a one-shot job; billed from credit when done.`;
       const url = `${internalRegistryUrl()}/x402/run`;
       const requestBody = body.notebook
-        ? { notebook: body.notebook, ...(body.lane ? { lane: body.lane } : {}), ...(body.e2b ? { e2b: body.e2b } : {}) }
+        ? { notebook: body.notebook, ...(body.lane ? { lane: body.lane } : {}), ...(body.e2b ? { e2b: body.e2b } : {}), ...(body.runtime ? { runtime: body.runtime } : {}) }
         : { payload: body.code };
       run = async () => {
         const pay = custodialPayingFetchForUser(user);

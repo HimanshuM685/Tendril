@@ -25,7 +25,8 @@ FROM python:3.12-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-server ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir nbclient nbformat ipykernel numpy pandas matplotlib requests scipy scikit-learn pillow psutil
+    && pip install --no-cache-dir nbclient nbformat ipykernel numpy pandas matplotlib requests scipy scikit-learn pillow psutil \
+    && python3 -c "import nbclient, nbformat, ipykernel, numpy, pandas, matplotlib, requests, scipy, sklearn, PIL, psutil"
 COPY --from=bore /out/bin/bore /usr/local/bin/bore
 
 COPY entrypoint.sh /entrypoint.sh
@@ -34,6 +35,11 @@ RUN chmod +x /entrypoint.sh
 # The renter's Algorand address is injected as the root password at runtime.
 ENV SSH_PASSWORD=tendril
 ENV BORE_SERVER=bore.pub
+
+# Fail image/runtime readiness when a critical notebook dependency is absent.
+# The contributor also runs this probe before advertising each exec sandbox.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
+  CMD python3 -c "import nbclient, nbformat, ipykernel, numpy, pandas, matplotlib, requests, scipy, sklearn, PIL, psutil"
 
 EXPOSE 22
 ENTRYPOINT ["/entrypoint.sh"]

@@ -1,7 +1,7 @@
 # Autonomous buyer (one-shot demo). Build from the REPO ROOT:
 #   docker build -f example-buyer/Dockerfile -t tendril-buyer .
 #   docker run --rm --env-file .env -e REGISTRY_URL=http://your-host:4000 tendril-buyer
-FROM node:20-slim
+FROM node:20.19.1-bookworm-slim
 
 WORKDIR /app
 
