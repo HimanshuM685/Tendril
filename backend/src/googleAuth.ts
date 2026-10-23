@@ -14,6 +14,7 @@ import {
   touchUserLogin,
 } from "./db.js";
 import { creditBalance } from "./x402/credit.js";
+import { onboardGoogleUser } from "./onboarding.js";
 import type { GoogleSessionResponse } from "@tendril/shared";
 
 const usedExchangeJtis = new Set<string>();
@@ -88,6 +89,11 @@ export async function googleCallback(req: Request, res: Response) {
         address,
         encryptedMnemonic,
       });
+      // Signup only: fund gas + opt into USDC in the background (two on-chain
+      // confirmations would otherwise stall the redirect).
+      const created = user;
+      void onboardGoogleUser(created).catch((e) =>
+        console.error(`[onboarding] ${created.address}: ${(e as Error).message}`));
     } else {
       await touchUserLogin(user.id);
     }

@@ -6,7 +6,7 @@ import { issueGoogleSession } from "./auth.js";
 import { config } from "./config.js";
 import { accountFromUser } from "./custodialWallet.js";
 import { custodialPayingFetchForUser, internalRegistryUrl } from "./custodialX402.js";
-import { findUserById } from "./db.js";
+import { findUserById, type DbUser } from "./db.js";
 import { algod } from "./wallet.js";
 import { hasOptedIn } from "./payout.js";
 import { creditBalance } from "./x402/credit.js";
@@ -36,6 +36,23 @@ interface PendingRequest {
 }
 
 const pending = new Map<string, PendingRequest>();
+
+/** Opt a custodial wallet into the payment asset (zero-amount self-transfer). */
+export async function optInUsdc(user: DbUser): Promise<string> {
+  const account = accountFromUser(user);
+  const suggestedParams = await algod.getTransactionParams().do();
+  const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+    sender: account.address,
+    receiver: account.address,
+    assetIndex: Number(config.assetId),
+    amount: 0,
+    suggestedParams,
+  });
+  const signed = txn.signTxn(account.secretKey);
+  const { txid } = await algod.sendRawTransaction(signed).do();
+  await algosdk.waitForConfirmation(algod, txid, 8);
+  return txid;
+}
 
 function prune() {
   const now = Date.now();
@@ -74,21 +91,7 @@ export async function prepareCustodialSign(
     case "optin": {
       summary = "Opt in to USDC";
       details = `Allow this wallet to hold USDC (asset ${config.assetId}) for payments.`;
-      run = async () => {
-        const account = accountFromUser(user);
-        const suggestedParams = await algod.getTransactionParams().do();
-        const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-          sender: account.address,
-          receiver: account.address,
-          assetIndex: Number(config.assetId),
-          amount: 0,
-          suggestedParams,
-        });
-        const signed = txn.signTxn(account.secretKey);
-        const { txid } = await algod.sendRawTransaction(signed).do();
-        await algosdk.waitForConfirmation(algod, txid, 8);
-        return { txid };
-      };
+      run = async () => ({ txid: await optInUsdc(user) });
       break;
     }
     case "rent": {
