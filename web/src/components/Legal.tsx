@@ -1,5 +1,7 @@
 import { useMemo, useEffect, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LandingFooter } from "./LandingFooter";
+import { TendrilBrand } from "./TendrilBrand";
 
 export type LegalDocument = "terms" | "privacy" | "refund";
 
@@ -212,9 +214,9 @@ const documentContent: Record<LegalDocument, string> = {
 };
 
 const documentMeta: Record<LegalDocument, { title: string; eyebrow: string; updated: string }> = {
-  terms: { title: "Terms of Service", eyebrow: "LEGAL / TERMS", updated: "2026-10-19" },
-  privacy: { title: "Privacy Policy", eyebrow: "LEGAL / PRIVACY", updated: "2026-10-19" },
-  refund: { title: "Refund Policy", eyebrow: "LEGAL / REFUNDS", updated: "2026-10-19" },
+  terms: { title: "Terms of Service", eyebrow: "LEGAL", updated: "October 19, 2026" },
+  privacy: { title: "Privacy Policy", eyebrow: "LEGAL", updated: "October 19, 2026" },
+  refund: { title: "Refund Policy", eyebrow: "LEGAL", updated: "October 19, 2026" },
 };
 
 function toSlug(text: string): string {
@@ -329,24 +331,16 @@ function renderBlock(block: Block, index: number): ReactNode {
     const plainText = block.text.replace(/^\d+[.)]\s*/, "");
     const aliasSlug = plainText !== block.text ? toSlug(plainText) : null;
     return (
-      <Heading key={index} id={block.slug} className={`legal-heading ${block.level === 2 ? "docs-h2" : ""}`}>
+      <Heading key={index} id={block.slug} className={`legal-heading ${block.level === 2 ? "legal-h2" : "legal-h3"}`}>
         {aliasSlug && <span id={aliasSlug} className="heading-anchor-alias" aria-hidden="true" />}
         <span className="heading-text">{renderInline(block.text)}</span>
-        <a
-          href={`#${block.slug}`}
-          className="heading-anchor"
-          aria-label={`Direct link to ${block.text}`}
-          title="Direct link to this section"
-        >
-          #
-        </a>
       </Heading>
     );
   }
   if (block.kind === "paragraph") return <p key={index}>{renderInline(block.text)}</p>;
   const List = block.ordered ? "ol" : "ul";
   return (
-    <List key={index} className="docs-list">
+    <List key={index} className="legal-list">
       {block.items.map((item, itemIndex) => (
         <li key={itemIndex}>{renderInline(item)}</li>
       ))}
@@ -356,14 +350,11 @@ function renderBlock(block: Block, index: number): ReactNode {
 
 /** Shared, dependency-free renderer for local legal markdown-like content. */
 export function Legal({ document: docType }: LegalProps) {
+  const navigate = useNavigate();
   const meta = documentMeta[docType];
   const location = useLocation();
 
   const blocks = useMemo(() => parseDocument(documentContent[docType]), [docType]);
-  const headings = useMemo(
-    () => blocks.filter((b): b is Extract<Block, { kind: "heading" }> => b.kind === "heading" && b.level === 2),
-    [blocks]
-  );
 
   useEffect(() => {
     const hash = location.hash;
@@ -381,60 +372,37 @@ export function Legal({ document: docType }: LegalProps) {
   }, [docType, location.hash]);
 
   return (
-    <main className="page docs-main-content legal-page-wrapper" aria-labelledby="legal-title">
-      <article className="docs-article">
-        <p className="docs-eyebrow">{meta.eyebrow}</p>
-        <h1 id="legal-title" className="docs-title">{meta.title}</h1>
-        <p className="docs-lead">Last updated: <time dateTime={meta.updated}>{meta.updated}</time></p>
-
-        <nav aria-label="Legal document switcher" className="legal-doc-tabs">
-          <Link
-            to="/terms"
-            className={`legal-tab-link ${docType === "terms" ? "active" : ""}`}
-            aria-current={docType === "terms" ? "page" : undefined}
-          >
-            Terms of Service
-          </Link>
-          <Link
-            to="/privacy"
-            className={`legal-tab-link ${docType === "privacy" ? "active" : ""}`}
-            aria-current={docType === "privacy" ? "page" : undefined}
-          >
-            Privacy Policy
-          </Link>
-          <Link
-            to="/refunds"
-            className={`legal-tab-link ${docType === "refund" ? "active" : ""}`}
-            aria-current={docType === "refund" ? "page" : undefined}
-          >
-            Refund Policy
-          </Link>
-        </nav>
-
-        <nav aria-label="Navigation actions" className="docs-header-actions" style={{ marginBottom: "24px" }}>
-          <Link className="docs-nav-link" to="/">← Home</Link>
-          <Link className="docs-nav-link" to="/docs">Documentation →</Link>
-        </nav>
-
-        {headings.length > 0 && (
-          <nav aria-label="Table of contents" className="legal-toc">
-            <span className="legal-toc-title">Table of contents</span>
-            <ul className="legal-toc-list">
-              {headings.map((h) => (
-                <li key={h.slug}>
-                  <a href={`#${h.slug}`} className="legal-toc-link">
-                    {h.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
-
-        <div className="docs-markdown-body" aria-label={`${meta.title} content`}>
-          {blocks.map(renderBlock)}
+    <div className="landing-wrapper legal-page">
+      <header className="topbar brand-guidelines-topbar">
+        <div className="topbar-inner wrap">
+          <TendrilBrand href="/" />
+          <div className="topbar-actions">
+            <button
+              type="button"
+              onClick={() => navigate("/explore")}
+              className="btn btn-dark btn-sm"
+            >
+              Explore Marketplace
+            </button>
+          </div>
         </div>
-      </article>
-    </main>
+      </header>
+
+      <main>
+        <div className="wrap legal-content">
+          <header className="legal-intro">
+            <span className="legal-eyebrow">{meta.eyebrow}</span>
+            <h1 id="legal-title" className="legal-title">{meta.title}</h1>
+            <p className="legal-updated">Last updated: <time dateTime="2026-10-19">{meta.updated}</time></p>
+          </header>
+
+          <article className="legal-body" aria-labelledby="legal-title">
+            {blocks.map(renderBlock)}
+          </article>
+        </div>
+      </main>
+
+      <LandingFooter />
+    </div>
   );
 }

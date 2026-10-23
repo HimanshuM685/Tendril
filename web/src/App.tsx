@@ -207,17 +207,19 @@ export function App() {
   // Legal pages render independently without authenticated app chrome.
   if (isLegal) {
     return (
-      <Suspense fallback={<p className="muted">Loading legal page…</p>}>
-        <Routes>
-          <Route path="/terms" element={<Legal document="terms" />} />
-          <Route path="/tnc" element={<Legal document="terms" />} />
-          <Route path="/terms-and-conditions" element={<Legal document="terms" />} />
-          <Route path="/privacy" element={<Legal document="privacy" />} />
-          <Route path="/privacy-policy" element={<Legal document="privacy" />} />
-          <Route path="/refunds" element={<Legal document="refund" />} />
-          <Route path="/refund" element={<Legal document="refund" />} />
-        </Routes>
-      </Suspense>
+      <div className="app app-landing">
+        <Suspense fallback={<p className="muted">Loading legal page…</p>}>
+          <Routes>
+            <Route path="/terms" element={<Legal document="terms" />} />
+            <Route path="/tnc" element={<Legal document="terms" />} />
+            <Route path="/terms-and-conditions" element={<Legal document="terms" />} />
+            <Route path="/privacy" element={<Legal document="privacy" />} />
+            <Route path="/privacy-policy" element={<Legal document="privacy" />} />
+            <Route path="/refunds" element={<Legal document="refund" />} />
+            <Route path="/refund" element={<Legal document="refund" />} />
+          </Routes>
+        </Suspense>
+      </div>
     );
   }
 
