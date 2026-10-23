@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { docsUrl } from "../lib/docsLinks";
+import { TendrilBrand } from "./TendrilBrand";
 
 const MCP_ANIMATED_PROMPTS = [
   "Find available GPU nodes for running my AI model",
@@ -256,21 +257,7 @@ export function LandingPage() {
     <div className="landing-wrapper">
       <header className="topbar">
         <div className="topbar-inner wrap">
-          <a href="#top" className="brand" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }}>
-            <span className="brand-flower">
-              <svg viewBox="0 0 32 32" width="24" height="24">
-                <rect width="32" height="32" rx="6" fill="#0B5D3A" />
-                <g fill="#F4F1EA">
-                  <rect x="5" y="7" width="22" height="4" />
-                  <rect x="5" y="7" width="2" height="3" />
-                  <rect x="25" y="7" width="2" height="3" />
-                  <rect x="14" y="7" width="4" height="17" />
-                  <rect x="10" y="22" width="12" height="3" />
-                </g>
-              </svg>
-            </span>
-            <span className="brand-text">Tendril</span>
-          </a>
+          <TendrilBrand href="#top" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }} />
 
           <nav className="desktop-nav" aria-label="Main Navigation">
             <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection("how-it-works"); }}>How it works</a>
@@ -393,7 +380,7 @@ export function LandingPage() {
                 exact second.
               </h1>
               <p className="hero-subtitle">
-                Tendril turns personal PCs into sandboxed, high-performance compute nodes. Rent CPU, GPU, and RAM via
+                Tendril turns personal PCs into sandboxed, high performance compute nodes. Rent CPU, GPU, and RAM via
                 metered SSH leases or run instant jobs over x402 on Algorand.
               </p>
               <div className="hero-cta-group">
@@ -645,7 +632,7 @@ export function LandingPage() {
                 <div className="sidebar-brand">
                   <span className="brand-flower-sm">
                     <svg viewBox="0 0 32 32" width="16" height="16">
-                      <rect width="32" height="32" rx="6" fill="#0B5D3A" />
+                      <rect width="32" height="32" rx="6" fill="#095D3B" />
                       <g fill="#F4F1EA">
                         <rect x="5" y="7" width="22" height="4" />
                         <rect x="5" y="7" width="2" height="3" />
@@ -1304,18 +1291,40 @@ export function LandingPage() {
         {/*  ================= 6. TESTIMONIAL & RELATABLE CTA =================  */}
         <section className="testimonial-section wrap">
           <blockquote className="founder-quote reveal-on-scroll">
-            “Every cloud platform out there was expensive, rigid, and bureaucratically bloated. Tendril lets our autonomous
-            agents spin up isolated GPU sandboxes and pay in seconds over x402 with zero hassle.”
+            “Tried{" "}
+            <a
+              href="https://x.com/tendrilhq"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="founder-quote-link"
+            >
+              @Tendrilhq
+            </a>{" "}
+            expecting another cloud wrapper. Instead I got a disposable GPU sandbox in seconds and paid exactly for what I used. That's how agentic compute should work.”
           </blockquote>
 
           <div className="founder-profile reveal-on-scroll reveal-stagger-1">
             <div className="founder-avatar-frame">
               <div className="founder-avatar-img">
-                <span>A</span>
+                <img
+                  src="/assets/core-contributor.jpg"
+                  alt="@Erakal17414"
+                  className="founder-avatar-photo"
+                  loading="lazy"
+                />
               </div>
             </div>
             <div className="founder-meta">
-              <strong className="founder-name">Alex S.</strong>
+              <strong className="founder-name">
+                <a
+                  href="https://x.com/Erakal17414"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="founder-author-link"
+                >
+                  @Erakal17414
+                </a>
+              </strong>
               <span className="founder-title">Core Contributor, Tendril</span>
             </div>
           </div>
@@ -1484,7 +1493,7 @@ export function LandingPage() {
             <a href="#top" className="brand" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }}>
               <span className="brand-flower">
                 <svg viewBox="0 0 32 32" width="24" height="24">
-                  <rect width="32" height="32" rx="6" fill="#0B5D3A" />
+                  <rect width="32" height="32" rx="6" fill="#095D3B" />
                   <g fill="#F4F1EA">
                     <rect x="5" y="7" width="22" height="4" />
                     <rect x="5" y="7" width="2" height="3" />

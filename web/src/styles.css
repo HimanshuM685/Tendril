@@ -21,7 +21,7 @@
   --border-light: rgba(0, 0, 0, 0.07);
   --border-dark: #2d2e29;
 
-  --brand-green: #0B5D3A;
+  --brand-green: #095D3B;
   --lime-primary: #7cb305;
   --lime-bright: #84cc16;
   --lime-dark: #5e8810;
@@ -2070,7 +2070,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 
 .docs-search-input-wrap.focused {
   border-color: var(--brand-green);
-  box-shadow: 0 0 0 3px rgba(11, 93, 58, 0.1);
+  box-shadow: 0 0 0 3px rgba(9, 93, 59, 0.1);
 }
 
 .docs-search-icon {
@@ -2158,7 +2158,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--brand-green);
-  background: rgba(11, 93, 58, 0.08);
+  background: rgba(9, 93, 59, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -2200,7 +2200,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 .docs-launch-btn:hover {
   background-color: #08482d;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(11, 93, 58, 0.25);
+  box-shadow: 0 4px 12px rgba(9, 93, 59, 0.25);
 }
 
 /* Horizontal Subnav Tabs (Docs | Build | API) */
@@ -2306,7 +2306,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 .docs-nav-link-item.active {
-  background-color: rgba(11, 93, 58, 0.08);
+  background-color: rgba(9, 93, 59, 0.08);
   color: var(--brand-green);
   font-weight: 600;
 }
@@ -2667,7 +2667,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   background-color: var(--brand-green);
   color: #ffffff;
   border-color: var(--brand-green);
-  box-shadow: 0 2px 6px rgba(11, 93, 58, 0.2);
+  box-shadow: 0 2px 6px rgba(9, 93, 59, 0.2);
 }
 
 .arch-svg-container {
@@ -2701,7 +2701,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 700;
-  fill: #0B5D3A;
+  fill: #095D3B;
   letter-spacing: 0.04em;
 }
 
@@ -2867,7 +2867,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background-color: rgba(11, 93, 58, 0.08);
+  background-color: rgba(9, 93, 59, 0.08);
   color: var(--brand-green);
   display: flex;
   align-items: center;
@@ -3212,7 +3212,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 .docs-toc-item.active {
   color: var(--brand-green);
   font-weight: 600;
-  background-color: rgba(11, 93, 58, 0.08);
+  background-color: rgba(9, 93, 59, 0.08);
 }
 
 /* Responsive Breakpoints */
@@ -3271,7 +3271,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 /* ===========================================================================
    CONNECT WALLET MODAL — Matching Current Design Theme & Typography
    Layout preserved from connect-wallet-layout.png, styled with Plus Jakarta Sans,
-   #ffffff background, #e6e7df borders, and #0B5D3A accents.
+   #ffffff background, #e6e7df borders, and #095D3B accents.
    =========================================================================== */
 
 .cw-modal-backdrop {
@@ -3321,7 +3321,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 
 .cw-title-slash {
   font-family: var(--font-mono);
-  color: var(--brand-green, #0B5D3A);
+  color: var(--brand-green, #095D3B);
   font-weight: 700;
 }
 
@@ -3393,7 +3393,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 
 .cw-option-btn:hover {
   background-color: #f5f6f0;
-  border-color: var(--brand-green, #0B5D3A);
+  border-color: var(--brand-green, #095D3B);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(20, 24, 15, 0.05);
 }
@@ -3419,7 +3419,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 700;
-  color: var(--brand-green, #0B5D3A);
+  color: var(--brand-green, #095D3B);
   width: 24px;
   height: 24px;
   background: #eef7dc;
@@ -3495,13 +3495,13 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   line-height: 1.2;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(11, 93, 58, 0.2);
+  box-shadow: 0 2px 8px rgba(9, 93, 59, 0.2);
 }
 
 .explore-connect-btn:hover {
   background-color: #08482d;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(11, 93, 58, 0.28);
+  box-shadow: 0 4px 14px rgba(9, 93, 59, 0.28);
 }
 
 /* ===========================================================================
@@ -3522,7 +3522,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   justify-content: center;
   gap: 8px;
   padding: 8px 16px;
-  background-color: var(--brand-green, #0B5D3A);
+  background-color: var(--brand-green, #095D3B);
   color: #ffffff;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 6px);
@@ -3566,7 +3566,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--brand-green, #0B5D3A);
+  background-color: var(--brand-green, #095D3B);
   color: #ffffff;
   padding: 7px 14px;
   border-radius: 6px;
@@ -3768,7 +3768,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 .ext-link {
-  color: var(--brand-green, #0B5D3A);
+  color: var(--brand-green, #095D3B);
   text-decoration: underline;
   font-weight: 600;
 }
@@ -4288,9 +4288,9 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 
 .email-field input:focus {
   outline: none;
-  border-color: var(--brand-green, #0B5D3A);
+  border-color: var(--brand-green, #095D3B);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(11, 93, 58, 0.1);
+  box-shadow: 0 0 0 3px rgba(9, 93, 59, 0.1);
 }
 
 .modal-foot {
@@ -4302,7 +4302,7 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 .link-btn {
   background: none;
   border: none;
-  color: var(--brand-green, #0B5D3A);
+  color: var(--brand-green, #095D3B);
   text-decoration: underline;
   font-weight: 600;
   cursor: pointer;

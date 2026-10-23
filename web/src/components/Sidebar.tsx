@@ -56,7 +56,7 @@ export function Sidebar({
       <div className="sidebar-brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
         <span className="brand-flower">
           <svg viewBox="0 0 32 32" width="24" height="24">
-            <rect width="32" height="32" rx="6" fill="#0B5D3A" />
+            <rect width="32" height="32" rx="6" fill="#095D3B" />
             <g fill="#F4F1EA">
               <rect x="5" y="7" width="22" height="4" />
               <rect x="5" y="7" width="2" height="3" />
