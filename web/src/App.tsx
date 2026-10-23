@@ -24,6 +24,7 @@ const SESSION_KEY = "tendril.session";
 // load only when their route/state needs them.
 const Marketplace = lazy(() => import("./components/Marketplace").then(({ Marketplace }) => ({ default: Marketplace })));
 const LandingPage = lazy(() => import("./components/LandingPage").then(({ LandingPage }) => ({ default: LandingPage })));
+const BrandGuidelinesPage = lazy(() => import("./components/BrandGuidelinesPage").then(({ BrandGuidelinesPage }) => ({ default: BrandGuidelinesPage })));
 const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ DocsRedirect }) => ({ default: DocsRedirect })));
 const Legal = lazy(() => import("./components/Legal").then(({ Legal }) => ({ default: Legal })));
 const Dashboard = lazy(() => import("./components/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
@@ -84,6 +85,7 @@ export function App() {
 
   const path = location.pathname;
   const isLanding = path === "/";
+  const isBrand = path === "/brand";
   const isDocs = path === "/docs" || path.startsWith("/docs/") || path === "/api";
   const isLegal =
     path === "/terms" ||
@@ -120,6 +122,7 @@ export function App() {
       "/privacy-policy": "Privacy Policy",
       "/refunds": "Refund Policy",
       "/refund": "Refund Policy",
+      "/brand": "Brand Guidelines",
     };
     const page = titles[path];
     document.title = page ? `${page} · Tendril` : "Tendril — Rent Real Compute by the Second";
@@ -218,6 +221,16 @@ export function App() {
     );
   }
 
+  if (isBrand) {
+    return (
+      <div className="app app-landing">
+        <Suspense fallback={<p className="muted">Loading brand guidelines…</p>}>
+          <BrandGuidelinesPage />
+        </Suspense>
+      </div>
+    );
+  }
+
   // Documentation is independently deployed at docs.tendrilhq.com.
   if (isDocs) {
     return <Suspense fallback={<p className="muted">Opening documentation…</p>}><DocsRedirect /></Suspense>;
@@ -230,7 +243,7 @@ export function App() {
         <div className="brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
           <span className="brand-flower">
             <svg viewBox="0 0 32 32" width="24" height="24">
-              <rect width="32" height="32" rx="6" fill="#0B5D3A" />
+              <rect width="32" height="32" rx="6" fill="#095D3B" />
               <g fill="#F4F1EA">
                 <rect x="5" y="7" width="22" height="4" />
                 <rect x="5" y="7" width="2" height="3" />

@@ -97,7 +97,7 @@ export function ArchDiagram() {
           const dimmed = activeFlow !== "all" && !edge.flows.includes(activeFlow);
           return (
             <g key={edge.id} className={`arch-flow-group${dimmed ? " dimmed" : ""}`} data-edge={edge.id} data-from={edge.from} data-to={edge.to}>
-              <path d={position.path} fill="none" stroke={edge.flows.includes("settlement") ? "#5e8810" : "#0B5D3A"} strokeWidth="2" strokeDasharray={edge.id === "dispatch" ? "5 4" : undefined} markerEnd={`url(#${id}-arrow)`} />
+              <path d={position.path} fill="none" stroke={edge.flows.includes("settlement") ? "#5e8810" : "#095D3B"} strokeWidth="2" strokeDasharray={edge.id === "dispatch" ? "5 4" : undefined} markerEnd={`url(#${id}-arrow)`} />
               <g transform={`translate(${position.x} ${position.y}) rotate(${position.rotation ?? 0})`}>
                 <rect x={-position.width / 2} y="-14" width={position.width} height="28" rx="4" fill="#ffffff" stroke="#e6e7df" />
                 <text textAnchor="middle" dominantBaseline="central" className="arch-flow-label">{edge.label}</text>
