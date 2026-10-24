@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Props {
   authType: "google" | "email";
@@ -16,6 +16,12 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
   const [mnemonic, setMnemonic] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Google re-auth completes in the popup and updates exportGrant asynchronously.
+  // Clear the redirect state so "Show phrase" becomes clickable after success.
+  useEffect(() => {
+    if (exportGrant) setBusy(false);
+  }, [exportGrant]);
 
   async function doExport() {
     setBusy(true);

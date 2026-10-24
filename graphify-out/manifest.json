@@ -42,10 +42,10 @@
     "semantic_hash": "b1700ead95f09361d67bc111eee87c98"
   },
   "backend/src/routes.ts": {
-    "mtime": 1792871226.0969634,
-    "seen": 1792871322.053385,
-    "ast_hash": "6dbdd6a4a1ccf5861c200fb52d63ae49",
-    "semantic_hash": "6dbdd6a4a1ccf5861c200fb52d63ae49"
+    "mtime": 1792874760.327065,
+    "seen": 1792877852.430198,
+    "ast_hash": "5067a6d814e31883f328cb2e37ea3ede",
+    "semantic_hash": ""
   },
   "backend/src/ws.ts": {
     "mtime": 1792424251.782922,
@@ -552,16 +552,16 @@
     "semantic_hash": "4f8b1030b6820518f6945fd39c04a405"
   },
   "web/src/components/GoogleCallback.tsx": {
-    "mtime": 1792870420.798041,
-    "seen": 1792871322.053447,
-    "ast_hash": "ef4a572430b302d3cad0c8f242bce941",
-    "semantic_hash": "ef4a572430b302d3cad0c8f242bce941"
+    "mtime": 1792876361.0193973,
+    "seen": 1792877852.430203,
+    "ast_hash": "844106cead63481779d909c24e5abf96",
+    "semantic_hash": ""
   },
   "web/src/components/GoogleWalletBar.tsx": {
-    "mtime": 1792870424.6539977,
-    "seen": 1792871322.053447,
-    "ast_hash": "839b387c503a6e7ed90dac204f71a95c",
-    "semantic_hash": "839b387c503a6e7ed90dac204f71a95c"
+    "mtime": 1792876449.3722644,
+    "seen": 1792877852.430204,
+    "ast_hash": "f4ce117be09edcbd688662f038e52f31",
+    "semantic_hash": ""
   },
   "web/src/components/OnchainAccountPanel.tsx": {
     "mtime": 1792864545.2194357,
@@ -1348,5 +1348,47 @@
     "seen": 1792871322.05352,
     "ast_hash": "5d52c176da8034ec8cf691e8d5591a3f",
     "semantic_hash": "5d52c176da8034ec8cf691e8d5591a3f"
+  },
+  "backend/src/pin.ts": {
+    "mtime": 1792871190.741977,
+    "seen": 1792877852.43019,
+    "ast_hash": "1266617f700658706d7b602ad894b27b",
+    "semantic_hash": ""
+  },
+  "backend/src/pinLock.test.ts": {
+    "mtime": 1792871287.1321602,
+    "seen": 1792877852.430194,
+    "ast_hash": "04d3ffcde2951448c19d001246c9949f",
+    "semantic_hash": ""
+  },
+  "backend/src/pinLock.ts": {
+    "mtime": 1792871053.2302125,
+    "seen": 1792877852.430196,
+    "ast_hash": "99a8aaf3807be2adc0df3370a9e7a799",
+    "semantic_hash": ""
+  },
+  "backend/src/securityDb.ts": {
+    "mtime": 1792872337.8742583,
+    "seen": 1792877852.4302,
+    "ast_hash": "9f3de85f0f99faa1958a9a7a19d0d186",
+    "semantic_hash": ""
+  },
+  "backend/src/signIntent.test.ts": {
+    "mtime": 1792871293.1180549,
+    "seen": 1792877852.430201,
+    "ast_hash": "96b59d001b5a4345ecd4b1a3fd359ae7",
+    "semantic_hash": ""
+  },
+  "backend/src/signIntent.ts": {
+    "mtime": 1792871059.9102137,
+    "seen": 1792877852.430201,
+    "ast_hash": "c668146f8b24e6bc0b57c949912a49f6",
+    "semantic_hash": ""
+  },
+  "web/src/components/SetPinModal.tsx": {
+    "mtime": 1792871235.4663665,
+    "seen": 1792877852.4302049,
+    "ast_hash": "2dd5b910a35b370e6f87f08ceeaa59a8",
+    "semantic_hash": ""
   }
 }

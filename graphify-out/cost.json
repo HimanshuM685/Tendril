@@ -137,6 +137,14 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "files": 44
+    },
+    {
+      "date": "2026-10-24T21:37:32.437145+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 10,
+      "mode": "incremental-code-only",
+      "usage_status": "no_semantic_llm"
     }
   ],
   "total_input_tokens": 523785,
