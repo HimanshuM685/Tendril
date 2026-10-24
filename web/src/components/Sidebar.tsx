@@ -4,6 +4,7 @@ import type { WalletSummary } from "@tendril/shared";
 import type { Session } from "../App";
 import { network } from "../lib/network";
 import { docsUrl } from "../lib/docsLinks";
+import { TendrilBrand } from "./TendrilBrand";
 
 interface SidebarProps {
   session: Session | null;
@@ -53,20 +54,15 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       {/* Brand Header */}
-      <div className="sidebar-brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
-        <span className="brand-flower">
-          <svg viewBox="0 0 32 32" width="24" height="24">
-            <rect width="32" height="32" rx="6" fill="#095D3B" />
-            <g fill="#F4F1EA">
-              <rect x="5" y="7" width="22" height="4" />
-              <rect x="5" y="7" width="2" height="3" />
-              <rect x="25" y="7" width="2" height="3" />
-              <rect x="14" y="7" width="4" height="17" />
-              <rect x="10" y="22" width="12" height="3" />
-            </g>
-          </svg>
-        </span>
-        <span className="brand-text">Tendril</span>
+      <div className="sidebar-brand-wrapper">
+        <TendrilBrand
+          href="/"
+          className="sidebar-brand"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
+          }}
+        />
       </div>
 
       {/* Primary Navigation */}

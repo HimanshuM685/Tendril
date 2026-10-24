@@ -68,8 +68,9 @@ export function LandingFooter({ onScrollToSection }: LandingFooterProps) {
           <ul className="footer-link-list">
             <li><a href="https://github.com/HimanshuM685/Tendril" target="_blank" rel="noopener">GitHub Repository</a></li>
             <li><a href={docsUrl("/docs/build#daemon-install")}>Contributor Daemon</a></li>
-            <li><a href="#privacy">Privacy Policy</a></li>
-            <li><a href="#terms">Terms of Service</a></li>
+            <li><a href="/privacy" onClick={(event) => { event.preventDefault(); navigate("/privacy"); }}>Privacy Policy</a></li>
+            <li><a href="/terms" onClick={(event) => { event.preventDefault(); navigate("/terms"); }}>Terms of Service</a></li>
+            <li><a href="/refunds" onClick={(event) => { event.preventDefault(); navigate("/refunds"); }}>Refund Policy</a></li>
           </ul>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { DOC_PAGES, renderDoc, resolveDocsLocation, type DocHeading } from "../lib/docs";
 import { APP_ORIGIN, DOCS_ORIGIN, REGISTRY_URL } from "../lib/site";
 import { ArchDiagram } from "./ArchDiagram";
+import { TendrilBrand, TendrilMark } from "./TendrilBrand";
 
 // All content is repository-owned Markdown compiled into the Next.js client bundle, never runtime input.
 const pages = DOC_PAGES.map((page) => ({ ...page, ...renderDoc(page) }));
@@ -234,6 +235,17 @@ export function Docs() {
   }, [location.pathname]);
 
   useEffect(() => {
+    if (navOpen && typeof window !== "undefined" && window.innerWidth <= 1025) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [navOpen]);
+
+  useEffect(() => {
     if (redirect) return;
     const title = page ? `${page.title} · Tendril Docs` : "Page not found · Tendril Docs";
     document.title = title;
@@ -320,10 +332,7 @@ export function Docs() {
       <a className="docs-skip-link" href="#docs-main">Skip to content</a>
       <header className="docs-top-header">
         <div className="docs-header-inner">
-          <a className="docs-brand" href={APP_ORIGIN} aria-label="Tendril home">
-            <img src="/favicon.svg" alt="" width="24" height="24" />
-            <span className="docs-brand-text">Tendril</span>
-          </a>
+          <TendrilBrand href={APP_ORIGIN} />
           <div className="docs-search-container" onBlur={(event) => {
             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSearchOpen(false);
           }}>
@@ -364,14 +373,76 @@ export function Docs() {
       </header>
       <nav className="docs-subnav-bar" aria-label="Documentation areas">
         <div className="docs-subnav-inner">
-          {([{ title: "Docs", path: "/", tab: "docs" }, { title: "Build", path: "/docs/build", tab: "build" }, { title: "API", path: "/docs/api", tab: "api" }] as const).map((tab) => (
-            <Link key={tab.tab} to={tab.path} className={`docs-subnav-tab${page?.tab === tab.tab ? " active" : ""}`} aria-current={page?.tab === tab.tab ? "page" : undefined}>{tab.title}</Link>
-          ))}
-          <button className="docs-browse-btn" type="button" aria-expanded={navOpen} aria-controls="docs-sidebar" onClick={() => setNavOpen((open) => !open)}>{navOpen ? "Close menu" : "Browse docs"}</button>
+          <div className="docs-subnav-desktop-tabs">
+            {([{ title: "Docs", path: "/", tab: "docs" }, { title: "Build", path: "/docs/build", tab: "build" }, { title: "API", path: "/docs/api", tab: "api" }] as const).map((tab) => (
+              <Link key={tab.tab} to={tab.path} className={`docs-subnav-tab${page?.tab === tab.tab ? " active" : ""}`} aria-current={page?.tab === tab.tab ? "page" : undefined}>{tab.title}</Link>
+            ))}
+          </div>
+          <div className="docs-mobile-breadcrumb-bar">
+            <button
+              className="docs-hamburger-btn"
+              type="button"
+              aria-expanded={navOpen}
+              aria-label="Open navigation menu"
+              onClick={() => setNavOpen((open) => !open)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="docs-breadcrumb-trail">
+              <span className="docs-breadcrumb-group">{page?.group ?? "Documentation"}</span>
+              <span className="docs-breadcrumb-sep" aria-hidden="true">›</span>
+              <span className="docs-breadcrumb-current">{page?.title ?? "Overview"}</span>
+            </div>
+          </div>
         </div>
       </nav>
+      {navOpen && (
+        <div
+          className="docs-drawer-backdrop"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <div className="docs-main-shell">
-        <aside id="docs-sidebar" className="docs-sidebar-nav" data-open={navOpen} aria-label="Documentation navigation">
+        <aside
+          id="docs-sidebar"
+          className={`docs-sidebar-nav${navOpen ? " open" : ""}`}
+          data-open={navOpen ? "true" : "false"}
+          aria-label="Documentation navigation"
+        >
+          <div className="docs-drawer-header">
+            <div className="docs-drawer-brand">
+              <TendrilMark />
+              <span className="docs-brand-text">Tendril</span>
+            </div>
+            <button
+              className="docs-drawer-close-btn"
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setNavOpen(false)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <div className="docs-drawer-tabs">
+            {([{ title: "Docs", path: "/", tab: "docs" }, { title: "Build", path: "/docs/build", tab: "build" }, { title: "API", path: "/docs/api", tab: "api" }] as const).map((tab) => (
+              <Link
+                key={tab.tab}
+                to={tab.path}
+                className={`docs-drawer-tab${page?.tab === tab.tab ? " active" : ""}`}
+                onClick={() => setNavOpen(false)}
+              >
+                {tab.title}
+              </Link>
+            ))}
+          </div>
           <nav className="docs-nav-group-list" aria-label="Documentation pages">
             {groups.map((group) => <div className="docs-nav-group" key={group}>
               <div className="docs-nav-group-title">{group}</div>
