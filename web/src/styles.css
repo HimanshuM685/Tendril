@@ -30,7 +30,7 @@
 
   /* Typography */
   --font-serif: 'Newsreader', Georgia, 'Playfair Display', serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-inter), 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Space Mono', ui-monospace, monospace;
 
   /* Corner Radii */
@@ -142,38 +142,59 @@ img {
   z-index: 90;
 }
 
+.sidebar-brand-wrapper {
+  padding: 0 6px 20px;
+  display: flex;
+  align-items: center;
+}
+
 .sidebar-brand,
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-sans);
-  font-size: 18px;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  text-decoration: none;
   cursor: pointer;
   user-select: none;
+  line-height: 1;
 }
 
 .sidebar-brand {
-  padding: 0 6px 20px;
+  padding: 0;
 }
 
 .brand-flower {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  line-height: 1;
 }
 
 .brand-flower svg {
   display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .brand-text {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text-primary);
+  transform: translateY(0.5px);
 }
 
 /* Sidebar Nav Items */
@@ -2062,27 +2083,47 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 .docs-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1;
   cursor: pointer;
   user-select: none;
 }
 
 .docs-brand-flower {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  line-height: 1;
 }
 
 .docs-brand-flower svg {
   display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .docs-brand-text {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1;
   color: var(--text-primary);
+  transform: translateY(0.5px);
 }
 
 .docs-subdomain-badge {

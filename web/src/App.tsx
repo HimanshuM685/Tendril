@@ -4,6 +4,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import type { WalletSummary } from "@tendril/shared";
 import { WalletBar } from "./components/WalletBar";
 import { Sidebar } from "./components/Sidebar";
+import { TendrilBrand } from "./components/TendrilBrand";
 import { loginWithWallet } from "./wallet";
 import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
@@ -242,21 +243,13 @@ export function App() {
     <div className="app app-appshell">
       {/* Mobile Top Header */}
       <header className="mobile-header">
-        <div className="brand" onClick={() => navigate("/")} role="button" tabIndex={0}>
-          <span className="brand-flower">
-            <svg viewBox="0 0 32 32" width="24" height="24">
-              <rect width="32" height="32" rx="6" fill="#095D3B" />
-              <g fill="#F4F1EA">
-                <rect x="5" y="7" width="22" height="4" />
-                <rect x="5" y="7" width="2" height="3" />
-                <rect x="25" y="7" width="2" height="3" />
-                <rect x="14" y="7" width="4" height="17" />
-                <rect x="10" y="22" width="12" height="3" />
-              </g>
-            </svg>
-          </span>
-          <span className="brand-text">Tendril</span>
-        </div>
+        <TendrilBrand
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
+          }}
+        />
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <WalletBar

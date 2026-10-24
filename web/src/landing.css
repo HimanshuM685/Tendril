@@ -296,24 +296,42 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1;
 }
 
 .brand-flower {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  line-height: 1;
 }
 
 .brand-flower svg {
   display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .brand-text {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 19px;
   font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text-primary);
+  transform: translateY(0.5px);
 }
 
 .desktop-nav {
@@ -1989,6 +2007,9 @@ button {
   margin-bottom: 24px;
   text-align: left;
   box-sizing: border-box;
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
 }
 
 .mcp-prompt-input-row {
@@ -1997,48 +2018,23 @@ button {
   align-items: center;
   min-height: 48px;
   width: 100%;
-}
-
-.mcp-real-input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 15px;
-  font-family: inherit;
-  color: #1f231e;
-  line-height: 1.5;
-  position: relative;
-  z-index: 2;
-  padding: 0;
-  margin: 0;
-}
-
-.mcp-real-input::placeholder {
-  color: transparent;
+  cursor: default;
 }
 
 .mcp-animated-placeholder {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
-  pointer-events: none;
   font-size: 15px;
   font-family: inherit;
   color: #1f231e;
   line-height: 1.5;
-  z-index: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
-  transition: opacity 0.15s ease;
-}
-
-.mcp-animated-placeholder.is-focused {
-  opacity: 0.5;
+  cursor: default;
 }
 
 .mcp-prompt-text {
@@ -2089,15 +2085,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: default;
   padding: 0;
-  transition: all 0.15s ease;
-}
-
-.mcp-tool-circle-btn:hover {
-  background-color: #f4f5ee;
-  color: #1a1a1a;
-  border-color: #c8c9bf;
+  user-select: none;
 }
 
 .mcp-prompt-tools-right {
@@ -2113,7 +2103,8 @@ button {
   font-size: 12px;
   font-weight: 500;
   color: #7a7d74;
-  cursor: pointer;
+  cursor: default;
+  user-select: none;
 }
 
 .mcp-send-btn {
@@ -2126,14 +2117,9 @@ button {
   align-items: center;
   justify-content: center;
   border: none;
-  cursor: pointer;
+  cursor: default;
   box-shadow: 0 2px 6px rgba(200, 109, 81, 0.3);
-  transition: background-color 0.15s ease, transform 0.15s ease;
-}
-
-.mcp-send-btn:hover {
-  background-color: #b55d42;
-  transform: translateY(-1px);
+  user-select: none;
 }
 
 .mcp-quick-tags {
@@ -2155,15 +2141,9 @@ button {
   font-size: 12px;
   font-weight: 500;
   color: #4b4e47;
-  cursor: pointer;
+  cursor: default;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: all 0.15s ease;
-}
-
-.mcp-tag-pill:hover {
-  background-color: #f8f8f4;
-  border-color: #d2d4cb;
-  color: #1a1a1a;
+  user-select: none;
 }
 
 .mcp-pill-code-sym {
@@ -4827,23 +4807,31 @@ button {
 .brand-menu-anchor {
   position: relative;
   display: inline-flex;
+  align-items: center;
   z-index: 120;
 }
 
 .brand-context-menu {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  width: 224px;
+  position: fixed;
+  width: 248px;
   padding: 8px;
   border: 1px solid rgba(23, 24, 21, 0.08);
-  border-radius: 15px;
+  border-radius: 14px;
   background-color: #fbfbf9;
   background: #fbfbf9;
-  box-shadow: 0 18px 35px rgba(23, 24, 21, 0.12), 0 3px 10px rgba(23, 24, 21, 0.06);
+  box-shadow: 0 18px 35px rgba(23, 24, 21, 0.14), 0 3px 10px rgba(23, 24, 21, 0.06);
+  z-index: 9999;
+  user-select: none;
+}
+
+.brand-context-menu--bottom {
   transform-origin: top left;
   animation: brand-menu-enter 160ms cubic-bezier(0.23, 1, 0.32, 1);
-  z-index: 125;
+}
+
+.brand-context-menu--top {
+  transform-origin: bottom left;
+  animation: brand-menu-enter-up 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .brand-context-menu button {
@@ -4851,20 +4839,26 @@ button {
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: 42px;
+  padding: 8px 12px;
   border-radius: 8px;
+  border: none;
+  background: transparent;
   color: var(--text-primary);
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1;
   text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease;
 }
 
 .brand-context-menu button:hover,
 .brand-context-menu button:focus-visible {
   background: rgba(9, 93, 59, 0.08);
+  color: var(--text-primary);
   outline: none;
 }
 
@@ -4872,15 +4866,37 @@ button {
   transform: scale(0.98);
 }
 
+.brand-context-menu .menu-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
 .brand-context-menu button svg {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: block;
   fill: none;
-  stroke: #777a72;
+  stroke: #5e6259;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.85;
+  transition: stroke 140ms ease;
+}
+
+.brand-context-menu button:hover svg,
+.brand-context-menu button:focus-visible svg {
+  stroke: var(--text-primary);
+}
+
+.brand-context-menu button span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .brand-context-divider {
@@ -4893,6 +4909,17 @@ button {
   from {
     opacity: 0;
     transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes brand-menu-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
   }
   to {
     opacity: 1;

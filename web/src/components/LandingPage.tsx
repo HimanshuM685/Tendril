@@ -84,10 +84,7 @@ export function LandingPage() {
   const [copyPromptText, setCopyPromptText] = useState("Copy prompt");
   const [showToast, setShowToast] = useState(false);
   const [searchStatus, setSearchStatus] = useState("Polling live nodes...");
-  const [mcpInput, setMcpInput] = useState("");
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState("");
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const mcpInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -102,8 +99,6 @@ export function LandingPage() {
   }, []);
 
   useEffect(() => {
-    if (mcpInput) return;
-
     let promptIndex = 0;
     let charIndex = 0;
     let isDeleting = false;
@@ -141,16 +136,7 @@ export function LandingPage() {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [mcpInput]);
-
-  const handleMcpSubmit = () => {
-    const query = mcpInput.trim() || animatedPlaceholder;
-    if (query) {
-      navigate(`/explore?q=${encodeURIComponent(query)}`);
-    } else {
-      navigate("/explore");
-    }
-  };
+  }, []);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1224,40 +1210,22 @@ export function LandingPage() {
                 Good morning
               </h3>
 
-              <div className="mcp-prompt-card" onClick={() => mcpInputRef.current?.focus()}>
-                <div className="mcp-prompt-input-row">
-                  <input
-                    ref={mcpInputRef}
-                    type="text"
-                    className="mcp-real-input"
-                    value={mcpInput}
-                    onChange={(e) => setMcpInput(e.target.value)}
-                    onFocus={() => setIsInputFocused(true)}
-                    onBlur={() => setIsInputFocused(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleMcpSubmit();
-                      }
-                    }}
-                    aria-label="Tendril MCP prompt input"
-                  />
-                  {!mcpInput && (
-                    <div className={`mcp-animated-placeholder ${isInputFocused ? "is-focused" : ""}`} aria-hidden="true">
-                      <span className="mcp-prompt-text">{animatedPlaceholder}</span>
-                      {!isInputFocused && <span className="mcp-prompt-cursor">|</span>}
-                    </div>
-                  )}
+              <div className="mcp-prompt-card">
+                <div className="mcp-prompt-input-row" aria-hidden="true">
+                  <div className="mcp-animated-placeholder">
+                    <span className="mcp-prompt-text">{animatedPlaceholder}</span>
+                    <span className="mcp-prompt-cursor">|</span>
+                  </div>
                 </div>
                 <div className="mcp-prompt-toolbar">
                   <div className="mcp-prompt-tools-left">
-                    <button type="button" className="mcp-tool-circle-btn" aria-label="Add attachment" onClick={(e) => { e.stopPropagation(); mcpInputRef.current?.focus(); }}>
+                    <div className="mcp-tool-circle-btn" aria-hidden="true">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
-                    </button>
-                    <button type="button" className="mcp-tool-circle-btn" aria-label="Adjust parameters" onClick={(e) => { e.stopPropagation(); mcpInputRef.current?.focus(); }}>
+                    </div>
+                    <div className="mcp-tool-circle-btn" aria-hidden="true">
                       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="4" y1="21" x2="4" y2="14" />
                         <line x1="4" y1="10" x2="4" y2="3" />
@@ -1269,49 +1237,49 @@ export function LandingPage() {
                         <line x1="9" y1="8" x2="15" y2="8" />
                         <line x1="17" y1="16" x2="23" y2="16" />
                       </svg>
-                    </button>
+                    </div>
                   </div>
                   <div className="mcp-prompt-tools-right">
-                    <div className="mcp-model-selector" onClick={(e) => e.stopPropagation()}>
+                    <div className="mcp-model-selector" aria-hidden="true">
                       <span className="model-name">Claude Opus 5</span>
                       <span className="selector-chevron">▾</span>
                     </div>
-                    <button type="button" className="mcp-send-btn" aria-label="Submit prompt" onClick={(e) => { e.stopPropagation(); handleMcpSubmit(); }}>
+                    <div className="mcp-send-btn" aria-hidden="true">
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
                         <path fillRule="evenodd"
                           d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z"
                           clipRule="evenodd" />
                       </svg>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mcp-quick-tags">
-                <button type="button" className="mcp-tag-pill" onClick={() => { setMcpInput("Create an automated GPU lease pipeline"); mcpInputRef.current?.focus(); }}>
+              <div className="mcp-quick-tags" aria-hidden="true">
+                <span className="mcp-tag-pill">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                     <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" />
                   </svg>
                   <span>Create</span>
-                </button>
-                <button type="button" className="mcp-tag-pill" onClick={() => { setMcpInput("POST /x402/run Python matrix benchmark script"); mcpInputRef.current?.focus(); }}>
+                </span>
+                <span className="mcp-tag-pill">
                   <span className="mcp-pill-code-sym">&lt;&gt;</span>
                   <span>Code</span>
-                </button>
-                <button type="button" className="mcp-tag-pill" onClick={() => { setMcpInput("Learn how Algorand settlement works with x402"); mcpInputRef.current?.focus(); }}>
+                </span>
+                <span className="mcp-tag-pill">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="5" y="3" width="14" height="18" rx="2" />
                     <line x1="9" y1="7" x2="15" y2="7" />
                   </svg>
                   <span>Learn</span>
-                </button>
-                <button type="button" className="mcp-tag-pill" onClick={() => { setMcpInput("Write an MCP integration script for Claude Desktop"); mcpInputRef.current?.focus(); }}>
+                </span>
+                <span className="mcp-tag-pill">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                   </svg>
                   <span>Write</span>
-                </button>
-                <button type="button" className="mcp-tag-pill" onClick={() => { setMcpInput("Monitor personal contributor node earnings"); mcpInputRef.current?.focus(); }}>
+                </span>
+                <span className="mcp-tag-pill">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
                     <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
@@ -1320,7 +1288,7 @@ export function LandingPage() {
                     <line x1="14" y1="1" x2="14" y2="4" />
                   </svg>
                   <span>Life stuff</span>
-                </button>
+                </span>
               </div>
             </div>
           </div>
@@ -1528,21 +1496,13 @@ export function LandingPage() {
         <div className="wrap footer-main-grid reveal-on-scroll">
           {/*  Brand & Mission  */}
           <div className="footer-brand-col">
-            <a href="#top" className="brand" onClick={(e) => { e.preventDefault(); scrollToSection("top"); }}>
-              <span className="brand-flower">
-                <svg viewBox="0 0 32 32" width="24" height="24">
-                  <rect width="32" height="32" rx="6" fill="#095D3B" />
-                  <g fill="#F4F1EA">
-                    <rect x="5" y="7" width="22" height="4" />
-                    <rect x="5" y="7" width="2" height="3" />
-                    <rect x="25" y="7" width="2" height="3" />
-                    <rect x="14" y="7" width="4" height="17" />
-                    <rect x="10" y="22" width="12" height="3" />
-                  </g>
-                </svg>
-              </span>
-              <span className="brand-text">Tendril</span>
-            </a>
+            <TendrilBrand
+              href="#top"
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToSection("top");
+              }}
+            />
             <p className="footer-tagline">
               A pay-per-call compute marketplace for individual contributors. Ephemeral sandboxes, metered in USDC over x402
               on Algorand.
