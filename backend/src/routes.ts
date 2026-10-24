@@ -138,12 +138,12 @@ import { hashPin, isPin, verifyPin } from "./pin.js";
 import { verifyPassword } from "./password.js";
 import {
   bumpAuthEpoch,
+  claimGoogleExport,
   clearPinFailures,
   consumeExportGrant,
+  claimExport,
   expireSignRequests,
-  exportAllowed,
   pinSubjectLocked,
-  recordExport,
   recordPinFailure,
 } from "./securityDb.js";
 import { emailEnabled, emailLogin, emailRegister } from "./emailAuth.js";
@@ -272,11 +272,21 @@ router.post("/auth/pin/change", guard(async (req: Request, res: Response) => {
   const user = await custodialUser(req, res);
   if (!user) return;
   const { currentPin, nextPin } = (req.body ?? {}) as { currentPin?: unknown; nextPin?: unknown };
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const locked = (await pinSubjectLocked(`user:${user.id}`)) ?? (await pinSubjectLocked(`ip:${ip}`));
+  if (locked) {
+    return res.status(429).json({ error: "too many pin attempts — try again later", retryAt: locked });
+  }
   if (!user.pin_hash || !isPin(currentPin) || !(await verifyPin(currentPin, user.pin_hash))) {
+    await recordPinFailure(`user:${user.id}`);
+    await recordPinFailure(`ip:${ip}`);
     return res.status(401).json({ error: "invalid pin" });
   }
   if (!isPin(nextPin)) return res.status(400).json({ error: "pin must be 4 digits" });
+  await clearPinFailures(`user:${user.id}`);
+  await clearPinFailures(`ip:${ip}`);
   await replaceUserPin(user.id, await hashPin(nextPin));
+  await expireSignRequests(user.id);
   res.json({ pinSet: true });
 }));
 
@@ -365,18 +375,23 @@ router.post("/auth/google/export-key", guard(async (req: Request, res: Response)
   } else if (session.kind !== "google-session") {
     return res.status(403).json({ error: "custodial account sign-in required" });
   }
-  const limit = await exportAllowed(user.id);
-  if (limit !== "ok") {
-    return res.status(429).json({ error: "export rate limit exceeded — try again later" });
-  }
-  if (session.kind === "google-session") {
-    if (typeof exportGrant !== "string" || !(await consumeExportGrant(exportGrant, user.id))) {
-      return res.status(401).json({ error: "google verification required" });
-    }
-  }
   try {
     const mnemonic = await exportMnemonicForUser(user.id);
-    await recordExport(user.id);
+    // Decrypt/read first. Quota and Google grant are consumed only after the
+    // key is available, so a storage or decryption failure does not burn access.
+    if (session.kind === "google-session") {
+      if (typeof exportGrant !== "string") {
+        return res.status(401).json({ error: "google verification required" });
+      }
+      const result = await claimGoogleExport(user.id, exportGrant);
+      if (result === "invalid") return res.status(401).json({ error: "google verification required" });
+      if (result !== "ok") return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+    } else {
+      const limit = await claimExport(user.id);
+      if (limit !== "ok") {
+        return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+      }
+    }
     res.json({ mnemonic });
   } catch (e) {
     res.status(500).json({ error: "export failed" });

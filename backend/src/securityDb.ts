@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { q } from "./db.js";
+import { inTransaction, q } from "./db.js";
 import { pinAfterFailure, pinIsLocked, type PinLockRow } from "./pinLock.js";
 import { payloadHash, type SignRow, type SignStatus } from "./signIntent.js";
 
@@ -139,22 +139,58 @@ export async function consumeExportGrant(grant: string, userId: string, now = Da
   return rows.length > 0;
 }
 
-export async function exportAllowed(userId: string, now = Date.now()): Promise<"ok" | "cooldown" | "limit"> {
-  const rows = await q<{ created_at: number }>(
-    `SELECT created_at FROM export_events WHERE user_id = $1 AND created_at > $2 ORDER BY created_at DESC`,
-    [userId, now - EXPORT_HOUR_MS],
-  );
-  if (rows.length >= EXPORT_MAX_PER_HOUR) return "limit";
-  if (rows[0] && now - rows[0].created_at < EXPORT_COOLDOWN_MS) return "cooldown";
-  return "ok";
+/** Atomically enforce export limits and reserve one export slot. */
+export async function claimExport(userId: string, now = Date.now()): Promise<"ok" | "cooldown" | "limit"> {
+  return inTransaction(async (client) => {
+    // Serialize export attempts for one user. Without this, concurrent requests
+    // can all pass the read-before-insert limit check.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [userId]);
+    const rows = await client.query<{ created_at: number }>(
+      `SELECT created_at FROM export_events WHERE user_id = $1 AND created_at > $2 ORDER BY created_at DESC`,
+      [userId, now - EXPORT_HOUR_MS],
+    );
+    if (rows.rows.length >= EXPORT_MAX_PER_HOUR) return "limit";
+    if (rows.rows[0] && now - rows.rows[0].created_at < EXPORT_COOLDOWN_MS) return "cooldown";
+    await client.query(`INSERT INTO export_events (id, user_id, created_at) VALUES ($1,$2,$3)`, [
+      randomUUID(),
+      userId,
+      now,
+    ]);
+    return "ok";
+  });
 }
 
-export async function recordExport(userId: string, now = Date.now()): Promise<void> {
-  await q(`INSERT INTO export_events (id, user_id, created_at) VALUES ($1,$2,$3)`, [
-    randomUUID(),
-    userId,
-    now,
-  ]);
+/** Validate and consume a Google export grant in the same transaction as its rate-limit slot. */
+export async function claimGoogleExport(
+  userId: string,
+  grant: string,
+  now = Date.now(),
+): Promise<"ok" | "invalid" | "cooldown" | "limit"> {
+  return inTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [userId]);
+    const challenge = await client.query<{ id: string }>(
+      `SELECT id FROM export_challenges
+       WHERE grant_hash = $1 AND user_id = $2 AND consumed_at IS NULL AND expires_at > $3
+       FOR UPDATE`,
+      [sha256(grant), userId, now],
+    );
+    if (!challenge.rows[0]) return "invalid";
+
+    const events = await client.query<{ created_at: number }>(
+      `SELECT created_at FROM export_events WHERE user_id = $1 AND created_at > $2 ORDER BY created_at DESC`,
+      [userId, now - EXPORT_HOUR_MS],
+    );
+    if (events.rows.length >= EXPORT_MAX_PER_HOUR) return "limit";
+    if (events.rows[0] && now - events.rows[0].created_at < EXPORT_COOLDOWN_MS) return "cooldown";
+
+    await client.query(`UPDATE export_challenges SET consumed_at = $2 WHERE id = $1`, [challenge.rows[0].id, now]);
+    await client.query(`INSERT INTO export_events (id, user_id, created_at) VALUES ($1,$2,$3)`, [
+      randomUUID(),
+      userId,
+      now,
+    ]);
+    return "ok";
+  });
 }
 
 interface PinDb {
@@ -185,16 +221,22 @@ export async function pinSubjectLocked(subject: string, now = Date.now()): Promi
 }
 
 export async function recordPinFailure(subject: string, now = Date.now()): Promise<void> {
-  const next = pinAfterFailure(await readLock(subject), now);
-  await q(
-    `INSERT INTO pin_attempts (subject, window_started_at, failure_count, locked_until)
-     VALUES ($1,$2,$3,$4)
-     ON CONFLICT (subject) DO UPDATE
-       SET window_started_at = EXCLUDED.window_started_at,
-           failure_count = EXCLUDED.failure_count,
-           locked_until = EXCLUDED.locked_until`,
-    [subject, next.windowStartedAt, next.failureCount, next.lockedUntil],
-  );
+  await inTransaction(async (client) => {
+    // Lock per subject so simultaneous bad attempts cannot overwrite each
+    // other's failure count and bypass the five-attempt threshold.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [subject]);
+    const rows = await client.query<PinDb>(`SELECT * FROM pin_attempts WHERE subject = $1 FOR UPDATE`, [subject]);
+    const next = pinAfterFailure(toLock(rows.rows[0]), now);
+    await client.query(
+      `INSERT INTO pin_attempts (subject, window_started_at, failure_count, locked_until)
+        VALUES ($1,$2,$3,$4)
+        ON CONFLICT (subject) DO UPDATE
+          SET window_started_at = EXCLUDED.window_started_at,
+              failure_count = EXCLUDED.failure_count,
+              locked_until = EXCLUDED.locked_until`,
+      [subject, next.windowStartedAt, next.failureCount, next.lockedUntil],
+    );
+  });
 }
 
 export async function clearPinFailures(subject: string): Promise<void> {

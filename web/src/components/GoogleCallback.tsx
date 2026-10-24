@@ -13,13 +13,22 @@ export function GoogleCallback({ onSession }: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    const finishPopup = (message: { type: string; grant?: string; error?: string }) => {
+      if (!window.opener || window.opener === window) return false;
+      window.opener.postMessage(message, window.location.origin);
+      window.close();
+      return true;
+    };
+
     const error = params.get("error");
     if (error) {
+      if (finishPopup({ type: "tendril.google-export-error", error })) return;
       setErr(error);
       return;
     }
     const exportGrant = params.get("exportGrant");
     if (exportGrant) {
+      if (finishPopup({ type: "tendril.google-export-grant", grant: exportGrant })) return;
       sessionStorage.setItem("tendril.exportGrant", exportGrant);
       navigate("/explore", { replace: true });
       return;
