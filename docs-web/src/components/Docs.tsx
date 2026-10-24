@@ -37,22 +37,22 @@ function Toc({ headings, path, active, onSelect }: {
 }
 
 function FeatureCards({ build = false }: { build?: boolean }) {
-  const cards = build ? [
+  const cards: { title: string; subtitle: string; text: string; href: string; icon?: string; logo?: string }[] = build ? [
     { title: "Agentic runtime", subtitle: "Autonomous loops", text: "Discover machines, execute code, and release compute from your agent.", href: "/docs/build#agent-loop", icon: "bolt" },
     { title: "Provider daemon", subtitle: "Share spare compute", text: "Turn a PC or server into a node with outbound bore tunnels.", href: "/docs/build#contributor-setup", icon: "box" },
     { title: "MCP integration", subtitle: "Model Context Protocol", text: "Connect Claude, Cursor, and other agent clients to execution sandboxes.", href: "/docs/build/mcp", icon: "globe" },
   ] : [
-    { title: "Algorand", subtitle: "Settlement layer", text: "Deterministic finality, with payment fees sponsored by the facilitator.", href: "/docs/concepts/algorand-settlement", icon: "globe" },
-    { title: "USDC with x402", subtitle: "Payments & credit", text: "USD-denominated settlement, idempotent deposits, and prepaid credit.", href: "/docs/concepts/usdc-with-x402", icon: "bolt" },
-    { title: "Docker & bore", subtitle: "Sandboxes & tunnels", text: "Disposable Linux containers with outbound tunnels and instant teardown.", href: "/docs/concepts/sandboxes-bore-tunnels", icon: "box" },
+    { title: "Algorand", subtitle: "Settlement layer", text: "Deterministic finality, with payment fees sponsored by the facilitator.", href: "/docs/concepts/algorand-settlement", logo: "/assets/algorand.svg" },
+    { title: "USDC with x402", subtitle: "Payments & credit", text: "USD-denominated settlement, idempotent deposits, and prepaid credit.", href: "/docs/concepts/usdc-with-x402", logo: "/assets/usdc.svg" },
+    { title: "Docker & bore", subtitle: "Sandboxes & tunnels", text: "Disposable Linux containers with outbound tunnels and instant teardown.", href: "/docs/concepts/sandboxes-bore-tunnels", logo: "/assets/dokaer-logo.png" },
   ];
   return (
     <div className="docs-feature-cards-grid">
       {cards.map((card) => (
         <Link className="docs-feature-card" to={card.href} key={card.title}>
-          <svg className="dfc-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          {card.logo ? <img className="dfc-icon" src={card.logo} alt="" width="34" height="34" /> : <svg className="dfc-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             {card.icon === "bolt" ? <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /> : card.icon === "box" ? <><path d="m12 2 9 5v10l-9 5-9-5V7z" /><path d="m3 7 9 5 9-5M12 12v10" /></> : <><circle cx="12" cy="12" r="10" /><ellipse cx="12" cy="12" rx="4" ry="10" /><path d="M2 12h20" /></>}
-          </svg>
+          </svg>}
           <span className="dfc-title">{card.title}</span>
           <span className="dfc-subtitle">{card.subtitle}</span>
           <span className="dfc-desc">{card.text}</span>
