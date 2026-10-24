@@ -1302,17 +1302,32 @@ export function LandingPage() {
 
         {/*  ================= 6. TESTIMONIAL & RELATABLE CTA =================  */}
         <section className="testimonial-section wrap">
-          <blockquote className="founder-quote reveal-on-scroll">
-            “Tried{" "}
+          <blockquote
+            className="founder-quote reveal-on-scroll"
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('.founder-quote-link')) return;
+              window.open("https://x.com/Erakal17414/status/2112600160098476099?s=20", "_blank", "noopener,noreferrer");
+            }}
+          >
             <a
-              href="https://x.com/tendrilhq"
+              href="https://x.com/Erakal17414/status/2112600160098476099?s=20"
               target="_blank"
               rel="noopener noreferrer"
-              className="founder-quote-link"
-            >
-              @Tendrilhq
-            </a>{" "}
-            expecting another cloud wrapper. Instead I got a disposable GPU sandbox in seconds and paid exactly for what I used. That's how agentic compute should work.”
+              className="founder-quote-hitbox"
+              aria-label="View post on X"
+            />
+            <span className="founder-quote-text">
+              “Tried{" "}
+              <a
+                href="https://x.com/tendrilhq"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="founder-quote-link"
+              >
+                @Tendrilhq
+              </a>{" "}
+              expecting another cloud wrapper. Instead I got a disposable GPU sandbox in seconds and paid exactly for what I used. That's how agentic compute should work.”
+            </span>
           </blockquote>
 
           <div className="founder-profile reveal-on-scroll reveal-stagger-1">

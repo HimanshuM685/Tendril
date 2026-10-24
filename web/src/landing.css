@@ -2215,10 +2215,30 @@ button {
   transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 
+.founder-quote {
+  position: relative;
+  cursor: pointer;
+}
+
+.founder-quote-hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.founder-quote-text {
+  pointer-events: none;
+}
+
+.founder-quote-link {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
 .founder-quote-link:hover {
   color: var(--lime-dark);
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  text-decoration: none;
 }
 
 .founder-author-link {
@@ -2229,7 +2249,7 @@ button {
 
 .founder-author-link:hover {
   color: var(--lime-dark);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .founder-meta strong {
