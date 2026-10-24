@@ -539,6 +539,8 @@ export interface GoogleSessionResponse extends WalletLoginResponse {
   email: string;
   name: string | null;
   authType: "google";
+  /** False until the account has a 4-digit transaction PIN. */
+  pinSet: boolean;
 }
 
 /** POST /auth/email/register or /auth/email/login response. */
@@ -546,6 +548,8 @@ export interface EmailSessionResponse extends WalletLoginResponse {
   email: string;
   name: string | null;
   authType: "email";
+  /** False until the account has a 4-digit transaction PIN. */
+  pinSet: boolean;
 }
 
 /** GET /auth/google/account */
@@ -557,6 +561,8 @@ export interface GoogleAccountResponse {
   prepaidCreditAtomic: number;
   /** False after self-funding (nonzero ALGO observed before any gas request). */
   gasGrantEligible: boolean;
+  /** False until this social account has set a 4-digit transaction PIN. */
+  pinSet: boolean;
 }
 
 /** GET /auth/wallet/account — same on-chain + eligibility fields as Google account. */
@@ -572,6 +578,8 @@ export interface SignPrepareResponse {
 /** POST /auth/google/confirm */
 export interface SignConfirmRequest {
   requestId: string;
+  /** Four digits. Required for Google and email sessions. */
+  pin: string;
 }
 
 /** POST /auth/google/export-key */

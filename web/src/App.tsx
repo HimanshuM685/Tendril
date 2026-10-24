@@ -10,7 +10,10 @@ import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
 import { isCustodialSession } from "./lib/session";
+import { fetchGoogleAccount, setTransactionPin } from "./lib/custodialClient";
+import { SetPinModal } from "./components/SetPinModal";
 import { LandingPage } from "./components/LandingPage";
+import type { EmailSessionResponse, GoogleSessionResponse } from "@tendril/shared";
 
 export type Session = {
   token: string;
@@ -18,7 +21,20 @@ export type Session = {
   authType?: "wallet" | "google" | "email";
   email?: string;
   name?: string | null;
+  /** Social accounts only. False until a 4-digit transaction PIN exists. */
+  pinSet?: boolean;
 };
+
+function custodialSession(res: GoogleSessionResponse | EmailSessionResponse): Session {
+  return {
+    token: res.token,
+    address: res.address,
+    authType: res.authType,
+    email: res.email,
+    name: res.name,
+    pinSet: res.pinSet,
+  };
+}
 
 const SESSION_KEY = "tendril.session";
 
@@ -73,6 +89,8 @@ export function App() {
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [connectWalletOpen, setConnectWalletOpen] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const autoSignIn = useRef(false);
 
@@ -182,6 +200,36 @@ export function App() {
     };
   }, [session, refreshWallet]);
 
+  useEffect(() => {
+    if (!session || !isCustodialSession(session) || session.pinSet === true) return;
+    let cancel = false;
+    fetchGoogleAccount(session.token)
+      .then((account) => {
+        if (cancel || session.pinSet === account.pinSet) return;
+        setSession({ ...session, pinSet: account.pinSet });
+      })
+      .catch(() => {
+        if (!cancel && session.pinSet === undefined) setSession({ ...session, pinSet: false });
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [session, setSession]);
+
+  async function savePin(pin: string) {
+    if (!session) return;
+    setPinBusy(true);
+    setPinError(null);
+    try {
+      await setTransactionPin(session.token, pin);
+      setSession({ ...session, pinSet: true });
+    } catch (e) {
+      setPinError((e as Error).message);
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
   async function signIn() {
     if (!activeAddress || isCustodialAuth) return;
     setSigningIn(true);
@@ -269,15 +317,7 @@ export function App() {
             signingIn={signingIn}
             onSignIn={signIn}
             onSignOut={() => setSession(null)}
-            onCustodialSession={(res) =>
-              setSession({
-                token: res.token,
-                address: res.address,
-                authType: res.authType,
-                email: res.email,
-                name: res.name,
-              })
-            }
+            onCustodialSession={(res) => setSession(custodialSession(res))}
             onAccountRefresh={onWalletChanged}
             balanceAtomic={wallet?.balanceAtomic ?? null}
             signTransactions={signTransactions as never}
@@ -325,15 +365,7 @@ export function App() {
               signingIn={signingIn}
               onSignIn={signIn}
               onSignOut={() => setSession(null)}
-              onCustodialSession={(res) =>
-                setSession({
-                  token: res.token,
-                  address: res.address,
-                  authType: res.authType,
-                  email: res.email,
-                  name: res.name,
-                })
-              }
+              onCustodialSession={(res) => setSession(custodialSession(res))}
               onAccountRefresh={onWalletChanged}
               balanceAtomic={wallet?.balanceAtomic ?? null}
               signTransactions={signTransactions as never}
@@ -418,20 +450,16 @@ export function App() {
         </main>
       </div>
 
+      {session && isCustodialSession(session) && session.pinSet === false && (
+        <SetPinModal busy={pinBusy} error={pinError} onSave={(pin) => void savePin(pin)} />
+      )}
+
       {/* Global Modals */}
       <Suspense fallback={null}>
         {connectWalletOpen && (
           <ConnectWalletModal
             onClose={() => setConnectWalletOpen(false)}
-            onCustodialSession={(res) => {
-              setSession({
-                token: res.token,
-                address: res.address,
-                authType: res.authType,
-                email: res.email,
-                name: res.name,
-              });
-            }}
+            onCustodialSession={(res) => setSession(custodialSession(res))}
             onWalletConnected={() => {
               autoSignIn.current = true;
             }}

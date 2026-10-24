@@ -18,6 +18,12 @@ export function GoogleCallback({ onSession }: Props) {
       setErr(error);
       return;
     }
+    const exportGrant = params.get("exportGrant");
+    if (exportGrant) {
+      sessionStorage.setItem("tendril.exportGrant", exportGrant);
+      navigate("/explore", { replace: true });
+      return;
+    }
     const code = params.get("code");
     if (!code) {
       setErr("missing authorization code");
@@ -32,6 +38,7 @@ export function GoogleCallback({ onSession }: Props) {
           authType: "google",
           email: res.email,
           name: res.name,
+          pinSet: res.pinSet,
         });
         navigate("/explore", { replace: true });
       } catch (e) {

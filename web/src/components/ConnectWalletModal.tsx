@@ -78,6 +78,7 @@ export function ConnectWalletModal({ onClose, onCustodialSession, onWalletConnec
         email: "wjonas387@gmail.com",
         name: "Jonas Walker",
         balanceAtomic: 0,
+        pinSet: true,
       });
       onClose();
       return;

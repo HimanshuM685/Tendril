@@ -262,6 +262,7 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS users_address_idx ON users (address);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS gas_grant_eligible BOOLEAN NOT NULL DEFAULT TRUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash TEXT;
     ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
 
@@ -304,6 +305,7 @@ export interface DbUser {
   address: string;
   encrypted_mnemonic: string;
   password_hash: string | null;
+  pin_hash: string | null;
   created_at: number;
   last_login_at: number;
   gas_grant_eligible: boolean;
@@ -391,6 +393,15 @@ export async function setEmailAuthEnabled(enabled: boolean): Promise<void> {
      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
     [EMAIL_AUTH_SETTING, enabled ? "true" : "false"],
   );
+}
+
+/** First PIN only. A second call does not replace an existing hash. */
+export async function setUserPin(userId: string, pinHash: string): Promise<boolean> {
+  const rows = await q<{ id: string }>(
+    `UPDATE users SET pin_hash = $2 WHERE id = $1 AND pin_hash IS NULL RETURNING id`,
+    [userId, pinHash],
+  );
+  return rows.length > 0;
 }
 
 export async function touchUserLogin(id: string): Promise<void> {

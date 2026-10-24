@@ -6,6 +6,7 @@ import {
   exportGoogleMnemonic,
   fetchGasRequest,
   fetchGoogleAccount,
+  startGoogleReauth,
   submitGasRequest,
 } from "../lib/custodialClient";
 import { useCustodialSign } from "../context/CustodialSignContext";
@@ -37,6 +38,7 @@ export function GoogleWalletBar({
   const [gasRequest, setGasRequest] = useState<GasRequestInfo | null | undefined>(undefined);
   const [gasBusy, setGasBusy] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportGrant, setExportGrant] = useState<string | null>(null);
   const [optInBusy, setOptInBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -49,6 +51,14 @@ export function GoogleWalletBar({
       /* non-fatal */
     }
   };
+
+  useEffect(() => {
+    const grant = sessionStorage.getItem("tendril.exportGrant");
+    if (!grant || session.authType !== "google") return;
+    sessionStorage.removeItem("tendril.exportGrant");
+    setExportGrant(grant);
+    setExportOpen(true);
+  }, [session.authType]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -177,10 +187,18 @@ export function GoogleWalletBar({
         </div>
       )}
 
-      {exportOpen && (
+      {exportOpen && session.authType && session.authType !== "wallet" && (
         <ExportKeyModal
-          onClose={() => setExportOpen(false)}
-          onExport={() => exportGoogleMnemonic(session.token)}
+          authType={session.authType}
+          exportGrant={exportGrant}
+          onClose={() => {
+            setExportOpen(false);
+            setExportGrant(null);
+          }}
+          onExport={(proof) => exportGoogleMnemonic(session.token, proof)}
+          onVerifyGoogle={async () => {
+            window.location.href = await startGoogleReauth(session.token);
+          }}
         />
       )}
     </div>

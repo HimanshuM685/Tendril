@@ -68,6 +68,7 @@ import {
   findGasRequestByUserId,
   findUserById,
   isWalletGasGrantEligible,
+  setUserPin,
   listApiKeys,
   metrics,
   recordWithdrawal,
@@ -126,11 +127,15 @@ import {
   type PrepareAction,
 } from "./custodialSign.js";
 import {
+  consumeExportGrant,
   googleCallback,
+  googleReauthUrl,
   googleSessionExchange,
   googleStart,
   isGoogleAuthEnabled,
 } from "./googleAuth.js";
+import { hashPin, isPin, pinLocked, recordPinFailure, clearPinFailures, verifyPin } from "./pin.js";
+import { verifyPassword } from "./password.js";
 import { emailEnabled, emailLogin, emailRegister } from "./emailAuth.js";
 import { syncGasGrantEligibility, syncWalletGasGrantEligibility } from "./gasGrant.js";
 
@@ -227,7 +232,33 @@ router.get("/auth/google/account", guard(async (req: Request, res: Response) => 
   res.json({
     ...info,
     gasGrantEligible: user?.gas_grant_eligible ?? false,
+    pinSet: !!user?.pin_hash,
   });
+}));
+
+router.post("/auth/pin", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (!requireCustodialSession(session, res)) return;
+  const { pin } = (req.body ?? {}) as { pin?: unknown };
+  if (!isPin(pin)) return res.status(400).json({ error: "pin must be 4 digits" });
+  const saved = await setUserPin(session.userId, await hashPin(pin));
+  if (!saved) return res.status(409).json({ error: "pin_already_set" });
+  res.json({ pinSet: true });
+}));
+
+router.post("/auth/google/reauth", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  if (!requireCustodialSession(session, res)) return;
+  if (session.kind !== "google-session") {
+    return res.status(403).json({ error: "google sign-in required" });
+  }
+  if (!isGoogleAuthEnabled()) {
+    return res.status(503).json({ error: "Google sign-in is not configured on this deployment" });
+  }
+  // JSON, not a redirect: a browser navigation cannot send the session bearer.
+  res.json({ url: googleReauthUrl(session.userId) });
 }));
 
 router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
@@ -247,8 +278,19 @@ router.post("/auth/google/confirm", guard(async (req: Request, res: Response) =>
   const session = requireSessionInfo(req, res);
   if (!session) return;
   if (!requireCustodialSession(session, res)) return;
-  const { requestId } = (req.body ?? {}) as { requestId?: string };
+  const { requestId, pin } = (req.body ?? {}) as { requestId?: string; pin?: unknown };
   if (!requestId) return res.status(400).json({ error: "requestId required" });
+  const user = await findUserById(session.userId);
+  if (!user) return res.status(401).json({ error: "sign in first" });
+  if (!user.pin_hash) return res.status(403).json({ error: "pin_not_set" });
+  if (pinLocked(session.userId)) {
+    return res.status(429).json({ error: "too many pin attempts — try again later" });
+  }
+  if (!isPin(pin) || !(await verifyPin(pin, user.pin_hash))) {
+    recordPinFailure(session.userId);
+    return res.status(401).json({ error: "invalid pin" });
+  }
+  clearPinFailures(session.userId);
   try {
     res.json(await confirmCustodialSign(session.userId, requestId));
   } catch (e) {
@@ -260,8 +302,28 @@ router.post("/auth/google/export-key", guard(async (req: Request, res: Response)
   const session = requireSessionInfo(req, res);
   if (!session) return;
   if (!requireCustodialSession(session, res)) return;
-  const { confirmed } = (req.body ?? {}) as { confirmed?: boolean };
+  const { confirmed, password, exportGrant } = (req.body ?? {}) as {
+    confirmed?: boolean;
+    password?: unknown;
+    exportGrant?: unknown;
+  };
   if (!confirmed) return res.status(400).json({ error: "confirmation required" });
+  const user = await findUserById(session.userId);
+  if (!user) return res.status(401).json({ error: "sign in first" });
+  if (session.kind === "email-session") {
+    if (typeof password !== "string" || !user.password_hash) {
+      return res.status(401).json({ error: "invalid password" });
+    }
+    if (!(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: "invalid password" });
+    }
+  } else if (session.kind === "google-session") {
+    if (typeof exportGrant !== "string" || !consumeExportGrant(exportGrant, session.userId)) {
+      return res.status(401).json({ error: "google verification required" });
+    }
+  } else {
+    return res.status(403).json({ error: "custodial account sign-in required" });
+  }
   if (!checkExportRateLimit(session.userId)) {
     return res.status(429).json({ error: "export rate limit exceeded — try again later" });
   }
@@ -343,6 +405,7 @@ router.get("/auth/wallet/account", guard(async (req: Request, res: Response) => 
   res.json({
     ...info,
     gasGrantEligible: await isWalletGasGrantEligible(session.address),
+    pinSet: false,
   });
 }));
 

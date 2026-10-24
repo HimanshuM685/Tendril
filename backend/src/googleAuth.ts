@@ -2,8 +2,10 @@ import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
 import {
   issueGoogleExchangeCode,
+  issueGoogleExportState,
   issueGoogleSession,
   verifyGoogleExchangeCode,
+  verifyGoogleExportState,
 } from "./auth.js";
 import { config, googleAuthEnabled } from "./config.js";
 import { generateCustodialAccount } from "./custodialWallet.js";
@@ -42,10 +44,66 @@ export function googleStart(_req: Request, res: Response) {
   res.redirect(`${GOOGLE_AUTH}?${params}`);
 }
 
+const exportGrants = new Map<string, { userId: string; expiresAt: number }>();
+
+/** One-time proof that this user just signed in with Google again. About 2 minutes. */
+export function issueExportGrant(userId: string): string {
+  const code = nanoid();
+  exportGrants.set(code, { userId, expiresAt: Date.now() + 2 * 60 * 1000 });
+  return code;
+}
+
+export function consumeExportGrant(code: string, userId: string): boolean {
+  const row = exportGrants.get(code);
+  exportGrants.delete(code);
+  if (!row || row.expiresAt <= Date.now() || row.userId !== userId) return false;
+  return true;
+}
+
+/** Google authorize URL that must be the same account as `userId`. */
+export function googleReauthUrl(userId: string): string {
+  const params = new URLSearchParams({
+    client_id: config.googleClientId,
+    redirect_uri: config.googleRedirectUri,
+    response_type: "code",
+    scope: "openid email profile",
+    access_type: "online",
+    prompt: "login",
+    state: issueGoogleExportState(userId),
+  });
+  return `${GOOGLE_AUTH}?${params}`;
+}
+
+async function googleProfile(code: string): Promise<{ sub: string; email: string; name?: string }> {
+  const tokenRes = await fetch(GOOGLE_TOKEN, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: config.googleClientId,
+      client_secret: config.googleClientSecret,
+      redirect_uri: config.googleRedirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+  if (!tokenRes.ok) throw new Error("token exchange failed");
+  const tokens = (await tokenRes.json()) as { access_token?: string };
+  if (!tokens.access_token) throw new Error("no access token");
+
+  const profileRes = await fetch(GOOGLE_USERINFO, {
+    headers: { authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!profileRes.ok) throw new Error("userinfo failed");
+  const profile = (await profileRes.json()) as { sub?: string; email?: string; name?: string };
+  if (!profile.sub || !profile.email) throw new Error("incomplete Google profile");
+  return { sub: profile.sub, email: profile.email, name: profile.name };
+}
+
 export async function googleCallback(req: Request, res: Response) {
   if (!googleAuthEnabled()) return disabled(req, res);
   const code = String(req.query.code ?? "");
   const err = String(req.query.error ?? "");
+  const state = String(req.query.state ?? "");
   if (err) {
     return res.redirect(`${config.webOrigin}/auth/google?error=${encodeURIComponent(err)}`);
   }
@@ -54,31 +112,22 @@ export async function googleCallback(req: Request, res: Response) {
   }
 
   try {
-    const tokenRes = await fetch(GOOGLE_TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: config.googleClientId,
-        client_secret: config.googleClientSecret,
-        redirect_uri: config.googleRedirectUri,
-        grant_type: "authorization_code",
-      }),
-    });
-    if (!tokenRes.ok) throw new Error("token exchange failed");
-    const tokens = (await tokenRes.json()) as { access_token?: string };
-    if (!tokens.access_token) throw new Error("no access token");
+    const profile = await googleProfile(code);
 
-    const profileRes = await fetch(GOOGLE_USERINFO, {
-      headers: { authorization: `Bearer ${tokens.access_token}` },
-    });
-    if (!profileRes.ok) throw new Error("userinfo failed");
-    const profile = (await profileRes.json()) as {
-      sub?: string;
-      email?: string;
-      name?: string;
-    };
-    if (!profile.sub || !profile.email) throw new Error("incomplete Google profile");
+    if (state) {
+      const exportState = verifyGoogleExportState(state);
+      if (!exportState) {
+        return res.redirect(`${config.webOrigin}/auth/google?error=invalid_state`);
+      }
+      const owner = await findUserById(exportState.userId);
+      if (!owner?.google_sub || owner.google_sub !== profile.sub) {
+        return res.redirect(`${config.webOrigin}/auth/google?error=google_mismatch`);
+      }
+      const grant = issueExportGrant(owner.id);
+      return res.redirect(
+        `${config.webOrigin}/auth/google?exportGrant=${encodeURIComponent(grant)}`,
+      );
+    }
 
     let user = await findUserByGoogleSub(profile.sub);
     if (!user) {
@@ -138,6 +187,7 @@ export async function googleSessionExchange(req: Request, res: Response) {
     name: user.name,
     balanceAtomic: await creditBalance(user.address),
     authType: "google",
+    pinSet: !!user.pin_hash,
   };
   res.json(body);
 }

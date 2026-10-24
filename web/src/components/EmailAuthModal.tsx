@@ -35,6 +35,7 @@ export function EmailAuthModal({ onClose, onSuccess }: Props) {
           email: email,
           name: name || email.split("@")[0],
           balanceAtomic: 0,
+          pinSet: true,
         });
         return;
       }

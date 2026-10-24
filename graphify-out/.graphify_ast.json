@@ -1,0 +1,3560 @@
+{
+  "nodes": [
+    {
+      "id": "docs_web_src_app_path_page",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_path_page_pageprops",
+      "label": "PageProps",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_path_page_page",
+      "label": "Page()",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L7",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_client_shell",
+      "label": "client-shell.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/client-shell.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_client_shell_clientshell",
+      "label": "ClientShell()",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/client-shell.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_docs_runtime",
+      "label": "docs-runtime.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_docs_runtime_docsruntime",
+      "label": "DocsRuntime()",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L7",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_layout",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_layout_metadata",
+      "label": "metadata",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_app_layout_rootlayout",
+      "label": "RootLayout()",
+      "file_type": "code",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram",
+      "label": "ArchDiagram.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_flowmode",
+      "label": "FlowMode",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_nodeid",
+      "label": "NodeId",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L4",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_edgeid",
+      "label": "EdgeId",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_position",
+      "label": "Position",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L6",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_connection",
+      "label": "Connection",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L7",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_nodes",
+      "label": "nodes",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_edges",
+      "label": "edges",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_widenodes",
+      "label": "wideNodes",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_compactnodes",
+      "label": "compactNodes",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L36",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_wideedges",
+      "label": "wideEdges",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L44",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_compactedges",
+      "label": "compactEdges",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L52",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_archdiagram_archdiagram",
+      "label": "ArchDiagram()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L61",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs",
+      "label": "Docs.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_pages",
+      "label": "pages",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_groups",
+      "label": "groups",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_searchindex",
+      "label": "searchIndex",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_toc",
+      "label": "Toc()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L20",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_featurecards",
+      "label": "FeatureCards()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L39",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_usedocsscrollspy",
+      "label": "useDocsScrollSpy()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L65",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_docs",
+      "label": "Docs()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L188",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_docs_copy",
+      "label": "copy()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L290",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_docs_docs_oncontentclick",
+      "label": "onContentClick()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L312",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand",
+      "label": "TendrilBrand.tsx",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_copytarget",
+      "label": "CopyTarget",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L8",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_tendrilbrandprops",
+      "label": "TendrilBrandProps",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L10",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_writeclipboard",
+      "label": "writeClipboard()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L16",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_menuicon",
+      "label": "MenuIcon()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L41",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_tendrilmark",
+      "label": "TendrilMark()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L97",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_web_src_components_tendrilbrand_tendrilbrand",
+      "label": "TendrilBrand()",
+      "file_type": "code",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L112",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app",
+      "label": "App.tsx",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_session",
+      "label": "Session",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_loadmarketplace",
+      "label": "loadMarketplace()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L27",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_marketplace",
+      "label": "Marketplace",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_brandguidelinespage",
+      "label": "BrandGuidelinesPage",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_docsredirect",
+      "label": "DocsRedirect",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L30",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_legal",
+      "label": "Legal",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_dashboard",
+      "label": "Dashboard",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_metrics",
+      "label": "Metrics",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L33",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_googlecallback",
+      "label": "GoogleCallback",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_topupmodal",
+      "label": "TopUpModal",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L35",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_mcpmodal",
+      "label": "McpModal",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L36",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_connectwalletmodal",
+      "label": "ConnectWalletModal",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_loadsession",
+      "label": "loadSession()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L39",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_storesession",
+      "label": "storeSession()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L50",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_app",
+      "label": "App()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L59",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_app_signin",
+      "label": "signIn()",
+      "file_type": "code",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L185",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_path_page",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_path_page_pageprops",
+      "label": "PageProps",
+      "file_type": "code",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_path_page_page",
+      "label": "Page()",
+      "file_type": "code",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L7",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_client_shell",
+      "label": "client-shell.tsx",
+      "file_type": "code",
+      "source_file": "web/src/app/client-shell.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_client_shell_clientshell",
+      "label": "ClientShell()",
+      "file_type": "code",
+      "source_file": "web/src/app/client-shell.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout_serif",
+      "label": "serif",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout_sans",
+      "label": "sans",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout_mono",
+      "label": "mono",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout_metadata",
+      "label": "metadata",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_layout_rootlayout",
+      "label": "RootLayout()",
+      "file_type": "code",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L31",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_web_runtime",
+      "label": "web-runtime.tsx",
+      "file_type": "code",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_web_runtime_walletmanager",
+      "label": "walletManager",
+      "file_type": "code",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_app_web_runtime_webruntime",
+      "label": "WebRuntime()",
+      "file_type": "code",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L24",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_brandguidelinespage",
+      "label": "BrandGuidelinesPage.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_brandguidelinespage_copytarget",
+      "label": "CopyTarget",
+      "file_type": "code",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L10",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_brandguidelinespage_downloadtrayicon",
+      "label": "DownloadTrayIcon()",
+      "file_type": "code",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_brandguidelinespage_checkicon",
+      "label": "CheckIcon()",
+      "file_type": "code",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L32",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_brandguidelinespage_brandguidelinespage",
+      "label": "BrandGuidelinesPage()",
+      "file_type": "code",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L40",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingfooter",
+      "label": "LandingFooter.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingfooter_landingfooterprops",
+      "label": "LandingFooterProps",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L6",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingfooter_landingfooter",
+      "label": "LandingFooter()",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L10",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingpage",
+      "label": "LandingPage.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingpage_mcp_animated_prompts",
+      "label": "MCP_ANIMATED_PROMPTS",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingpage_faq_items",
+      "label": "FAQ_ITEMS",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingpage_trustedmarquee",
+      "label": "TrustedMarquee()",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L66",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_landingpage_landingpage",
+      "label": "LandingPage()",
+      "file_type": "code",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L80",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal",
+      "label": "Legal.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_legaldocument",
+      "label": "LegalDocument",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L6",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_legalprops",
+      "label": "LegalProps",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L8",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_block",
+      "label": "Block",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L13",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_termscontent",
+      "label": "termsContent",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_privacycontent",
+      "label": "privacyContent",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L86",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_refundcontent",
+      "label": "refundContent",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L172",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_documentcontent",
+      "label": "documentContent",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L210",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_documentmeta",
+      "label": "documentMeta",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L216",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_toslug",
+      "label": "toSlug()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L222",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_parsedocument",
+      "label": "parseDocument()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L230",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_safehref",
+      "label": "safeHref()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L285",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_renderinline",
+      "label": "renderInline()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L289",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_renderblock",
+      "label": "renderBlock()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L328",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_legal_legal",
+      "label": "Legal()",
+      "file_type": "code",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L352",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_sidebar",
+      "label": "Sidebar.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_sidebar_sidebarprops",
+      "label": "SidebarProps",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_sidebar_shortaddr",
+      "label": "shortAddr()",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L20",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_sidebar_sidebar",
+      "label": "Sidebar()",
+      "file_type": "code",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L25",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand",
+      "label": "TendrilBrand.tsx",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand_copytarget",
+      "label": "CopyTarget",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand_tendrilbrandprops",
+      "label": "TendrilBrandProps",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L11",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand_menuicon",
+      "label": "MenuIcon()",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L17",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand_tendrilmark",
+      "label": "TendrilMark()",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L76",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "web_src_components_tendrilbrand_tendrilbrand",
+      "label": "TendrilBrand()",
+      "file_type": "code",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L91",
+      "_callable": true,
+      "_origin": "ast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_web_src_app_path_page",
+      "target": "docs_web_src_app_client_shell",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_path_page",
+      "target": "docs_web_src_app_client_shell_clientshell",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_path_page",
+      "target": "docs_web_src_app_path_page_pageprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_path_page",
+      "target": "docs_web_src_app_path_page_page",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/[[...path]]/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_client_shell",
+      "target": "docs_web_src_app_docs_runtime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/client-shell.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_client_shell",
+      "target": "docs_web_src_app_docs_runtime_docsruntime",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/client-shell.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_client_shell",
+      "target": "docs_web_src_app_client_shell_clientshell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/client-shell.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_docs_runtime",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_docs_runtime",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_docs_runtime",
+      "target": "docs_web_src_components_docs",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_docs_runtime",
+      "target": "docs_web_src_components_docs_docs",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_docs_runtime",
+      "target": "docs_web_src_app_docs_runtime_docsruntime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/docs-runtime.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_layout",
+      "target": "ref_next",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_layout",
+      "target": "docs_web_src_styles",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_layout",
+      "target": "docs_web_src_app_layout_metadata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_app_layout",
+      "target": "docs_web_src_app_layout_rootlayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/app/layout.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_flowmode",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_nodeid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_edgeid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_position",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_connection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_nodes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_edges",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_widenodes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_compactnodes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_wideedges",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L44",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_compactedges",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_archdiagram",
+      "target": "docs_web_src_components_archdiagram_archdiagram",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/ArchDiagram.tsx",
+      "source_location": "L61",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_docs",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_docs_doc_pages",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_docs_renderdoc",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_docs_resolvedocslocation",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_docs_docheading",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_site",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_site_app_origin",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_site_docs_origin",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_lib_site_registry_url",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_archdiagram",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_archdiagram_archdiagram",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_tendrilbrand_tendrilmark",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_pages",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_groups",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_searchindex",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_toc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_featurecards",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_usedocsscrollspy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs",
+      "target": "docs_web_src_components_docs_docs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs_docs",
+      "target": "docs_web_src_components_docs_docs_copy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L290",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs_docs",
+      "target": "docs_web_src_components_docs_docs_oncontentclick",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L312",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs_docs",
+      "target": "docs_web_src_components_docs_usedocsscrollspy",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L286",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs_docs",
+      "target": "docs_web_src_components_docs_docs_copy",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L470",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_docs_docs_oncontentclick",
+      "target": "docs_web_src_components_docs_docs_copy",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/Docs.tsx",
+      "source_location": "L317",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "ref_react_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_lib_site",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_lib_site_app_origin",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_copytarget",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_tendrilbrandprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_writeclipboard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_menuicon",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_tendrilmark",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L97",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L112",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_web_src_components_tendrilbrand_tendrilbrand",
+      "target": "docs_web_src_components_tendrilbrand_writeclipboard",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-web/src/components/TendrilBrand.tsx",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "ref_txnlab_use_wallet_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "shared_src_index",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "shared_src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_walletbar",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_walletbar_walletbar",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_sidebar",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_sidebar_sidebar",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_wallet",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_wallet_loginwithwallet",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_api",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_api_fetchwallet",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_api_activelease",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_x402client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_x402client_serializesigner",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_network",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_session",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_lib_session_iscustodialsession",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_landingpage",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_landingpage_landingpage",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_session",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_loadmarketplace",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_marketplace",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_brandguidelinespage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_docsredirect",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_legal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_dashboard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_metrics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_googlecallback",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_topupmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_mcpmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_connectwalletmodal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_loadsession",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_storesession",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L50",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L59",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_app",
+      "target": "web_src_app_app_signin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L185",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_loadmarketplace",
+      "target": "web_src_components_marketplace",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_brandguidelinespage",
+      "target": "web_src_components_brandguidelinespage",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_docsredirect",
+      "target": "web_src_components_docsredirect",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_legal",
+      "target": "web_src_components_legal",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_dashboard",
+      "target": "web_src_components_dashboard",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_metrics",
+      "target": "web_src_components_metrics",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_googlecallback",
+      "target": "web_src_components_googlecallback",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_topupmodal",
+      "target": "web_src_components_topupmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_mcpmodal",
+      "target": "web_src_components_mcpmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_connectwalletmodal",
+      "target": "web_src_components_connectwalletmodal",
+      "relation": "imports_from",
+      "context": "import",
+      "deferred": true,
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_app",
+      "target": "web_src_app_loadsession",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "web/src/App.tsx",
+      "source_location": "L69",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_app",
+      "target": "web_src_app_storesession",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L83",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_app",
+      "target": "web_src_app_loadmarketplace",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L109",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_app",
+      "target": "web_src_app_app_signin",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "source_location": "L203",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_app_loadmarketplace",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "web/src/App.tsx",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_marketplace",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_brandguidelinespage",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_docsredirect",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_legal",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_dashboard",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_metrics",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_googlecallback",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_topupmodal",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_mcpmodal",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app",
+      "target": "web_src_components_connectwalletmodal",
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/App.tsx",
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_path_page",
+      "target": "web_src_app_client_shell",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_path_page",
+      "target": "web_src_app_client_shell_clientshell",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_path_page",
+      "target": "web_src_app_path_page_pageprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_path_page",
+      "target": "web_src_app_path_page_page",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/[[...path]]/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_client_shell",
+      "target": "web_src_app_web_runtime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/client-shell.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_client_shell",
+      "target": "web_src_app_web_runtime_webruntime",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/client-shell.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_client_shell",
+      "target": "web_src_app_client_shell_clientshell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/client-shell.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "ref_next",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "ref_next_font_google",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_styles",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_landing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_app_layout_serif",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_app_layout_sans",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_app_layout_mono",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_app_layout_metadata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_layout",
+      "target": "web_src_app_layout_rootlayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/layout.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "ref_txnlab_use_wallet_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_app_app",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_context_custodialsigncontext",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_context_custodialsigncontext_custodialsignprovider",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_lib_network",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_app_web_runtime_walletmanager",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_app_web_runtime",
+      "target": "web_src_app_web_runtime_webruntime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/app/web-runtime.tsx",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_clipboard",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_clipboard_writeclipboard",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_landingfooter",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_landingfooter_landingfooter",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_tendrilbrand_tendrilmark",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_brandguidelinespage_copytarget",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_brandguidelinespage_downloadtrayicon",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_brandguidelinespage_checkicon",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_brandguidelinespage",
+      "target": "web_src_components_brandguidelinespage_brandguidelinespage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/BrandGuidelinesPage.tsx",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_lib_docslinks",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_lib_docslinks_docsurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_components_landingfooter_landingfooterprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingfooter",
+      "target": "web_src_components_landingfooter_landingfooter",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingFooter.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_lib_docslinks",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_lib_docslinks_docsurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_landingpage_mcp_animated_prompts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_landingpage_faq_items",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_landingpage_trustedmarquee",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L66",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_landingpage",
+      "target": "web_src_components_landingpage_landingpage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/LandingPage.tsx",
+      "source_location": "L80",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_landingfooter",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_landingfooter_landingfooter",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_legaldocument",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_legalprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_block",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_termscontent",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_privacycontent",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L86",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_refundcontent",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L172",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_documentcontent",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L210",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_documentmeta",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_toslug",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L222",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_parsedocument",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L230",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_safehref",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L285",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_renderinline",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L289",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_renderblock",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L328",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal",
+      "target": "web_src_components_legal_legal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L352",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_parsedocument",
+      "target": "web_src_components_legal_toslug",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L262",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_renderinline",
+      "target": "web_src_components_legal_safehref",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L304",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_renderblock",
+      "target": "web_src_components_legal_toslug",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L332",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_renderblock",
+      "target": "web_src_components_legal_renderinline",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L336",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_legal",
+      "target": "web_src_components_legal_parsedocument",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L357",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_legal_legal",
+      "target": "web_src_components_legal_renderblock",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "web/src/components/Legal.tsx",
+      "source_location": "L400",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "shared_src_index",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "shared_src_index_walletsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "type_only": true,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_app_session",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_lib_network",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_lib_network_network",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_lib_docslinks",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_lib_docslinks_docsurl",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_components_tendrilbrand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_components_sidebar_sidebarprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_components_sidebar_shortaddr",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar",
+      "target": "web_src_components_sidebar_sidebar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar_sidebar",
+      "target": "web_src_components_sidebar_shortaddr",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "ref_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "ref_react_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "ref_react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_clipboard",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_clipboard_writeclipboard",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_components_tendrilbrand_copytarget",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_components_tendrilbrand_tendrilbrandprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_components_tendrilbrand_menuicon",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_components_tendrilbrand_tendrilmark",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_tendrilbrand",
+      "target": "web_src_components_tendrilbrand_tendrilbrand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/TendrilBrand.tsx",
+      "source_location": "L91",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "web_src_components_sidebar_sidebarprops",
+      "target": "web_src_app_session",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "web/src/components/Sidebar.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "failed_sources": [],
+  "extracted_sources": [
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/app/[[...path]]/page.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/app/client-shell.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/app/docs-runtime.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/app/layout.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/components/ArchDiagram.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/components/Docs.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/docs-web/src/components/TendrilBrand.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/App.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/app/[[...path]]/page.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/app/client-shell.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/app/layout.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/app/web-runtime.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/BrandGuidelinesPage.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/LandingFooter.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/LandingPage.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/Legal.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/Sidebar.tsx",
+    "/Users/fusion/Code/GitRepos/Tendril/web/src/components/TendrilBrand.tsx"
+  ]
+}

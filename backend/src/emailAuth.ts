@@ -75,6 +75,7 @@ export async function emailRegister(req: Request, res: Response) {
     name: user.name,
     balanceAtomic: await creditBalance(user.address),
     authType: "email",
+    pinSet: false,
   };
   res.status(201).json(body);
 }
@@ -109,6 +110,7 @@ export async function emailLogin(req: Request, res: Response) {
     name: fresh.name,
     balanceAtomic: await creditBalance(fresh.address),
     authType: "email",
+    pinSet: !!fresh.pin_hash,
   };
   res.json(body);
 }

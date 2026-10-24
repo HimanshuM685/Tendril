@@ -37,11 +37,11 @@ export function CustodialSignProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  async function approve() {
+  async function approve(pin: string) {
     if (!pending) return;
     setBusy(true);
     try {
-      const result = await confirmCustodial(tokenRef.current, pending.prepare.requestId);
+      const result = await confirmCustodial(tokenRef.current, pending.prepare.requestId, pin);
       pending.resolve(result);
     } catch (e) {
       pending.reject(e instanceof Error ? e : new Error(String(e)));
@@ -64,7 +64,7 @@ export function CustodialSignProvider({ children }: { children: ReactNode }) {
           summary={pending.prepare.summary}
           details={pending.prepare.details}
           busy={busy}
-          onApprove={approve}
+          onApprove={(pin) => void approve(pin)}
           onCancel={cancel}
         />
       )}

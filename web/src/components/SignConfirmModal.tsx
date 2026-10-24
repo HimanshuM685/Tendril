@@ -1,13 +1,18 @@
+import { useState } from "react";
+
 interface Props {
   summary: string;
   details: string;
   busy: boolean;
-  onApprove: () => void;
+  onApprove: (pin: string) => void;
   onCancel: () => void;
 }
 
-/** Mandatory approval before any server-side custodial signature. */
+/** Mandatory approval plus the 4-digit PIN before a custodial signature. */
 export function SignConfirmModal({ summary, details, busy, onApprove, onCancel }: Props) {
+  const [pin, setPin] = useState("");
+  const ready = /^\d{4}$/.test(pin);
+
   return (
     <div className="modal-backdrop" onClick={busy ? undefined : onCancel}>
       <div
@@ -32,13 +37,27 @@ export function SignConfirmModal({ summary, details, busy, onApprove, onCancel }
             <strong>{summary}</strong>
           </p>
           <p className="muted small">{details}</p>
-          <p className="muted small">Your custodial wallet will sign this on the server after you approve.</p>
+          <p className="muted small">Enter your 4-digit PIN. The custodial wallet signs only after it matches.</p>
+          <label className="muted small" htmlFor="tx-pin">
+            Transaction PIN
+            <input
+              id="tx-pin"
+              className="modal-input"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              value={pin}
+              disabled={busy}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            />
+          </label>
         </div>
         <div className="modal-actions">
           <button className="btn ghost" type="button" disabled={busy} onClick={onCancel}>
             Cancel
           </button>
-          <button className="btn" type="button" disabled={busy} onClick={onApprove}>
+          <button className="btn" type="button" disabled={busy || !ready} onClick={() => onApprove(pin)}>
             {busy ? "Signing…" : "Approve"}
           </button>
         </div>

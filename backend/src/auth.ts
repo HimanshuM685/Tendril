@@ -94,6 +94,23 @@ export function issueGoogleExchangeCode(userId: string): string {
   return jwt.sign({ userId, kind: "google-exchange", jti }, config.jwtSecret, { expiresIn: "60s" });
 }
 
+/** Signed OAuth `state` so a Google re-check can only export that user's key. */
+export function issueGoogleExportState(userId: string): string {
+  return jwt.sign({ userId, kind: "google-export", jti: randomUUID() }, config.jwtSecret, {
+    expiresIn: "10m",
+  });
+}
+
+export function verifyGoogleExportState(state: string): { userId: string } | null {
+  try {
+    const p = jwt.verify(state, config.jwtSecret) as { userId?: string; kind?: string };
+    if (p.kind !== "google-export" || !p.userId) return null;
+    return { userId: p.userId };
+  } catch {
+    return null;
+  }
+}
+
 export function verifyGoogleExchangeCode(code: string): { userId: string; jti: string } | null {
   try {
     const p = jwt.verify(code, config.jwtSecret) as {
