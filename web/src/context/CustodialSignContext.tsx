@@ -16,6 +16,8 @@ interface PendingConfirm {
 interface CustodialSignContextValue {
   /** Prepare → show modal → confirm. Returns the confirm endpoint result. */
   runCustodialAction: (token: string, action: CustodialAction) => Promise<unknown>;
+  /** Social accounts may sign only after a PIN exists. Wallet users stay enabled. */
+  setSigningReady: (ready: boolean) => void;
 }
 
 const CustodialSignContext = createContext<CustodialSignContextValue | null>(null);
@@ -23,13 +25,23 @@ const CustodialSignContext = createContext<CustodialSignContextValue | null>(nul
 export function CustodialSignProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const tokenRef = useRef("");
+  const signingReady = useRef(true);
+  const setSigningReady = useCallback((ready: boolean) => {
+    signingReady.current = ready;
+  }, []);
 
   const runCustodialAction = useCallback((token: string, action: CustodialAction) => {
     tokenRef.current = token;
     return new Promise<unknown>(async (resolve, reject) => {
+      if (!signingReady.current) {
+        reject(new Error("pin_not_set"));
+        return;
+      }
       try {
         const prepare = await prepareCustodial(token, action);
+        setPinError(null);
         setPending({ prepare, resolve, reject });
       } catch (e) {
         reject(e instanceof Error ? e : new Error(String(e)));
@@ -40,14 +52,21 @@ export function CustodialSignProvider({ children }: { children: ReactNode }) {
   async function approve(pin: string) {
     if (!pending) return;
     setBusy(true);
+    setPinError(null);
     try {
       const result = await confirmCustodial(tokenRef.current, pending.prepare.requestId, pin);
       pending.resolve(result);
+      setPending(null);
     } catch (e) {
-      pending.reject(e instanceof Error ? e : new Error(String(e)));
+      const message = e instanceof Error ? e.message : String(e);
+      if (/invalid pin|too many pin attempts/i.test(message)) {
+        setPinError(message);
+        return;
+      }
+      pending.reject(e instanceof Error ? e : new Error(message));
+      setPending(null);
     } finally {
       setBusy(false);
-      setPending(null);
     }
   }
 
@@ -57,13 +76,14 @@ export function CustodialSignProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <CustodialSignContext.Provider value={{ runCustodialAction }}>
+    <CustodialSignContext.Provider value={{ runCustodialAction, setSigningReady }}>
       {children}
       {pending && (
         <SignConfirmModal
           summary={pending.prepare.summary}
           details={pending.prepare.details}
           busy={busy}
+          error={pinError}
           onApprove={(pin) => void approve(pin)}
           onCancel={cancel}
         />

@@ -27,7 +27,7 @@
     "mcp": "npm run mcp -w @tendril/mcp-server",
     "keygen": "npm run keygen -w contributor",
     "build": "docker build -t tendril-backend .",
-    "test": "npm exec --workspace backend -- tsx --test ../shared/src/format.test.ts src/leases.test.ts src/leases.lifecycle.test.ts src/registry.test.ts src/metrics.test.ts src/hosted.test.ts src/runLimits.test.ts src/gasGrant.test.ts src/x402/cors.test.ts src/x402/discovery.test.ts src/x402/network.test.ts src/providers/notebookRunner.test.ts ../web/src/lib/x402Client.test.ts",
+    "test": "npm exec --workspace backend -- tsx --test ../shared/src/format.test.ts src/pinLock.test.ts src/signIntent.test.ts src/leases.test.ts src/leases.lifecycle.test.ts src/registry.test.ts src/metrics.test.ts src/hosted.test.ts src/runLimits.test.ts src/gasGrant.test.ts src/x402/cors.test.ts src/x402/discovery.test.ts src/x402/network.test.ts src/providers/notebookRunner.test.ts ../web/src/lib/x402Client.test.ts",
     "typecheck": "tsc -b shared backend contributor example-buyer mcp && npm run typecheck -w web && npm run typecheck -w docs-web && npm run typecheck -w admin",
     "build:shared": "tsc -b shared"
   },

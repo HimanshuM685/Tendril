@@ -157,7 +157,7 @@ export async function exportGoogleMnemonic(
   const res = await fetch(`${REGISTRY_URL}/auth/google/export-key`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ confirmed: true, ...proof }),
+    body: JSON.stringify({ acknowledged: true, ...proof }),
   });
   if (!res.ok) throw await apiError(res, "export");
   const body = (await res.json()) as { mnemonic: string };

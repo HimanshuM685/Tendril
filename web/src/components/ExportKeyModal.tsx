@@ -12,6 +12,7 @@ interface Props {
 export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVerifyGoogle }: Props) {
   const [step, setStep] = useState<"warn" | "show">(exportGrant ? "warn" : "warn");
   const [password, setPassword] = useState("");
+  const [ack, setAck] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -42,11 +43,18 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
     }
   }
 
-  const emailReady = password.length > 0;
+  function close() {
+    setMnemonic("");
+    setPassword("");
+    setAck(false);
+    onClose();
+  }
+
+  const emailReady = ack && password.length > 0;
   const googleReady = !!exportGrant;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={close}>
       <div
         className="modal"
         role="dialog"
@@ -55,7 +63,7 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
       >
         <div className="modal-head">
           <span>// EXPORT KEY</span>
-          <button className="modal-close" aria-label="Close" onClick={onClose}>
+          <button className="modal-close" aria-label="Close" onClick={close}>
             ×
           </button>
         </div>
@@ -66,6 +74,10 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
                 This reveals your <strong>25-word recovery phrase</strong>. Anyone with it controls
                 your wallet and funds.
               </p>
+              <label className="muted small">
+                <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />{" "}
+                I understand anyone with this phrase controls the wallet
+              </label>
               {authType === "email" ? (
                 <label className="muted small" htmlFor="export-password">
                   Account password
@@ -88,11 +100,11 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
               {err && <p className="modal-err">{err}</p>}
             </div>
             <div className="modal-actions">
-              <button className="btn ghost" type="button" onClick={onClose}>
+              <button className="btn ghost" type="button" onClick={close}>
                 Cancel
               </button>
               {authType === "google" && !googleReady ? (
-                <button className="btn" type="button" disabled={busy} onClick={() => void verifyGoogle()}>
+                <button className="btn" type="button" disabled={busy || !ack} onClick={() => void verifyGoogle()}>
                   {busy ? "Redirecting…" : "Verify with Google"}
                 </button>
               ) : (
@@ -120,7 +132,7 @@ export function ExportKeyModal({ authType, exportGrant, onClose, onExport, onVer
               />
             </div>
             <div className="modal-actions">
-              <button className="btn" type="button" onClick={onClose}>
+              <button className="btn" type="button" onClick={close}>
                 Done
               </button>
             </div>

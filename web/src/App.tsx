@@ -10,6 +10,7 @@ import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
 import { isCustodialSession } from "./lib/session";
+import { useCustodialSign } from "./context/CustodialSignContext";
 import { fetchGoogleAccount, setTransactionPin } from "./lib/custodialClient";
 import { SetPinModal } from "./components/SetPinModal";
 import { LandingPage } from "./components/LandingPage";
@@ -81,6 +82,7 @@ export function App() {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const { setSigningReady } = useCustodialSign();
   const [lease, setLease] = useState<ActiveLease | null>(null);
   const [session, setSessionState] = useState<Session | null>(loadSession);
   const [wallet, setWallet] = useState<WalletSummary | null>(null);
@@ -215,6 +217,11 @@ export function App() {
       cancel = true;
     };
   }, [session, setSession]);
+
+  useEffect(() => {
+    const social = !!session && isCustodialSession(session);
+    setSigningReady(!social || session?.pinSet === true);
+  }, [session, setSigningReady]);
 
   async function savePin(pin: string) {
     if (!session) return;

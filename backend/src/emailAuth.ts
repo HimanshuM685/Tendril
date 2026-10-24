@@ -69,7 +69,7 @@ export async function emailRegister(req: Request, res: Response) {
   await ensureCustodialGasRequest(user);
 
   const body: EmailSessionResponse = {
-    token: issueEmailSession(user.id, user.address, user.email),
+    token: issueEmailSession(user.id, user.address, user.email, user.auth_epoch ?? 0),
     address: user.address,
     email: user.email,
     name: user.name,
@@ -104,7 +104,7 @@ export async function emailLogin(req: Request, res: Response) {
   const fresh = (await findUserById(user.id))!;
 
   const body: EmailSessionResponse = {
-    token: issueEmailSession(fresh.id, fresh.address, fresh.email),
+    token: issueEmailSession(fresh.id, fresh.address, fresh.email, fresh.auth_epoch ?? 0),
     address: fresh.address,
     email: fresh.email,
     name: fresh.name,

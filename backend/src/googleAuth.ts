@@ -18,6 +18,7 @@ import {
   linkGoogleSub,
   touchUserLogin,
 } from "./db.js";
+import { bindExportGrant, createExportChallenge } from "./securityDb.js";
 import { creditBalance } from "./x402/credit.js";
 import type { GoogleSessionResponse } from "@tendril/shared";
 
@@ -44,24 +45,10 @@ export function googleStart(_req: Request, res: Response) {
   res.redirect(`${GOOGLE_AUTH}?${params}`);
 }
 
-const exportGrants = new Map<string, { userId: string; expiresAt: number }>();
-
-/** One-time proof that this user just signed in with Google again. About 2 minutes. */
-export function issueExportGrant(userId: string): string {
-  const code = nanoid();
-  exportGrants.set(code, { userId, expiresAt: Date.now() + 2 * 60 * 1000 });
-  return code;
-}
-
-export function consumeExportGrant(code: string, userId: string): boolean {
-  const row = exportGrants.get(code);
-  exportGrants.delete(code);
-  if (!row || row.expiresAt <= Date.now() || row.userId !== userId) return false;
-  return true;
-}
-
 /** Google authorize URL that must be the same account as `userId`. */
-export function googleReauthUrl(userId: string): string {
+export async function googleReauthUrl(userId: string): Promise<string> {
+  const state = issueGoogleExportState(userId);
+  await createExportChallenge(userId, state, Date.now() + 10 * 60 * 1000);
   const params = new URLSearchParams({
     client_id: config.googleClientId,
     redirect_uri: config.googleRedirectUri,
@@ -69,7 +56,7 @@ export function googleReauthUrl(userId: string): string {
     scope: "openid email profile",
     access_type: "online",
     prompt: "login",
-    state: issueGoogleExportState(userId),
+    state,
   });
   return `${GOOGLE_AUTH}?${params}`;
 }
@@ -123,7 +110,11 @@ export async function googleCallback(req: Request, res: Response) {
       if (!owner?.google_sub || owner.google_sub !== profile.sub) {
         return res.redirect(`${config.webOrigin}/auth/google?error=google_mismatch`);
       }
-      const grant = issueExportGrant(owner.id);
+      const grant = nanoid();
+      const bound = await bindExportGrant(state, grant, Date.now() + 2 * 60 * 1000);
+      if (!bound) {
+        return res.redirect(`${config.webOrigin}/auth/google?error=invalid_state`);
+      }
       return res.redirect(
         `${config.webOrigin}/auth/google?exportGrant=${encodeURIComponent(grant)}`,
       );
@@ -181,7 +172,7 @@ export async function googleSessionExchange(req: Request, res: Response) {
   if (!user) return res.status(404).json({ error: "user not found" });
 
   const body: GoogleSessionResponse = {
-    token: issueGoogleSession(user.id, user.address, user.email),
+    token: issueGoogleSession(user.id, user.address, user.email, user.auth_epoch ?? 0),
     address: user.address,
     email: user.email,
     name: user.name,

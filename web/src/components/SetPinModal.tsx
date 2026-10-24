@@ -20,7 +20,7 @@ export function SetPinModal({ busy, error, onSave }: Props) {
         </div>
         <div className="modal-body">
           <p>
-            Your PIN is not set. Choose a <strong>4-digit PIN</strong> for future transactions.
+            Your transaction PIN is not set. Create a 4-digit PIN before spending from your custodial wallet.
           </p>
           <p className="muted small">
             Approve will ask for this PIN. It is not your email password, and wallet sign-in does not use it.

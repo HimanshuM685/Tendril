@@ -4,12 +4,13 @@ interface Props {
   summary: string;
   details: string;
   busy: boolean;
+  error: string | null;
   onApprove: (pin: string) => void;
   onCancel: () => void;
 }
 
 /** Mandatory approval plus the 4-digit PIN before a custodial signature. */
-export function SignConfirmModal({ summary, details, busy, onApprove, onCancel }: Props) {
+export function SignConfirmModal({ summary, details, busy, error, onApprove, onCancel }: Props) {
   const [pin, setPin] = useState("");
   const ready = /^\d{4}$/.test(pin);
 
@@ -38,6 +39,7 @@ export function SignConfirmModal({ summary, details, busy, onApprove, onCancel }
           </p>
           <p className="muted small">{details}</p>
           <p className="muted small">Enter your 4-digit PIN. The custodial wallet signs only after it matches.</p>
+          {error && <p className="modal-err">{error}</p>}
           <label className="muted small" htmlFor="tx-pin">
             Transaction PIN
             <input
