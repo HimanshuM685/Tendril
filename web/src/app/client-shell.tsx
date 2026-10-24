@@ -1,15 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { WebRuntime } from "./web-runtime";
 
-const WebRuntime = dynamic(
-  () => import("./web-runtime").then((module) => module.WebRuntime),
-  {
-    ssr: false,
-    loading: () => <div className="app-loading" aria-live="polite">Loading Tendril…</div>,
-  },
-);
-
-export function ClientShell() {
-  return <WebRuntime />;
+export function ClientShell({ initialPath = "/" }: { initialPath?: string }) {
+  return <WebRuntime initialPath={initialPath} />;
 }

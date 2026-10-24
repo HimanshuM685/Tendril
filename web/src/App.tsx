@@ -10,6 +10,7 @@ import { fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
 import { isCustodialSession } from "./lib/session";
+import { LandingPage } from "./components/LandingPage";
 
 export type Session = {
   token: string;
@@ -23,8 +24,8 @@ const SESSION_KEY = "tendril.session";
 
 // Keep first paint small. Wallet chrome stays eager; route screens and modals
 // load only when their route/state needs them.
-const Marketplace = lazy(() => import("./components/Marketplace").then(({ Marketplace }) => ({ default: Marketplace })));
-const LandingPage = lazy(() => import("./components/LandingPage").then(({ LandingPage }) => ({ default: LandingPage })));
+const loadMarketplace = () => import("./components/Marketplace").then(({ Marketplace }) => ({ default: Marketplace }));
+const Marketplace = lazy(loadMarketplace);
 const BrandGuidelinesPage = lazy(() => import("./components/BrandGuidelinesPage").then(({ BrandGuidelinesPage }) => ({ default: BrandGuidelinesPage })));
 const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ DocsRedirect }) => ({ default: DocsRedirect })));
 const Legal = lazy(() => import("./components/Legal").then(({ Legal }) => ({ default: Legal })));
@@ -100,6 +101,17 @@ export function App() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [path]);
+
+  // Marketplace is next route reached from landing CTAs. Load its chunk while
+  // user is reading landing content so navigation does not reveal Suspense UI.
+  useEffect(() => {
+    if (!isLanding) return;
+    const prefetch = () => { void loadMarketplace(); };
+    const idle = window.setTimeout(prefetch, 700);
+    return () => {
+      window.clearTimeout(idle);
+    };
+  }, [isLanding]);
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
@@ -198,9 +210,7 @@ export function App() {
   if (isLanding) {
     return (
       <div className="app app-landing">
-        <Suspense fallback={<p className="muted">Loading Tendril…</p>}>
-          <LandingPage />
-        </Suspense>
+        <LandingPage />
       </div>
     );
   }

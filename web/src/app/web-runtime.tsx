@@ -1,7 +1,7 @@
 "use client";
 
 import { StrictMode } from "react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import {
   NetworkId,
   WalletId,
@@ -11,7 +11,6 @@ import {
 import { App } from "../App";
 import { CustodialSignProvider } from "../context/CustodialSignContext";
 import { network } from "../lib/network";
-import "lute-connect";
 
 const walletManager = new WalletManager({
   wallets: [
@@ -22,14 +21,14 @@ const walletManager = new WalletManager({
   defaultNetwork: network.network === "mainnet" ? NetworkId.MAINNET : NetworkId.TESTNET,
 });
 
-export function WebRuntime() {
+export function WebRuntime({ initialPath = "/" }: { initialPath?: string }) {
   return (
     <StrictMode>
       <CustodialSignProvider>
         <WalletProvider manager={walletManager}>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          {typeof window === "undefined"
+            ? <MemoryRouter initialEntries={[initialPath]}><App /></MemoryRouter>
+            : <BrowserRouter><App /></BrowserRouter>}
         </WalletProvider>
       </CustodialSignProvider>
     </StrictMode>

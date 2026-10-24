@@ -31,6 +31,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <link rel="dns-prefetch" href="//docs.tendrilhq.com" />
+        <link rel="preconnect" href="https://docs.tendrilhq.com" />
+      </head>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );

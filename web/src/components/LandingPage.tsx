@@ -407,7 +407,13 @@ export function LandingPage() {
             {/*  Right Hero Mockup with lake-Valley.jpg  */}
             <div className="hero-visual reveal-on-scroll reveal-stagger-1">
               <div className="hero-art-frame">
-                <img src="/assets/lake-Valley.jpg" alt="Painted green landscape" className="hero-art-img" />
+                <img
+                  src="/assets/lake-Valley.jpg"
+                  alt="Painted green landscape"
+                  className="hero-art-img"
+                  fetchPriority="high"
+                  decoding="async"
+                />
 
                 {/*  Floating Node Explorer Card  */}
                 <div className="hero-floating-card">
@@ -539,20 +545,20 @@ export function LandingPage() {
               </div>
 
               <div className="partner-logo partner-logo--color">
-                <img src="/assets/agentmesh-color.png" alt="" width="32" height="32" />
+                <img src="/assets/agentmesh-color.png" alt="" width="32" height="32" loading="lazy" decoding="async" />
                 <span>AgentMesh</span>
               </div>
 
               <div className="partner-logo partner-logo--color">
-                <img src="/assets/claude-wordmark.svg" alt="Claude" width="147" height="32" />
+                <img src="/assets/claude-wordmark.svg" alt="Claude" width="147" height="32" loading="lazy" decoding="async" />
               </div>
 
               <div className="partner-logo">
-                <img src="/assets/e2b-wordmark.svg" alt="E2B for Startups" width="256" height="32" />
+                <img src="/assets/e2b-wordmark.svg" alt="E2B for Startups" width="256" height="32" loading="lazy" decoding="async" />
               </div>
 
               <div className="partner-logo partner-logo--openai">
-                <img src="/assets/OpenAI.svg" alt="OpenAI" width="118" height="32" />
+                <img src="/assets/OpenAI.svg" alt="OpenAI" width="118" height="32" loading="lazy" decoding="async" />
               </div>
             </TrustedMarquee>
           </div>
