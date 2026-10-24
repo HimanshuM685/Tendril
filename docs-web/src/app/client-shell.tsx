@@ -1,15 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { DocsRuntime } from "./docs-runtime";
 
-const DocsRuntime = dynamic(
-  () => import("./docs-runtime").then((module) => module.DocsRuntime),
-  {
-    ssr: false,
-    loading: () => <div className="docs-page-wrapper" aria-live="polite">Loading documentation…</div>,
-  },
-);
-
-export function ClientShell() {
-  return <DocsRuntime />;
+export function ClientShell({ initialPath = "/" }: { initialPath?: string }) {
+  return <DocsRuntime initialPath={initialPath} />;
 }

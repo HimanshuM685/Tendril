@@ -1,15 +1,15 @@
 "use client";
 
 import { StrictMode } from "react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { Docs } from "../components/Docs";
 
-export function DocsRuntime() {
+export function DocsRuntime({ initialPath = "/" }: { initialPath?: string }) {
   return (
     <StrictMode>
-      <BrowserRouter>
-        <Docs />
-      </BrowserRouter>
+      {typeof window === "undefined"
+        ? <MemoryRouter initialEntries={[initialPath]}><Docs /></MemoryRouter>
+        : <BrowserRouter><Docs /></BrowserRouter>}
     </StrictMode>
   );
 }
