@@ -1,10 +1,10 @@
 # Tendril Terms of Service
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 These Terms describe use of Tendril's compute marketplace. They are a product
-description and an agreement template; they are not legal advice. Replace the
-contact placeholder and have counsel review before publishing.
+description and an agreement template; they are not legal advice. Confirm the
+contact mailbox and have counsel review before publishing.
 
 ## 1. Service
 
@@ -14,9 +14,11 @@ nodes operated by independent contributors. Hosted notebook capacity and
 contributor-run nodes may have different surfaces, availability, prices, and
 limits.
 
-Tendril is not a bank, payment account, custodian of user investment funds, or
-provider of guaranteed compute capacity. The service does not pay interest on
-balances and a credit balance is not a deposit.
+Tendril is not a bank, investment account, or provider of guaranteed compute
+capacity. The service does not pay interest and does not maintain segregated
+deposit accounts. For custodial accounts, Tendril holds and signs with a
+platform-managed Algorand wallet. Prepaid credit is an off-chain service ledger,
+not a bank balance or an investment product.
 
 ## 2. Identity and accounts
 
@@ -65,8 +67,8 @@ For a metered session, the gate fee is separate from usage. Tendril starts the
 meter when the sandbox is ready and closes it on release, watchdog close, or
 another terminal event. The close calculation uses the seconds the sandbox
 actually ran, prorated at the node rate. A session charge is capped by available
-credit; a one-shot run can be charged for its actual execution and may leave a
-negative credit balance that must be topped up before further use.
+credit; a leaseless code run can be charged for its actual execution and may
+leave a negative credit balance that must be topped up before further use.
 
 When credit runs out, an idle watchdog may allow a grace window worth 1.00 USDC
 at that node's rate before force-closing the sandbox, subject to deployment
@@ -80,9 +82,12 @@ ledger permits.
 For contributor-run nodes, collected usage is credited to the contributor's
 earnings ledger when the lease closes. Earnings are not sent on-chain per lease.
 The contributor may withdraw the full available balance once it reaches the
-5.00 USDC minimum and the payout address has opted into the payment asset. A
-failed on-chain send restores the debited earnings balance; a successful send is
-recorded with its transaction id.
+5.00 USDC minimum and the payout address has opted into the payment asset, if
+withdrawals are enabled for the deployment. If Tendril determines that an
+on-chain send failed before completion, it restores the debited earnings
+balance and records the failed attempt. A confirmed send is recorded with its
+transaction id, but a process failure or uncertain chain result may require
+manual reconciliation and is not guaranteed to restore automatically.
 
 Contributors must operate only software and hardware they control, keep their
 daemon and runtime supported, accurately advertise capacity and price, protect
@@ -139,5 +144,5 @@ updated version will carry a new last-updated date. Continued use after an
 effective update means you accept the updated Terms to the extent allowed by
 law.
 
-Contact: **[legal contact to be added]**. This placeholder must be replaced
-before publication.
+Contact: **legal@tendrilhq.com** or the Tendril GitHub repository. Confirm that
+this mailbox is monitored before publication.

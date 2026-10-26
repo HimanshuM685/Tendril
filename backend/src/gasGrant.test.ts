@@ -11,11 +11,16 @@ import {
 } from "./gasGrant.js";
 
 // Self-fund before any request → permanently ineligible.
-assert.equal(shouldMarkGasGrantIneligible(false, 0), false, "zero balance stays eligible");
+assert.equal(shouldMarkGasGrantIneligible(false, 0, 0), false, "zero ALGO and USDC stays eligible");
 assert.equal(
   shouldMarkGasGrantIneligible(false, 260_000),
   true,
   "nonzero balance without a request marks ineligible",
+);
+assert.equal(
+  shouldMarkGasGrantIneligible(false, 0, 1),
+  true,
+  "positive USDC without a request marks ineligible",
 );
 assert.equal(
   shouldMarkGasGrantIneligible(true, 500_000),
@@ -25,20 +30,31 @@ assert.equal(
 
 // Submit gate: exactly zero ALGO, eligible, no prior row.
 assert.equal(canSubmitGasGrant(true, 0, false), true, "new zero-balance account may request");
+assert.equal(canSubmitGasGrant(true, 0, false, 1), false, "USDC-funded account cannot request");
 assert.equal(canSubmitGasGrant(false, 0, false), false, "self-funded user blocked at zero");
 assert.equal(canSubmitGasGrant(true, 1, false), false, "nonzero balance blocked");
 assert.equal(canSubmitGasGrant(true, 0, true), false, "duplicate request blocked by row");
 
 // Custodial login uses the same zero-balance onboarding gate.
 assert.equal(
-  shouldCreateCustodialGasRequest(true, 0, false),
+  shouldCreateCustodialGasRequest(true, true, 0, false),
   true,
   "new custodial zero-balance account gets onboarding request",
 );
 assert.equal(
-  shouldCreateCustodialGasRequest(true, 0, true),
+  shouldCreateCustodialGasRequest(true, true, 0, true),
   false,
   "custodial login does not duplicate request",
+);
+assert.equal(
+  shouldCreateCustodialGasRequest(true, true, 0, false, 1),
+  false,
+  "new account with self-funded USDC gets no request",
+);
+assert.equal(
+  shouldCreateCustodialGasRequest(false, true, 0, false),
+  false,
+  "existing account never gets a new onboarding request",
 );
 
 // Accept retries never resend gas after a recorded delivery or observed balance.

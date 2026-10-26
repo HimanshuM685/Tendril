@@ -262,7 +262,54 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS users_address_idx ON users (address);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS gas_grant_eligible BOOLEAN NOT NULL DEFAULT TRUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_epoch INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS custodial_sign_requests (
+      id                 TEXT PRIMARY KEY,
+      user_id            TEXT NOT NULL,
+      action             TEXT NOT NULL,
+      payload_json       TEXT NOT NULL,
+      payload_hash       TEXT NOT NULL,
+      summary            TEXT NOT NULL,
+      details            TEXT NOT NULL,
+      status             TEXT NOT NULL,
+      expires_at         BIGINT NOT NULL,
+      consumed_at        BIGINT,
+      created_at         BIGINT NOT NULL,
+      client_request_id  TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS custodial_sign_client_uniq
+      ON custodial_sign_requests (user_id, client_request_id)
+      WHERE client_request_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS custodial_sign_user_idx
+      ON custodial_sign_requests (user_id, status, expires_at);
+
+    CREATE TABLE IF NOT EXISTS pin_attempts (
+      subject            TEXT PRIMARY KEY,
+      window_started_at  BIGINT NOT NULL,
+      failure_count      INTEGER NOT NULL,
+      locked_until       BIGINT
+    );
+
+    CREATE TABLE IF NOT EXISTS export_challenges (
+      id           TEXT PRIMARY KEY,
+      user_id      TEXT NOT NULL,
+      provider     TEXT NOT NULL,
+      state_hash   TEXT UNIQUE,
+      grant_hash   TEXT UNIQUE,
+      expires_at   BIGINT NOT NULL,
+      consumed_at  BIGINT,
+      created_at   BIGINT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS export_events (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL,
+      created_at  BIGINT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS export_events_user_idx ON export_events (user_id, created_at DESC);
     CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
 
     CREATE TABLE IF NOT EXISTS platform_settings (
@@ -304,6 +351,8 @@ export interface DbUser {
   address: string;
   encrypted_mnemonic: string;
   password_hash: string | null;
+  pin_hash: string | null;
+  auth_epoch: number;
   created_at: number;
   last_login_at: number;
   gas_grant_eligible: boolean;
@@ -321,6 +370,22 @@ export async function findUserById(id: string): Promise<DbUser | null> {
 
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
   const rows = await q<DbUser>("SELECT * FROM users WHERE LOWER(email) = LOWER($1)", [email]);
+  return rows[0] ?? null;
+}
+
+/** Link verified Google identity to an existing email account without changing its wallet. */
+export async function linkGoogleSub(
+  userId: string,
+  googleSub: string,
+  name?: string | null,
+): Promise<DbUser | null> {
+  const rows = await q<DbUser>(
+    `UPDATE users
+     SET google_sub = $2, name = COALESCE(name, $3), last_login_at = $4
+     WHERE id = $1 AND (google_sub IS NULL OR google_sub = $2)
+     RETURNING *`,
+    [userId, googleSub, name ?? null, Date.now()],
+  );
   return rows[0] ?? null;
 }
 
@@ -375,6 +440,19 @@ export async function setEmailAuthEnabled(enabled: boolean): Promise<void> {
      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
     [EMAIL_AUTH_SETTING, enabled ? "true" : "false"],
   );
+}
+
+export async function replaceUserPin(userId: string, pinHash: string): Promise<void> {
+  await q(`UPDATE users SET pin_hash = $2 WHERE id = $1`, [userId, pinHash]);
+}
+
+/** First PIN only. A second call does not replace an existing hash. */
+export async function setUserPin(userId: string, pinHash: string): Promise<boolean> {
+  const rows = await q<{ id: string }>(
+    `UPDATE users SET pin_hash = $2 WHERE id = $1 AND pin_hash IS NULL RETURNING id`,
+    [userId, pinHash],
+  );
+  return rows.length > 0;
 }
 
 export async function touchUserLogin(id: string): Promise<void> {

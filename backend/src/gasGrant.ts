@@ -16,8 +16,9 @@ import { nanoid } from "nanoid";
 export function shouldMarkGasGrantIneligible(
   hasGasRequestRow: boolean,
   algoMicro: number,
+  usdcAtomic = 0,
 ): boolean {
-  return !hasGasRequestRow && algoMicro > 0;
+  return !hasGasRequestRow && (algoMicro > 0 || usdcAtomic > 0);
 }
 
 /** Google custodial: observe on-chain balance; flip eligibility when self-funded. */
@@ -25,8 +26,8 @@ export async function syncGoogleGasGrantEligibility(userId: string, address: str
   const existing = await findGasRequestByUserId(userId);
   if (existing) return;
 
-  const { algoMicro } = await googleAccountInfo(address);
-  if (shouldMarkGasGrantIneligible(false, algoMicro)) {
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(address);
+  if (shouldMarkGasGrantIneligible(false, algoMicro, usdcAtomic)) {
     await setGasGrantIneligible(userId);
   }
 }
@@ -36,8 +37,8 @@ export async function syncWalletGasGrantEligibility(address: string): Promise<vo
   const existing = await findGasRequestByAddress(address);
   if (existing) return;
 
-  const { algoMicro } = await googleAccountInfo(address);
-  if (shouldMarkGasGrantIneligible(false, algoMicro)) {
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(address);
+  if (shouldMarkGasGrantIneligible(false, algoMicro, usdcAtomic)) {
     await setWalletGasGrantIneligible(address);
   }
 }
@@ -50,8 +51,9 @@ export function canSubmitGasGrant(
   gasGrantEligible: boolean,
   algoMicro: number,
   hasGasRequestRow: boolean,
+  usdcAtomic = 0,
 ): boolean {
-  return gasGrantEligible && algoMicro === 0 && !hasGasRequestRow;
+  return gasGrantEligible && algoMicro === 0 && usdcAtomic === 0 && !hasGasRequestRow;
 }
 
 /**
@@ -59,11 +61,13 @@ export function canSubmitGasGrant(
  * during login instead of waiting for the wallet UI to make a second request.
  */
 export function shouldCreateCustodialGasRequest(
+  isNewAccount: boolean,
   gasGrantEligible: boolean,
   algoMicro: number,
   hasGasRequestRow: boolean,
+  usdcAtomic = 0,
 ): boolean {
-  return canSubmitGasGrant(gasGrantEligible, algoMicro, hasGasRequestRow);
+  return isNewAccount && canSubmitGasGrant(gasGrantEligible, algoMicro, hasGasRequestRow, usdcAtomic);
 }
 
 /**
@@ -89,8 +93,8 @@ export async function ensureCustodialGasRequest(user: DbUser): Promise<DbGasRequ
   const fresh = await findUserById(user.id);
   if (!fresh) return null;
 
-  const { algoMicro } = await googleAccountInfo(fresh.address);
-  if (!shouldCreateCustodialGasRequest(fresh.gas_grant_eligible, algoMicro, false)) {
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(fresh.address);
+  if (!shouldCreateCustodialGasRequest(true, fresh.gas_grant_eligible, algoMicro, false, usdcAtomic)) {
     return null;
   }
 

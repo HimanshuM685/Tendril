@@ -69,12 +69,13 @@ export async function emailRegister(req: Request, res: Response) {
   await ensureCustodialGasRequest(user);
 
   const body: EmailSessionResponse = {
-    token: issueEmailSession(user.id, user.address, user.email),
+    token: issueEmailSession(user.id, user.address, user.email, user.auth_epoch ?? 0),
     address: user.address,
     email: user.email,
     name: user.name,
     balanceAtomic: await creditBalance(user.address),
     authType: "email",
+    pinSet: false,
   };
   res.status(201).json(body);
 }
@@ -102,15 +103,14 @@ export async function emailLogin(req: Request, res: Response) {
   await touchUserLogin(user.id);
   const fresh = (await findUserById(user.id))!;
 
-  await ensureCustodialGasRequest(fresh);
-
   const body: EmailSessionResponse = {
-    token: issueEmailSession(fresh.id, fresh.address, fresh.email),
+    token: issueEmailSession(fresh.id, fresh.address, fresh.email, fresh.auth_epoch ?? 0),
     address: fresh.address,
     email: fresh.email,
     name: fresh.name,
     balanceAtomic: await creditBalance(fresh.address),
     authType: "email",
+    pinSet: !!fresh.pin_hash,
   };
   res.json(body);
 }

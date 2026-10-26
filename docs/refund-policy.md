@@ -1,9 +1,9 @@
 # Tendril Refund Policy
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 This policy explains how failed work and prepaid credit are handled. It is a
-product policy and is not legal advice. Replace the contact placeholder before
+product policy and is not legal advice. Confirm the contact mailbox before
 publication.
 
 ## 1. Prepaid credit
@@ -39,16 +39,18 @@ uncharged. The job result reports the failure through its polling endpoint.
 ## 3. Run failures and actual usage
 
 Execution failure, timeout, or a failed program is not automatically a refund
-when compute actually ran. Tendril closes the run and bills the seconds the
-sandbox actually ran at the selected node's rate. A failed result can therefore
-include an execution charge. A run that fails before execution starts does not
-receive an execution-time charge; its already-settled gate fee, if any, is not
-automatically reversed.
+when compute actually ran. For a leaseless run, Tendril closes the temporary
+sandbox and bills the seconds it actually ran at the selected node's rate. A
+failed result can therefore include an execution charge. A run that fails before
+execution starts does not receive an execution-time charge; its already-settled
+gate fee, if any, is not automatically reversed.
 
 For a job executed inside an existing lease, the job's gate payment is settled
-after execution succeeds. If execution fails before that settlement, the job
-gate fee is not settled, while the existing lease remains governed by its own
-meter and close rules.
+after the provider returns a result, including a result reporting a failed
+program. If the provider fails before returning a result, the job gate fee is
+not settled. The existing lease remains active and is governed by its own meter
+and close rules; its accumulated usage is charged when that lease is later
+closed.
 
 ## 4. Grace and lease close
 
@@ -70,13 +72,17 @@ transfer after the 5.00 USDC minimum is met. Tendril debits the earnings ledger
 before sending to prevent double payment. If the on-chain send is known to have
 failed, Tendril restores the debited balance and records the failed attempt.
 
-If a transfer is confirmed on-chain, Tendril cannot promise reversal. Verify the
-destination address and asset opt-in before withdrawing.
+If a transfer is confirmed on-chain, Tendril cannot promise reversal. A
+withdrawal also requires the deployment's payout configuration, the minimum
+balance, and asset opt-in. Verify the destination address and asset opt-in
+before withdrawing.
 
 ## 6. Contact and disputes
 
 For a suspected duplicate charge, incorrect usage duration, failed provisioning
 outcome, or withdrawal problem, preserve the request id, job or lease id,
-transaction id, and response, then contact **[support contact to be added]**.
+transaction id, and response, then contact **support@tendrilhq.com** or the
+Tendril GitHub repository. Confirm that this mailbox is monitored before
+publication.
 Do not send private keys, seed phrases, API keys, or other secrets in a support
 request.

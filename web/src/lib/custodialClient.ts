@@ -102,14 +102,35 @@ export async function prepareCustodial(
 export async function confirmCustodial<T = unknown>(
   token: string,
   requestId: string,
+  pin: string,
 ): Promise<T> {
   const res = await fetch(`${REGISTRY_URL}/auth/google/confirm`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ requestId }),
+    body: JSON.stringify({ requestId, pin }),
   });
   if (!res.ok) throw await apiError(res, "confirm");
   return res.json();
+}
+
+export async function setTransactionPin(token: string, pin: string): Promise<void> {
+  const res = await fetch(`${REGISTRY_URL}/auth/pin`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+  if (!res.ok) throw await apiError(res, "pin");
+}
+
+export async function startGoogleReauth(token: string): Promise<string> {
+  const res = await fetch(`${REGISTRY_URL}/auth/google/reauth`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "google verification");
+  const body = (await res.json()) as { url?: string };
+  if (!body.url) throw new Error("google verification failed");
+  return body.url;
 }
 
 export async function fetchGasRequest(token: string): Promise<GasRequestInfo | null> {
@@ -129,11 +150,14 @@ export async function submitGasRequest(token: string): Promise<GasRequestInfo> {
   return res.json();
 }
 
-export async function exportGoogleMnemonic(token: string): Promise<string> {
+export async function exportGoogleMnemonic(
+  token: string,
+  proof: { password?: string; exportGrant?: string },
+): Promise<string> {
   const res = await fetch(`${REGISTRY_URL}/auth/google/export-key`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ confirmed: true }),
+    body: JSON.stringify({ acknowledged: true, ...proof }),
   });
   if (!res.ok) throw await apiError(res, "export");
   const body = (await res.json()) as { mnemonic: string };

@@ -6,6 +6,7 @@ import {
   exportGoogleMnemonic,
   fetchGasRequest,
   fetchGoogleAccount,
+  startGoogleReauth,
   submitGasRequest,
 } from "../lib/custodialClient";
 import { useCustodialSign } from "../context/CustodialSignContext";
@@ -37,9 +38,11 @@ export function GoogleWalletBar({
   const [gasRequest, setGasRequest] = useState<GasRequestInfo | null | undefined>(undefined);
   const [gasBusy, setGasBusy] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportGrant, setExportGrant] = useState<string | null>(null);
   const [optInBusy, setOptInBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const reauthPopup = useRef<Window | null>(null);
 
   const loadAccount = async () => {
     try {
@@ -49,6 +52,32 @@ export function GoogleWalletBar({
       /* non-fatal */
     }
   };
+
+  useEffect(() => {
+    const grant = sessionStorage.getItem("tendril.exportGrant");
+    if (!grant || session.authType !== "google") return;
+    sessionStorage.removeItem("tendril.exportGrant");
+    setExportGrant(grant);
+    setExportOpen(true);
+  }, [session.authType]);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin || event.source !== reauthPopup.current) return;
+      const data = event.data as { type?: unknown; grant?: unknown; error?: unknown };
+      if (data.type === "tendril.google-export-grant" && typeof data.grant === "string") {
+        setExportGrant(data.grant);
+        setErr(null);
+        reauthPopup.current?.close();
+        reauthPopup.current = null;
+      } else if (data.type === "tendril.google-export-error") {
+        setErr(typeof data.error === "string" ? data.error : "Google verification failed");
+        reauthPopup.current = null;
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -177,11 +206,32 @@ export function GoogleWalletBar({
         </div>
       )}
 
-      {exportOpen && (
+      {exportOpen && session.authType && session.authType !== "wallet" && (
         <ExportKeyModal
-          onClose={() => setExportOpen(false)}
-          onExport={() => exportGoogleMnemonic(session.token)}
-        />
+          authType={session.authType}
+          exportGrant={exportGrant}
+          onClose={() => {
+            setExportOpen(false);
+            setExportGrant(null);
+          }}
+          onExport={(proof) => exportGoogleMnemonic(session.token, proof)}
+          onVerifyGoogle={async () => {
+            const popup = window.open(
+              "about:blank",
+              "tendril-google-export",
+              "popup,width=520,height=720,resizable=yes,scrollbars=yes",
+            );
+            if (!popup) throw new Error("Google verification popup was blocked");
+            reauthPopup.current = popup;
+            try {
+              popup.location.href = await startGoogleReauth(session.token);
+            } catch (e) {
+              popup.close();
+              reauthPopup.current = null;
+              throw e;
+            }
+          }}
+         />
       )}
     </div>
   );

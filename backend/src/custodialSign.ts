@@ -7,6 +7,8 @@ import { config } from "./config.js";
 import { accountFromUser } from "./custodialWallet.js";
 import { custodialPayingFetchForUser, internalRegistryUrl } from "./custodialX402.js";
 import { findUserById, type DbUser } from "./db.js";
+import { consumeSignRequest, insertSignRequest } from "./securityDb.js";
+import { canonicalJson, payloadHash } from "./signIntent.js";
 import { algod } from "./wallet.js";
 import { hasOptedIn } from "./payout.js";
 import { creditBalance } from "./x402/credit.js";
@@ -27,16 +29,6 @@ export type PrepareAction =
   | { action: "release"; leaseId: string; leaseToken: string }
   | { action: "mintkey"; label?: string };
 
-interface PendingRequest {
-  userId: string;
-  summary: string;
-  details: string;
-  expiresAt: number;
-  run: () => Promise<unknown>;
-}
-
-const pending = new Map<string, PendingRequest>();
-
 /** Opt a custodial wallet into the payment asset (zero-amount self-transfer). */
 export async function optInUsdc(user: DbUser): Promise<string> {
   const account = accountFromUser(user);
@@ -54,153 +46,150 @@ export async function optInUsdc(user: DbUser): Promise<string> {
   return txid;
 }
 
-function prune() {
-  const now = Date.now();
-  for (const [id, req] of pending) {
-    if (req.expiresAt <= now) pending.delete(id);
+function describe(body: PrepareAction): { summary: string; details: string } {
+  switch (body.action) {
+    case "topup":
+      return {
+        summary: `Top up ${formatUsdc(body.amountAtomic)}`,
+        details: `Credit your prepaid balance from on-chain USDC.`,
+      };
+    case "optin":
+      return {
+        summary: "Opt in to USDC",
+        details: `Allow this wallet to hold USDC (asset ${config.assetId}) for payments.`,
+      };
+    case "rent":
+      return {
+        summary: `Rent node ${body.nodeId}`,
+        details: `Open a metered session (gate fee applies).`,
+      };
+    case "run":
+      return {
+        summary: "Run code (leaseless)",
+        details: `Execute a one-shot job; billed from credit when done.`,
+      };
+    case "release":
+      return {
+        summary: `Release lease ${body.leaseId.slice(0, 8)}…`,
+        details: `Close the session and bill for time used.`,
+      };
+    case "mintkey":
+      return {
+        summary: `Mint contributor API key`,
+        details: `One-time ${formatUsdc(config.flatMintKeyAtomic)} on-chain fee. Earnings pay to your custodial wallet.`,
+      };
+    default:
+      throw new Error("unknown action");
+  }
+}
+
+/** Every custodial spend. Confirm runs this from the stored payload, not a new browser body. */
+export async function executeCustodialAction(user: DbUser, body: PrepareAction): Promise<unknown> {
+  const pay = custodialPayingFetchForUser(user);
+  switch (body.action) {
+    case "topup": {
+      const res = await pay(`${internalRegistryUrl()}/x402/topup?amount=${body.amountAtomic}`, { method: "POST" });
+      if (!res.ok) await failPaid(res, "top-up");
+      return res.json();
+    }
+    case "optin":
+      return { txid: await optInUsdc(user) };
+    case "rent": {
+      const surface = body.surface === "jupyter" ? "jupyter" : undefined;
+      const url =
+        `${internalRegistryUrl()}/x402/rent?nodeId=${encodeURIComponent(body.nodeId)}` +
+        (surface ? `&surface=${surface}` : "");
+      const res = await pay(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...(body.sshPubKey ? { sshPubKey: body.sshPubKey } : {}),
+          ...(surface ? { surface } : {}),
+        }),
+      });
+      if (!res.ok) await failPaid(res, "rent");
+      return res.json();
+    }
+    case "run": {
+      const requestBody = body.notebook
+        ? {
+            notebook: body.notebook,
+            ...(body.lane ? { lane: body.lane } : {}),
+            ...(body.e2b ? { e2b: body.e2b } : {}),
+            ...(body.runtime ? { runtime: body.runtime } : {}),
+          }
+        : { payload: body.code };
+      const res = await pay(`${internalRegistryUrl()}/x402/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      if (!res.ok) await failPaid(res, "run");
+      return res.json();
+    }
+    case "release": {
+      const res = await pay(`${internalRegistryUrl()}/x402/leases/${encodeURIComponent(body.leaseId)}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${body.leaseToken}` },
+      });
+      if (!res.ok) await failPaid(res, "release");
+      return res.json();
+    }
+    case "mintkey": {
+      const label = String(body.label ?? "").slice(0, 64);
+      const sessionToken = issueGoogleSession(user.id, user.address, user.email, user.auth_epoch ?? 0);
+      const res = await pay(`${internalRegistryUrl()}/x402/keys`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ label }),
+      });
+      if (!res.ok) await failPaid(res, "mint key");
+      return res.json();
+    }
+    default:
+      throw new Error("unknown action");
   }
 }
 
 export async function prepareCustodialSign(
   userId: string,
   body: PrepareAction,
+  clientRequestId?: string | null,
 ): Promise<SignPrepareResponse> {
-  prune();
   const user = await findUserById(userId);
   if (!user) throw new Error("user not found");
-
-  const requestId = randomUUID();
-  let summary = "";
-  let details = "";
-  let run: () => Promise<unknown>;
-
-  switch (body.action) {
-    case "topup": {
-      summary = `Top up ${formatUsdc(body.amountAtomic)}`;
-      details = `Credit your prepaid balance from on-chain USDC.`;
-      const amount = body.amountAtomic;
-      const url = `${internalRegistryUrl()}/x402/topup?amount=${amount}`;
-      run = async () => {
-        const pay = custodialPayingFetchForUser(user);
-        const res = await pay(url, { method: "POST" });
-        if (!res.ok) await failPaid(res, "top-up");
-        return res.json();
-      };
-      break;
-    }
-    case "optin": {
-      summary = "Opt in to USDC";
-      details = `Allow this wallet to hold USDC (asset ${config.assetId}) for payments.`;
-      run = async () => ({ txid: await optInUsdc(user) });
-      break;
-    }
-    case "rent": {
-      summary = `Rent node ${body.nodeId}`;
-      details = `Open a metered session (gate fee applies).`;
-      const nodeId = body.nodeId;
-      const sshPubKey = body.sshPubKey ?? null;
-      const surface = body.surface === "jupyter" ? "jupyter" : undefined;
-      const url =
-        `${internalRegistryUrl()}/x402/rent?nodeId=${encodeURIComponent(nodeId)}` +
-        (surface ? `&surface=${surface}` : "");
-      run = async () => {
-        const pay = custodialPayingFetchForUser(user);
-        const res = await pay(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            ...(sshPubKey ? { sshPubKey } : {}),
-            ...(surface ? { surface } : {}),
-          }),
-        });
-        if (!res.ok) await failPaid(res, "rent");
-        return res.json();
-      };
-      break;
-    }
-    case "run": {
-      summary = "Run code (leaseless)";
-      details = `Execute a one-shot job; billed from credit when done.`;
-      const url = `${internalRegistryUrl()}/x402/run`;
-      const requestBody = body.notebook
-        ? { notebook: body.notebook, ...(body.lane ? { lane: body.lane } : {}), ...(body.e2b ? { e2b: body.e2b } : {}), ...(body.runtime ? { runtime: body.runtime } : {}) }
-        : { payload: body.code };
-      run = async () => {
-        const pay = custodialPayingFetchForUser(user);
-        const res = await pay(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(requestBody),
-        });
-        if (!res.ok) await failPaid(res, "run");
-        return res.json();
-      };
-      break;
-    }
-    case "release": {
-      summary = `Release lease ${body.leaseId.slice(0, 8)}…`;
-      details = `Close the session and bill for time used.`;
-      const leaseId = body.leaseId;
-      const token = body.leaseToken;
-      const url = `${internalRegistryUrl()}/x402/leases/${encodeURIComponent(leaseId)}`;
-      run = async () => {
-        const pay = custodialPayingFetchForUser(user);
-        const res = await pay(url, {
-          method: "DELETE",
-          headers: { authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) await failPaid(res, "release");
-        return res.json();
-      };
-      break;
-    }
-    case "mintkey": {
-      const label = String(body.label ?? "").slice(0, 64);
-      const fee = formatUsdc(config.flatMintKeyAtomic);
-      summary = `Mint contributor API key`;
-      details = `One-time ${fee} on-chain fee. Earnings pay to your custodial wallet.`;
-      const sessionToken = issueGoogleSession(user.id, user.address, user.email);
-      const url = `${internalRegistryUrl()}/x402/keys`;
-      run = async () => {
-        const pay = custodialPayingFetchForUser(user);
-        const res = await pay(url, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${sessionToken}`,
-          },
-          body: JSON.stringify({ label }),
-        });
-        if (!res.ok) await failPaid(res, "mint key");
-        return res.json();
-      };
-      break;
-    }
-    default:
-      throw new Error("unknown action");
-  }
-
-  pending.set(requestId, {
+  const { summary, details } = describe(body);
+  const payloadJson = canonicalJson(body);
+  const now = Date.now();
+  const row = await insertSignRequest({
+    id: randomUUID(),
     userId,
+    action: body.action,
+    payloadJson,
+    payloadHash: payloadHash(payloadJson),
     summary,
     details,
-    expiresAt: Date.now() + TTL_MS,
-    run,
+    status: "pending",
+    expiresAt: now + TTL_MS,
+    consumedAt: null,
+    createdAt: now,
+    clientRequestId: clientRequestId || null,
   });
-
-  return { requestId, summary, details };
+  return { requestId: row.id, summary: row.summary, details: row.details };
 }
 
-export async function confirmCustodialSign(
-  userId: string,
-  requestId: string,
-): Promise<unknown> {
-  prune();
-  const req = pending.get(requestId);
-  if (!req) throw new Error("request expired or not found");
-  if (req.userId !== userId) throw new Error("forbidden");
-  pending.delete(requestId);
-  return req.run();
+export async function confirmCustodialSign(userId: string, requestId: string): Promise<unknown> {
+  const row = await consumeSignRequest(requestId, userId);
+  if (!row || payloadHash(row.payloadJson) !== row.payloadHash) {
+    throw new Error("request expired or not found");
+  }
+  const user = await findUserById(userId);
+  if (!user) throw new Error("user not found");
+  const body = JSON.parse(row.payloadJson) as PrepareAction;
+  return executeCustodialAction(user, body);
 }
 
 export interface GoogleAccountInfo {
@@ -231,19 +220,6 @@ export async function googleAccountInfo(address: string): Promise<GoogleAccountI
     usdcOptedIn: optedIn,
     prepaidCreditAtomic: await creditBalance(address),
   };
-}
-
-/** Rate limit export-key: 3 per hour per user. */
-const exportLog = new Map<string, number[]>();
-
-export function checkExportRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const window = exportLog.get(userId) ?? [];
-  const recent = window.filter((t) => now - t < 3_600_000);
-  if (recent.length >= 3) return false;
-  recent.push(now);
-  exportLog.set(userId, recent);
-  return true;
 }
 
 export async function exportMnemonicForUser(userId: string): Promise<string> {

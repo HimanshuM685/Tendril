@@ -68,11 +68,14 @@ import {
   findGasRequestByUserId,
   findUserById,
   isWalletGasGrantEligible,
+  replaceUserPin,
+  setUserPin,
   listApiKeys,
   metrics,
   recordWithdrawal,
   revokeApiKey,
   type DbGasRequest,
+  type DbUser,
   walletSummary,
 } from "./db.js";
 import { hasOptedIn, payContributor, payoutsEnabled } from "./payout.js";
@@ -122,15 +125,27 @@ import {
   exportMnemonicForUser,
   googleAccountInfo,
   prepareCustodialSign,
-  checkExportRateLimit,
   type PrepareAction,
 } from "./custodialSign.js";
 import {
   googleCallback,
+  googleReauthUrl,
   googleSessionExchange,
   googleStart,
   isGoogleAuthEnabled,
 } from "./googleAuth.js";
+import { hashPin, isPin, verifyPin } from "./pin.js";
+import { verifyPassword } from "./password.js";
+import {
+  bumpAuthEpoch,
+  claimGoogleExport,
+  clearPinFailures,
+  consumeExportGrant,
+  claimExport,
+  expireSignRequests,
+  pinSubjectLocked,
+  recordPinFailure,
+} from "./securityDb.js";
 import { emailEnabled, emailLogin, emailRegister } from "./emailAuth.js";
 import { syncGasGrantEligibility, syncWalletGasGrantEligibility } from "./gasGrant.js";
 
@@ -218,39 +233,125 @@ router.post("/auth/email/register", guard(emailRegister));
 router.post("/auth/email/login", guard(emailLogin));
 
 router.get("/auth/google/account", guard(async (req: Request, res: Response) => {
-  const session = requireSessionInfo(req, res);
-  if (!session) return;
-  if (!requireCustodialSession(session, res)) return;
-  await syncGasGrantEligibility(session.userId, session.address);
-  const user = await findUserById(session.userId);
-  const info = await googleAccountInfo(session.address);
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  await syncGasGrantEligibility(user.id, user.address);
+  const info = await googleAccountInfo(user.address);
   res.json({
     ...info,
-    gasGrantEligible: user?.gas_grant_eligible ?? false,
+    gasGrantEligible: user.gas_grant_eligible ?? false,
+    pinSet: !!user.pin_hash,
   });
 }));
 
-router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
+router.post("/auth/pin", guard(async (req: Request, res: Response) => {
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const { pin } = (req.body ?? {}) as { pin?: unknown };
+  if (!isPin(pin)) return res.status(400).json({ error: "pin must be 4 digits" });
+  const saved = await setUserPin(user.id, await hashPin(pin));
+  if (!saved) return res.status(409).json({ error: "pin_already_set" });
+  res.json({ pinSet: true });
+}));
+
+router.post("/auth/google/reauth", guard(async (req: Request, res: Response) => {
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const session = sessionFromAuthHeader(req.header("authorization"));
+  if (session?.kind !== "google-session") {
+    return res.status(403).json({ error: "google sign-in required" });
+  }
+  if (!isGoogleAuthEnabled()) {
+    return res.status(503).json({ error: "Google sign-in is not configured on this deployment" });
+  }
+  // JSON, not a redirect: a browser navigation cannot send the session bearer.
+  res.json({ url: await googleReauthUrl(user.id) });
+}));
+
+router.post("/auth/pin/change", guard(async (req: Request, res: Response) => {
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const { currentPin, nextPin } = (req.body ?? {}) as { currentPin?: unknown; nextPin?: unknown };
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const locked = (await pinSubjectLocked(`user:${user.id}`)) ?? (await pinSubjectLocked(`ip:${ip}`));
+  if (locked) {
+    return res.status(429).json({ error: "too many pin attempts — try again later", retryAt: locked });
+  }
+  if (!user.pin_hash || !isPin(currentPin) || !(await verifyPin(currentPin, user.pin_hash))) {
+    await recordPinFailure(`user:${user.id}`);
+    await recordPinFailure(`ip:${ip}`);
+    return res.status(401).json({ error: "invalid pin" });
+  }
+  if (!isPin(nextPin)) return res.status(400).json({ error: "pin must be 4 digits" });
+  await clearPinFailures(`user:${user.id}`);
+  await clearPinFailures(`ip:${ip}`);
+  await replaceUserPin(user.id, await hashPin(nextPin));
+  await expireSignRequests(user.id);
+  res.json({ pinSet: true });
+}));
+
+router.post("/auth/pin/reset", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
   if (!requireCustodialSession(session, res)) return;
+  const user = await findUserById(session.userId);
+  if (!user || (user.auth_epoch ?? 0) !== (session.epoch ?? 0)) {
+    return res.status(401).json({ error: "session expired — sign in again" });
+  }
+  const { pin, password, exportGrant } = (req.body ?? {}) as {
+    pin?: unknown;
+    password?: unknown;
+    exportGrant?: unknown;
+  };
+  if (!isPin(pin)) return res.status(400).json({ error: "pin must be 4 digits" });
+  if (session.kind === "email-session") {
+    if (typeof password !== "string" || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: "invalid password" });
+    }
+  } else if (typeof exportGrant !== "string" || !(await consumeExportGrant(exportGrant, user.id))) {
+    return res.status(401).json({ error: "google verification required" });
+  }
+  await replaceUserPin(user.id, await hashPin(pin));
+  await bumpAuthEpoch(user.id);
+  await expireSignRequests(user.id);
+  res.json({ pinSet: true });
+}));
+
+router.post("/auth/google/prepare", guard(async (req: Request, res: Response) => {
+  const user = await custodialUser(req, res);
+  if (!user) return;
   try {
-    const body = req.body as PrepareAction;
-    if (!body?.action) return res.status(400).json({ error: "action required" });
-    res.json(await prepareCustodialSign(session.userId, body));
+    const raw = (req.body ?? {}) as PrepareAction & { clientRequestId?: string };
+    if (!raw.action) return res.status(400).json({ error: "action required" });
+    const clientRequestId = raw.clientRequestId;
+    const body = { ...raw };
+    delete body.clientRequestId;
+    res.json(await prepareCustodialSign(user.id, body, clientRequestId));
   } catch (e) {
     res.status(400).json({ error: (e as Error).message });
   }
 }));
 
 router.post("/auth/google/confirm", guard(async (req: Request, res: Response) => {
-  const session = requireSessionInfo(req, res);
-  if (!session) return;
-  if (!requireCustodialSession(session, res)) return;
-  const { requestId } = (req.body ?? {}) as { requestId?: string };
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const { requestId, pin } = (req.body ?? {}) as { requestId?: string; pin?: unknown };
   if (!requestId) return res.status(400).json({ error: "requestId required" });
+  if (!user.pin_hash) return res.status(403).json({ error: "pin_not_set" });
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const locked = (await pinSubjectLocked(`user:${user.id}`)) ?? (await pinSubjectLocked(`ip:${ip}`));
+  if (locked) {
+    return res.status(429).json({ error: "too many pin attempts — try again later", retryAt: locked });
+  }
+  if (!isPin(pin) || !(await verifyPin(pin, user.pin_hash))) {
+    await recordPinFailure(`user:${user.id}`);
+    await recordPinFailure(`ip:${ip}`);
+    return res.status(401).json({ error: "invalid pin" });
+  }
+  await clearPinFailures(`user:${user.id}`);
+  await clearPinFailures(`ip:${ip}`);
   try {
-    res.json(await confirmCustodialSign(session.userId, requestId));
+    res.json(await confirmCustodialSign(user.id, requestId));
   } catch (e) {
     res.status(400).json({ error: (e as Error).message });
   }
@@ -259,16 +360,41 @@ router.post("/auth/google/confirm", guard(async (req: Request, res: Response) =>
 router.post("/auth/google/export-key", guard(async (req: Request, res: Response) => {
   const session = requireSessionInfo(req, res);
   if (!session) return;
-  if (!requireCustodialSession(session, res)) return;
-  const { confirmed } = (req.body ?? {}) as { confirmed?: boolean };
-  if (!confirmed) return res.status(400).json({ error: "confirmation required" });
-  if (!checkExportRateLimit(session.userId)) {
-    return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const { acknowledged, password, exportGrant } = (req.body ?? {}) as {
+    acknowledged?: boolean;
+    password?: unknown;
+    exportGrant?: unknown;
+  };
+  if (acknowledged !== true) return res.status(400).json({ error: "acknowledgment required" });
+  if (session.kind === "email-session") {
+    if (typeof password !== "string" || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: "invalid password" });
+    }
+  } else if (session.kind !== "google-session") {
+    return res.status(403).json({ error: "custodial account sign-in required" });
   }
   try {
-    res.json({ mnemonic: await exportMnemonicForUser(session.userId) });
+    const mnemonic = await exportMnemonicForUser(user.id);
+    // Decrypt/read first. Quota and Google grant are consumed only after the
+    // key is available, so a storage or decryption failure does not burn access.
+    if (session.kind === "google-session") {
+      if (typeof exportGrant !== "string") {
+        return res.status(401).json({ error: "google verification required" });
+      }
+      const result = await claimGoogleExport(user.id, exportGrant);
+      if (result === "invalid") return res.status(401).json({ error: "google verification required" });
+      if (result !== "ok") return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+    } else {
+      const limit = await claimExport(user.id);
+      if (limit !== "ok") {
+        return res.status(429).json({ error: "export rate limit exceeded — try again later" });
+      }
+    }
+    res.json({ mnemonic });
   } catch (e) {
-    res.status(500).json({ error: (e as Error).message });
+    res.status(500).json({ error: "export failed" });
   }
 }));
 
@@ -286,20 +412,18 @@ function toGasRequestInfo(r: DbGasRequest): GasRequestInfo {
 }
 
 router.get("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
-  const session = requireSessionInfo(req, res);
-  if (!session) return;
-  if (!requireCustodialSession(session, res)) return;
-  const row = await findGasRequestByUserId(session.userId);
+  const user = await custodialUser(req, res);
+  if (!user) return;
+  const row = await findGasRequestByUserId(user.id);
   res.json(row ? toGasRequestInfo(row) : null);
 }));
 
 router.post("/auth/google/gas-request", guard(async (req: Request, res: Response) => {
-  const session = requireSessionInfo(req, res);
-  if (!session) return;
-  if (!requireCustodialSession(session, res)) return;
+  const user = await custodialUser(req, res);
+  if (!user) return;
   const existing =
-    (await findGasRequestByUserId(session.userId)) ??
-    (await findGasRequestByAddress(session.address));
+    (await findGasRequestByUserId(user.id)) ??
+    (await findGasRequestByAddress(user.address));
   if (existing) {
     return res.status(409).json({
       error: "gas already requested",
@@ -307,16 +431,16 @@ router.post("/auth/google/gas-request", guard(async (req: Request, res: Response
     });
   }
 
-  await syncGasGrantEligibility(session.userId, session.address);
-  const user = await findUserById(session.userId);
-  if (!user) return res.status(404).json({ error: "user not found" });
-  if (!user.gas_grant_eligible) {
+  await syncGasGrantEligibility(user.id, user.address);
+  const fresh = await findUserById(user.id);
+  if (!fresh) return res.status(404).json({ error: "user not found" });
+  if (!fresh.gas_grant_eligible) {
     return res.status(403).json({ error: "not eligible for gas grant" });
   }
 
-  const { algoMicro } = await googleAccountInfo(session.address);
-  if (algoMicro !== 0) {
-    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(user.address);
+  if (algoMicro !== 0 || usdcAtomic !== 0) {
+    return res.status(409).json({ error: "gas grant requires an unfunded ALGO and USDC balance" });
   }
 
   const row = await createGasRequest({
@@ -343,6 +467,7 @@ router.get("/auth/wallet/account", guard(async (req: Request, res: Response) => 
   res.json({
     ...info,
     gasGrantEligible: await isWalletGasGrantEligible(session.address),
+    pinSet: false,
   });
 }));
 
@@ -376,9 +501,9 @@ router.post("/auth/wallet/gas-request", guard(async (req: Request, res: Response
     return res.status(403).json({ error: "not eligible for gas grant" });
   }
 
-  const { algoMicro } = await googleAccountInfo(session.address);
-  if (algoMicro !== 0) {
-    return res.status(409).json({ error: "gas grant requires zero ALGO balance" });
+  const { algoMicro, usdcAtomic } = await googleAccountInfo(session.address);
+  if (algoMicro !== 0 || usdcAtomic !== 0) {
+    return res.status(409).json({ error: "gas grant requires an unfunded ALGO and USDC balance" });
   }
 
   const row = await createGasRequest({
@@ -1537,6 +1662,18 @@ function requireSessionInfo(req: Request, res: Response) {
     return null;
   }
   return info;
+}
+
+async function custodialUser(req: Request, res: Response): Promise<DbUser | null> {
+  const session = requireSessionInfo(req, res);
+  if (!session) return null;
+  if (!requireCustodialSession(session, res)) return null;
+  const user = await findUserById(session.userId);
+  if (!user || (user.auth_epoch ?? 0) !== (session.epoch ?? 0)) {
+    res.status(401).json({ error: "session expired — sign in again" });
+    return null;
+  }
+  return user;
 }
 
 function requireCustodialSession(

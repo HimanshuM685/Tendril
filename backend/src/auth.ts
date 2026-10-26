@@ -16,6 +16,8 @@ export interface SessionInfo {
   kind: SessionKind;
   userId?: string;
   email?: string;
+  /** Absent on tokens issued before epoch tracking. Treated as 0. */
+  epoch?: number;
 }
 
 export interface AdminInfo {
@@ -75,15 +77,15 @@ export function issueSession(address: string): string {
 }
 
 /** Mint a session token for a Google custodial user. */
-export function issueGoogleSession(userId: string, address: string, email: string): string {
-  return jwt.sign({ userId, address, email, kind: "google-session" }, config.jwtSecret, {
+export function issueGoogleSession(userId: string, address: string, email: string, epoch = 0): string {
+  return jwt.sign({ userId, address, email, kind: "google-session", epoch }, config.jwtSecret, {
     expiresIn: "7d",
   });
 }
 
 /** Mint a session token for an email/password custodial user. */
-export function issueEmailSession(userId: string, address: string, email: string): string {
-  return jwt.sign({ userId, address, email, kind: "email-session" }, config.jwtSecret, {
+export function issueEmailSession(userId: string, address: string, email: string, epoch = 0): string {
+  return jwt.sign({ userId, address, email, kind: "email-session", epoch }, config.jwtSecret, {
     expiresIn: "7d",
   });
 }
@@ -92,6 +94,23 @@ export function issueEmailSession(userId: string, address: string, email: string
 export function issueGoogleExchangeCode(userId: string): string {
   const jti = randomUUID();
   return jwt.sign({ userId, kind: "google-exchange", jti }, config.jwtSecret, { expiresIn: "60s" });
+}
+
+/** Signed OAuth `state` so a Google re-check can only export that user's key. */
+export function issueGoogleExportState(userId: string): string {
+  return jwt.sign({ userId, kind: "google-export", jti: randomUUID() }, config.jwtSecret, {
+    expiresIn: "10m",
+  });
+}
+
+export function verifyGoogleExportState(state: string): { userId: string } | null {
+  try {
+    const p = jwt.verify(state, config.jwtSecret) as { userId?: string; kind?: string };
+    if (p.kind !== "google-export" || !p.userId) return null;
+    return { userId: p.userId };
+  } catch {
+    return null;
+  }
 }
 
 export function verifyGoogleExchangeCode(code: string): { userId: string; jti: string } | null {
@@ -117,15 +136,17 @@ export function sessionFromAuthHeader(header?: string): SessionInfo | null {
       kind?: string;
       userId?: string;
       email?: string;
+      epoch?: number;
     };
+    const epoch = typeof p.epoch === "number" ? p.epoch : 0;
     if (p.kind === "session" && p.address) {
       return { address: p.address, kind: "session" };
     }
     if (p.kind === "google-session" && p.address && p.userId) {
-      return { address: p.address, kind: "google-session", userId: p.userId, email: p.email };
+      return { address: p.address, kind: "google-session", userId: p.userId, email: p.email, epoch };
     }
     if (p.kind === "email-session" && p.address && p.userId) {
-      return { address: p.address, kind: "email-session", userId: p.userId, email: p.email };
+      return { address: p.address, kind: "email-session", userId: p.userId, email: p.email, epoch };
     }
     return null;
   } catch {
