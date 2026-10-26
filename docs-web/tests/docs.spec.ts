@@ -53,6 +53,54 @@ test("anchors, page changes, and browser history select the correct document", a
   await expect(page).toHaveURL(/architecture-flow#machine-lifecycle$/);
 });
 
+test("TOC sidebar on API docs scrolls automatically to keep active section visible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/docs/api");
+
+  const initialScroll = await page.locator(".docs-toc-rail").evaluate((el) => el.scrollTop);
+  expect(initialScroll).toBe(0);
+
+  // Scroll to a section deep down in the page
+  await page.locator("#delete-x402leasesid").evaluate((el) => el.scrollIntoView({ block: "start" }));
+  await page.waitForTimeout(600);
+
+  // The active item in TOC should be the one scrolled to
+  const activeToc = page.locator(".docs-toc-rail .docs-toc-item.active");
+  await expect(activeToc).toContainText("DELETE /x402/leases/:id");
+
+  // TOC rail should have scrolled down automatically
+  const railScroll = await page.locator(".docs-toc-rail").evaluate((el) => el.scrollTop);
+  expect(railScroll).toBeGreaterThan(100);
+
+  // Active TOC item must be within visible bounds of TOC rail
+  const isVisibleInRail = await page.evaluate(() => {
+    const rail = document.querySelector(".docs-toc-rail")!;
+    const active = rail.querySelector(".docs-toc-item.active")!;
+    const railRect = rail.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    return activeRect.top >= railRect.top && activeRect.bottom <= railRect.bottom;
+  });
+  expect(isVisibleInRail).toBe(true);
+
+  // Scroll back to the top
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.waitForTimeout(600);
+  const topActive = page.locator(".docs-toc-rail .docs-toc-item.active");
+  // Click a link in the TOC
+  await page.locator(".docs-toc-rail").getByRole("link", { name: "POST /auth/wallet-login", exact: true }).click();
+  await page.waitForTimeout(600);
+  const authActive = page.locator(".docs-toc-rail .docs-toc-item.active");
+  await expect(authActive).toContainText("POST /auth/wallet-login");
+  const authVisible = await page.evaluate(() => {
+    const rail = document.querySelector(".docs-toc-rail")!;
+    const active = rail.querySelector(".docs-toc-item.active")!;
+    const railRect = rail.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    return activeRect.top >= railRect.top && activeRect.bottom <= railRect.bottom;
+  });
+  expect(authVisible).toBe(true);
+});
+
 test("legacy URLs and Markdown cross-references resolve to dedicated routes", async ({ page }) => {
   const legacy = [
     ["/docs", "/"],

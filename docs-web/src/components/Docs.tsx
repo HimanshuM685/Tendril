@@ -27,6 +27,7 @@ function Toc({ headings, path, active, onSelect }: {
     <nav className="docs-toc-links" aria-label="Page subsections">
       {headings.map((heading) => (
         <Link key={heading.id} to={`${path}#${heading.id}`} onClick={onSelect}
+          data-heading-id={heading.id}
           className={`docs-toc-item${heading.depth === 3 ? " docs-toc-subitem" : ""}${active === heading.id ? " active" : ""}`}
           aria-current={active === heading.id ? "location" : undefined}>
           {heading.text}
@@ -97,7 +98,9 @@ function useDocsScrollSpy(
       const article = contentRef.current;
       if (!article) return;
 
-      const headingElements = [...article.querySelectorAll<HTMLElement>("h2[id], h3[id]")];
+      const tocIds = page ? new Set(page.toc.map((h) => h.id)) : null;
+      const allHeadings = [...article.querySelectorAll<HTMLElement>("h2[id], h3[id]")];
+      const headingElements = tocIds ? allHeadings.filter((el) => tocIds.has(el.id)) : allHeadings;
       if (headingElements.length === 0) {
         setActiveHeading(firstHeadingId);
         return;
@@ -113,7 +116,7 @@ function useDocsScrollSpy(
       const scrollHeight = document.documentElement.scrollHeight;
       const clientHeight = window.innerHeight;
       const isScrollable = scrollHeight > clientHeight + 40;
-      const atBottom = isScrollable && window.scrollY + clientHeight >= scrollHeight - 8;
+      const atBottom = isScrollable && window.scrollY + clientHeight >= scrollHeight - 20;
 
       if (atBottom) {
         let lowest = headingElements[0];
@@ -185,6 +188,48 @@ function useDocsScrollSpy(
   }, [page, location.pathname, location.hash, contentRef, setActiveHeading]);
 }
 
+function useTocScroll(
+  railRef: React.RefObject<HTMLElement | null>,
+  activeHeading: string,
+  pathname: string,
+) {
+  const isInitial = useRef(true);
+
+  useEffect(() => {
+    isInitial.current = true;
+  }, [pathname]);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || !activeHeading) return;
+
+    if (rail.clientHeight === 0 || rail.scrollHeight <= rail.clientHeight) return;
+
+    const activeItem = rail.querySelector<HTMLElement>(`[data-heading-id="${CSS.escape(activeHeading)}"]`) ||
+      rail.querySelector<HTMLElement>(".docs-toc-item.active");
+    if (!activeItem) return;
+
+    const railRect = rail.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+
+    const linkScrollTop = rail.scrollTop + (itemRect.top - railRect.top);
+    const targetScroll = linkScrollTop - (rail.clientHeight / 2) + (itemRect.height / 2);
+    const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
+    const clampedTarget = Math.max(0, Math.min(maxScroll, Math.round(targetScroll)));
+
+    if (Math.abs(clampedTarget - rail.scrollTop) < 2) return;
+
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior = isInitial.current || prefersReducedMotion ? "instant" : "smooth";
+    isInitial.current = false;
+
+    rail.scrollTo({
+      top: clampedTarget,
+      behavior,
+    });
+  }, [activeHeading, pathname, railRef]);
+}
+
 export function Docs() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -200,6 +245,7 @@ export function Docs() {
   const searchRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const mobileTocRef = useRef<HTMLDetailsElement>(null);
+  const tocRailRef = useRef<HTMLElement>(null);
   const previousPath = useRef(location.pathname);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -284,6 +330,7 @@ export function Docs() {
   }, [location.pathname, location.hash, location.key, page, redirect]);
 
   useDocsScrollSpy(page, contentRef, setActiveHeading);
+  useTocScroll(tocRailRef, activeHeading, location.pathname);
 
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
 
@@ -478,7 +525,7 @@ export function Docs() {
             </> : <><p>This documentation page does not exist. Search above or choose a page from the navigation.</p><Link className="docs-launch-btn" to="/">Documentation home</Link></>}
           </article>
         </main>
-        {page && <aside className="docs-toc-rail" aria-label="On this page"><div className="docs-toc-header">On this page</div><Toc headings={page.toc} path={page.path} active={activeHeading} /></aside>}
+        {page && <aside ref={tocRailRef} className="docs-toc-rail" aria-label="On this page"><div className="docs-toc-header">On this page</div><Toc headings={page.toc} path={page.path} active={activeHeading} /></aside>}
       </div>
       <p className="docs-copy-status" role="status" aria-live="polite">{copyStatus}</p>
     </div>
