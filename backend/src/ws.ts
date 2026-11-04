@@ -82,8 +82,8 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
         socket.emit(WS.destroyContainer, { leaseId: msg.leaseId });
         return;
       }
-      // A renter who supplied a public key authenticates with it; otherwise the
-      // password is their own address (only possible when they are signed in).
+      // Contributor SSH always installs a public key. Password here is only for
+      // a sandbox started without one (one-shot jobs, not an SSH login).
       const usePubKey = pendingContainers.get(msg.leaseId)?.sshPubKey != null;
       const access: SandboxAccess = {
         kind: "ssh",

@@ -339,6 +339,15 @@ export async function initDb(): Promise<void> {
       address             TEXT PRIMARY KEY,
       gas_grant_eligible  BOOLEAN NOT NULL DEFAULT TRUE
     );
+
+    -- Display name and one OpenSSH public key per renter address.
+    -- Wallet sessions have no users row, so this is keyed by address.
+    CREATE TABLE IF NOT EXISTS renter_profiles (
+      address      TEXT PRIMARY KEY,
+      display_name TEXT,
+      ssh_pub_key  TEXT,
+      updated_at   BIGINT NOT NULL
+    );
   `),
   );
 }
@@ -371,6 +380,51 @@ export async function findUserById(id: string): Promise<DbUser | null> {
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
   const rows = await q<DbUser>("SELECT * FROM users WHERE LOWER(email) = LOWER($1)", [email]);
   return rows[0] ?? null;
+}
+
+export async function findUserByAddress(address: string): Promise<DbUser | null> {
+  const rows = await q<DbUser>("SELECT * FROM users WHERE address = $1", [address]);
+  return rows[0] ?? null;
+}
+
+export interface DbRenterProfile {
+  address: string;
+  display_name: string | null;
+  ssh_pub_key: string | null;
+  updated_at: number;
+}
+
+export async function findRenterProfile(address: string): Promise<DbRenterProfile | null> {
+  const rows = await q<DbRenterProfile>(
+    "SELECT * FROM renter_profiles WHERE address = $1",
+    [address],
+  );
+  return rows[0] ?? null;
+}
+
+/** Write the fields that were sent. A name change also updates a custodial users row. */
+export async function saveRenterProfile(
+  address: string,
+  patch: { displayName?: string; sshPubKey?: string | null },
+): Promise<DbRenterProfile> {
+  const now = Date.now();
+  const current = await findRenterProfile(address);
+  const displayName = patch.displayName !== undefined ? patch.displayName : (current?.display_name ?? null);
+  const sshPubKey = patch.sshPubKey !== undefined ? patch.sshPubKey : (current?.ssh_pub_key ?? null);
+  const rows = await q<DbRenterProfile>(
+    `INSERT INTO renter_profiles (address, display_name, ssh_pub_key, updated_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (address) DO UPDATE
+       SET display_name = EXCLUDED.display_name,
+           ssh_pub_key = EXCLUDED.ssh_pub_key,
+           updated_at = EXCLUDED.updated_at
+     RETURNING *`,
+    [address, displayName, sshPubKey, now],
+  );
+  if (patch.displayName !== undefined) {
+    await q("UPDATE users SET name = $2 WHERE address = $1", [address, patch.displayName]);
+  }
+  return rows[0];
 }
 
 /** Link verified Google identity to an existing email account without changing its wallet. */

@@ -142,7 +142,8 @@ export const ROUTES = {
           },
           sshPubKey: {
             type: "string",
-            description: "BODY field: OpenSSH public key to authorize. Optional.",
+            description:
+              "BODY field: OpenSSH public key to authorize. Optional when the payer already saved one on their profile.",
           },
         },
         required: ["nodeId"],

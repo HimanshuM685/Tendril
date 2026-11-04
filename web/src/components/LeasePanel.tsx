@@ -210,9 +210,7 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
         ) : ssh ? (
         <div className="ssh-access">
           <p className="muted small">
-            {ssh.authMethod === "publickey"
-              ? "Connect over SSH — your key is already authorized:"
-              : "Connect over SSH — your wallet address is the password:"}
+            Connect over SSH with the private key that matches your profile public key:
           </p>
           <div className="ssh-row">
             <code className="ssh-code">{ssh.command}</code>
@@ -220,15 +218,6 @@ export function LeasePanel({ lease, session, onRelease }: Props) {
               {copied === "cmd" ? "Copied!" : "Copy"}
             </button>
           </div>
-          {ssh.password && (
-            <div className="ssh-row">
-              <span className="muted small">password</span>
-              <code className="ssh-code">{ssh.password}</code>
-              <button className="btn ghost" onClick={() => copy("pw", ssh.password ?? "")}>
-                {copied === "pw" ? "Copied!" : "Copy"}
-              </button>
-            </div>
-          )}
           <p className="muted small">
             Billed by the second from your credit when you release. The countdown is when your
             credit runs out at this rate — top up and it moves out.

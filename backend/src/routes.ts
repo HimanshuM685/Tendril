@@ -66,8 +66,11 @@ import {
   createGasRequest,
   findGasRequestByAddress,
   findGasRequestByUserId,
+  findRenterProfile,
+  findUserByAddress,
   findUserById,
   isWalletGasGrantEligible,
+  saveRenterProfile,
   replaceUserPin,
   setUserPin,
   listApiKeys,
@@ -217,6 +220,54 @@ router.post("/auth/wallet-login", guard(async (req: Request, res: Response) => {
     balanceAtomic: await creditBalance(address),
   };
   res.json(body);
+}));
+
+// ─────────────────────── renter profile (name + SSH public key) ───────────────────────
+
+router.get("/me", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  const [profile, user] = await Promise.all([
+    findRenterProfile(session.address),
+    findUserByAddress(session.address),
+  ]);
+  res.json({
+    address: session.address,
+    name: user?.name ?? profile?.display_name ?? null,
+    sshPubKey: profile?.ssh_pub_key ?? null,
+  });
+}));
+
+router.patch("/me", guard(async (req: Request, res: Response) => {
+  const session = requireSessionInfo(req, res);
+  if (!session) return;
+  const body = (req.body ?? {}) as { name?: unknown; sshPubKey?: unknown };
+  const patch: { displayName?: string; sshPubKey?: string | null } = {};
+
+  if ("name" in body) {
+    if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 80) {
+      return res.status(400).json({ error: "invalid_name" });
+    }
+    patch.displayName = body.name.trim();
+  }
+
+  if ("sshPubKey" in body) {
+    const parsed = parseSshPubKey(body.sshPubKey);
+    if (!parsed.ok) return res.status(400).json({ error: "invalid_ssh_key" });
+    patch.sshPubKey = parsed.key;
+  }
+
+  if (!("name" in body) && !("sshPubKey" in body)) {
+    return res.status(400).json({ error: "nothing_to_update" });
+  }
+
+  const profile = await saveRenterProfile(session.address, patch);
+  const user = await findUserByAddress(session.address);
+  res.json({
+    address: session.address,
+    name: user?.name ?? profile.display_name,
+    sshPubKey: profile.ssh_pub_key,
+  });
 }));
 
 // ─────────────────────── Google OAuth (custodial login) ───────────────────────
@@ -862,10 +913,8 @@ async function rent(req: Request, res: Response) {
     });
   }
 
-  const sshPubKey = (req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey ?? null;
-  if (sshPubKey !== null && (typeof sshPubKey !== "string" || !isOpenSshPubKey(sshPubKey))) {
-    return res.status(400).json({ error: "invalid_ssh_key" });
-  }
+  const parsedKey = parseSshPubKey((req.body as { sshPubKey?: unknown } | undefined)?.sshPubKey);
+  if (!parsedKey.ok) return res.status(400).json({ error: "invalid_ssh_key" });
 
   // The payer is read off the verified transaction — the only trustworthy identity.
   const renter = paid.facts.payer;
@@ -918,6 +967,15 @@ async function rent(req: Request, res: Response) {
         `at least ${config.minLeaseSeconds}s of credit is required to open a session.`,
       creditAtomic: String(credit),
       rateAtomicPerHour: String(rate),
+    });
+  }
+
+  const storedKey = parsedKey.key ? null : (await findRenterProfile(renter))?.ssh_pub_key ?? null;
+  const sshPubKey = parsedKey.key ?? storedKey;
+  if (!sshPubKey) {
+    return res.status(400).json({
+      error: "ssh_key_required",
+      detail: "Add an SSH public key on your profile, or send sshPubKey in the rent body.",
     });
   }
 
@@ -1008,8 +1066,8 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
         config.graceAtomic,
         hostedReadyMs(node.provider),
       ),
-      // Hosted Jupyter never uses the wallet address as a password.
-      sshPassword: isHosted(node.provider) || sshPubKey ? null : renterAddr,
+      // Contributor SSH is public-key only. Hosted Jupyter has no SSH login.
+      sshPassword: null,
       sshPubKey: isHosted(node.provider) ? null : sshPubKey,
     });
     if (isHosted(node.provider)) activateLease(lease.id, access);
@@ -1724,6 +1782,15 @@ const SSH_PUBKEY =
 
 function isOpenSshPubKey(value: string): boolean {
   return SSH_PUBKEY.test(value.trim());
+}
+
+/** `null` means omitted or cleared. A private key or a bad line is not ok. */
+function parseSshPubKey(raw: unknown): { ok: true; key: string | null } | { ok: false } {
+  if (raw == null || raw === "") return { ok: true, key: null };
+  if (typeof raw !== "string") return { ok: false };
+  const key = raw.trim();
+  if (key.length > 4096 || /PRIVATE KEY/.test(key) || !isOpenSshPubKey(key)) return { ok: false };
+  return { ok: true, key };
 }
 
 router.use("/admin", adminRouter);

@@ -23,6 +23,36 @@ export const REGISTRY_URL = (
   process.env.NEXT_PUBLIC_REGISTRY_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
 
+export interface RenterProfile {
+  address: string;
+  name: string | null;
+  sshPubKey: string | null;
+}
+
+export async function fetchMe(token: string): Promise<RenterProfile> {
+  const res = await safeFetch(`${REGISTRY_URL}/me`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError(res, "profile");
+  return res.json();
+}
+
+export async function patchMe(
+  token: string,
+  patch: { name?: string; sshPubKey?: string | null },
+): Promise<RenterProfile> {
+  const res = await safeFetch(`${REGISTRY_URL}/me`, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw await apiError(res, "profile");
+  return res.json();
+}
+
 export const explorerTxUrl = (txid: string) => `${EXPLORER_URL}/transaction/${txid}`;
 export const explorerAddrUrl = (address: string) => `${EXPLORER_URL}/account/${address}`;
 

@@ -6,7 +6,7 @@ import { WalletBar } from "./components/WalletBar";
 import { Sidebar } from "./components/Sidebar";
 import { TendrilBrand } from "./components/TendrilBrand";
 import { loginWithWallet } from "./wallet";
-import { fetchWallet, type ActiveLease } from "./api";
+import { fetchMe, fetchWallet, type ActiveLease } from "./api";
 import { serializeSigner } from "./lib/x402Client";
 import { network } from "./lib/network";
 import { isCustodialSession } from "./lib/session";
@@ -48,6 +48,7 @@ const DocsRedirect = lazy(() => import("./components/DocsRedirect").then(({ Docs
 const Legal = lazy(() => import("./components/Legal").then(({ Legal }) => ({ default: Legal })));
 const Dashboard = lazy(() => import("./components/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
 const Metrics = lazy(() => import("./components/Metrics").then(({ Metrics }) => ({ default: Metrics })));
+const Profile = lazy(() => import("./components/Profile").then(({ Profile }) => ({ default: Profile })));
 const GoogleCallback = lazy(() => import("./components/GoogleCallback").then(({ GoogleCallback }) => ({ default: GoogleCallback })));
 const TopUpModal = lazy(() => import("./components/TopUpModal").then(({ TopUpModal }) => ({ default: TopUpModal })));
 const McpModal = lazy(() => import("./components/McpModal").then(({ McpModal }) => ({ default: McpModal })));
@@ -141,11 +142,26 @@ export function App() {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
+    if (!session) return;
+    let alive = true;
+    fetchMe(session.token)
+      .then((me) => {
+        if (!alive || !me.name || me.name === session.name) return;
+        setSession({ ...session, name: me.name });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [session?.token]);
+
+  useEffect(() => {
     const titles: Record<string, string> = {
       "/explore": "Explore",
       "/contribute": "Contribute",
       "/dashboard": "Dashboard",
       "/metrics": "Metrics",
+      "/profile": "Profile",
       "/api": "API",
       "/docs": "Docs",
       "/terms": "Terms of Service",
@@ -451,6 +467,18 @@ export function App() {
                 }
               />
               <Route path="/metrics" element={<Metrics />} />
+              <Route
+                path="/profile"
+                element={
+                  <Profile
+                    session={session}
+                    onName={(name) => {
+                      if (session) setSession({ ...session, name });
+                    }}
+                    onConnect={() => setConnectWalletOpen(true)}
+                  />
+                }
+              />
               <Route path="*" element={<Navigate to="/explore" replace />} />
             </Routes>
           </Suspense>

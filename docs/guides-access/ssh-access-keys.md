@@ -7,15 +7,15 @@ When a lease is ready, the registry returns its relay host and unique port. Use 
 Copy the SSH command from your active lease. For example:
 
 ```bash
-ssh root@bore.tendrilhq.com -p 38472
-# Password: your wallet address, unless you supplied an SSH public key
+ssh -i ~/.ssh/id_ed25519 root@bore.tendrilhq.com -p 38472
+# Uses the private key matching the public key on your profile. No password.
 ```
 
 The host and port above are illustrative. Always use the values returned for your lease.
 
 ## Use a public key
 
-Supply your SSH **public** key during checkout to enable key-based authentication. Keep the private key on your own client machine.
+Save your SSH **public** key on your profile, or send it as `sshPubKey` when you rent. Keep the private key on your own machine. Tendril never asks for it.
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 root@<lease-host> -p <lease-port>

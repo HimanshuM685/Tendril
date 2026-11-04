@@ -399,8 +399,8 @@ curl -s "https://facilitator.goplausible.xyz/discovery/resources?includeTestnets
 2. Show the node appear in **Explore** at `http://localhost:5173`.
 3. **Human path:** connect Pera (testnet) → **Top up** (one wallet approval, any amount) → watch
    the credit appear → click **Rent**. With enough credit that's **zero popups**; without, one 402
-   and one approval. A copyable **`ssh root@… -p …`** command appears (password = your wallet
-   address) with a countdown to `paidUntil`. `ssh` in. **Release** refunds the unused time as credit
+   and one approval. A copyable **`ssh root@… -p …`** command appears. Log in with the private key
+   that matches the public key on your profile. **Release** refunds the unused time as credit
    and destroys the sandbox.
 4. **Autonomous path:** run `npm run client` and narrate the logs — **no sign-in anywhere**. The
    agent tops up over x402, rents the cheapest node, runs a tiny training loop *on someone else's
@@ -440,11 +440,9 @@ accounts holding USDC).
   `503` with **nothing settled**, so a failed rent costs the caller nothing.
 - **Nodes + leases are in-memory:** a registry restart drops live sessions (the sockets die anyway).
   This is what keeps the DB quiet — heartbeats and the watchdog never write to Postgres.
-- **SSH auth** is a throwaway root container either way. Send `sshPubKey` in the rent body and it
-  becomes the container's `authorized_keys` (`authMethod: "publickey"`) — the only option that works
-  without a session, since there is no wallet address to use as a password. Otherwise it falls back
-  to a per-lease password (your wallet address), which is fine for ephemeral compute but is a
-  password, not a key.
+- **SSH auth** is a throwaway root container. Send `sshPubKey` in the rent body, or save one on
+  the renter profile. It becomes the container's `authorized_keys` (`authMethod: "publickey"`).
+  There is no wallet-address password. A rent with neither key returns `ssh_key_required`.
 - **Auth:** paying needs no account at all — the settled transaction's sender *is* the identity.
   A **session token** (minted after signing a login nonce) is only needed to *spend existing credit*.
   Unauthenticated callers can still hint `?payer=`, but the discount is floored at

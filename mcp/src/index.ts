@@ -134,7 +134,7 @@ server.tool(
   "Open a metered SSH sandbox. POST /x402/rent?nodeId=. Pick nodeId from tendril_list_nodes. Returns ssh command, leaseId, leaseToken. Gate fee on-chain; time bills from credit until tendril_release.",
   {
     nodeId: z.string().describe("Node id from tendril_list_nodes / GET /explorer"),
-    sshPubKey: z.string().optional().describe("OpenSSH public key to authorize; otherwise wallet address is the password"),
+    sshPubKey: z.string().optional().describe("OpenSSH public key to authorize. If omitted, the payer's saved profile key is used. Required when none is saved."),
   },
   async ({ nodeId, sshPubKey }) => {
     try {

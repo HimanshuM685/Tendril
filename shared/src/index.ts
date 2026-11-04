@@ -66,12 +66,11 @@ export interface SshAccess {
   port: number;
   username: string;
   /**
-   * `"publickey"` when the renter supplied an `sshPubKey` — the only option
-   * that works without a session, since there is no address to use as a
-   * password. `"password"` is the signed-in web flow.
+   * `"publickey"` for a contributor SSH lease. `"password"` remains for
+   * internal one-shot jobs that are not an SSH login.
    */
   authMethod: "password" | "publickey";
-  /** SSH password (the renter's address), or null under `"publickey"`. */
+  /** Null for public-key SSH. Set only for non-SSH job sandboxes. */
   password: string | null;
   /** Ready-to-copy connect command, e.g. "ssh root@bore.pub -p 12345". */
   command: string;

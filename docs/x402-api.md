@@ -496,7 +496,7 @@ at the end of a block they guessed wrong.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `nodeId` | string | no | Alternative to `?nodeId=`. The query parameter wins if both are given. |
-| `sshPubKey` | string | no | An OpenSSH public key line, e.g. `ssh-ed25519 AAAAC3Nza…`. Installed as the sandbox's `authorized_keys`; the response then has `authMethod: "publickey"` and `password: null`. **Without a session this is the only usable auth** — there is no address to use as a password. |
+| `sshPubKey` | string | no | An OpenSSH public key line, e.g. `ssh-ed25519 AAAAC3Nza…`. Installed as the sandbox's `authorized_keys`. The response has `authMethod: "publickey"` and `password: null`. If omitted, the payer's saved profile key is used. SSH rent fails with `ssh_key_required` when neither exists. The wallet address is not a password. |
 
 ```jsonc
 { "sshPubKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI… you@host" }
@@ -558,6 +558,7 @@ window closes. `GET /lease/:id` reports it as `graceUntil`. Top up during it and
 | `402` | `credit_exhausted` | The payer's balance is **negative** — an earlier `/x402/run` overdrew it. **Nothing settled.** Top up by at least the amount owed. Carries `creditAtomic`. |
 | `402` | `settlement_failed` | Sandbox came up but the gate fee would not settle. Sandbox torn down, node freed. Carries `detail`. |
 | `400` | `invalid_ssh_key` | `sshPubKey` is not a valid OpenSSH public key line. |
+| `400` | `ssh_key_required` | No public key in the body and none saved on the payer's profile. Nothing settled. |
 | `400` | `malformed_payment` | `PAYMENT-SIGNATURE` undecodable. |
 | `404` | `node_not_found` | No such node. |
 | `409` | `node_unavailable` | Node is offline or has missed heartbeats. |
@@ -612,8 +613,9 @@ export LEASE_TOKEN=$(jq -r .leaseToken lease.json)
 eval "$(jq -r .ssh.command lease.json)"      # actually connect
 ```
 
-Without a session, **omitting `sshPubKey` leaves you locked out**: the fallback password is the
-session address, and there isn't one. The rent still succeeds and still bills.
+**Omitting `sshPubKey` uses the public key saved on that payer's profile.** If there is no saved
+key either, the rent returns `400 ssh_key_required` and nothing is settled. There is no password
+fallback.
 
 Failures you can reproduce with `curl` alone, no signer:
 
@@ -1162,8 +1164,8 @@ const node = nodes
   .sort((a, b) => a.pricePerHourUsd - b.pricePerHourUsd)[0];
 if (!node) throw new Error("no node available");
 
-// 3. Open the session. Send a public key — without a session token it is the
-//    only usable auth, since there is no wallet address to use as a password.
+// 3. Open the session. Send a public key, or rely on the one saved on this
+//    payer's profile. There is no password login.
 const res = await pay(`${API}/x402/rent?nodeId=${node.id}`, {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -1185,9 +1187,9 @@ node rent.mjs
 # ssh root@bore.pub -p 41823
 ```
 
-No key yet? `ssh-keygen -t ed25519` first. Omitting `sshPubKey` falls back to password auth, but
-the password is the *session* address — so without signing in there is nothing to log in with. Send
-the key.
+No key yet? `ssh-keygen -t ed25519` on your own machine, then send `id_ed25519.pub` or save that
+line on your Tendril profile. Do not send the private key. Omitting `sshPubKey` works only when
+that payer already has a public key saved.
 
 ### Working, then stopping
 

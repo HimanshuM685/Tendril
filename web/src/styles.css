@@ -4484,7 +4484,8 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 6px;
 }
 
-.email-field input {
+.email-field input,
+.email-field textarea {
   padding: 9px 12px;
   border: 1px solid var(--border-subtle, #e6e7df);
   border-radius: var(--radius-sm, 6px);
@@ -4495,7 +4496,14 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   transition: all 0.16s ease;
 }
 
-.email-field input:focus {
+.email-field textarea {
+  resize: vertical;
+  font-family: var(--font-mono);
+  line-height: 1.45;
+}
+
+.email-field input:focus,
+.email-field textarea:focus {
   outline: none;
   border-color: var(--brand-green, #095D3B);
   background: #ffffff;

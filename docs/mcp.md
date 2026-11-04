@@ -155,7 +155,7 @@ HTTP shapes and errors: [api.md](./api.md) and [x402-api.md](./x402-api.md).
 
 1. `tendril_list_nodes` — pick an id.
 2. `tendril_rent` `{nodeId}`.
-3. SSH with the returned command (password is the wallet address unless you passed `sshPubKey`).
+3. SSH with the returned command. Pass `sshPubKey`, or save one on the payer profile. There is no password.
 4. `tendril_release` when done.
 
 **Share a machine**

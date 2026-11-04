@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { ExplorerNode, X402RentResponse, WalletSummary } from "@tendril/shared";
 import { formatUsdc } from "@tendril/shared";
-import { type ActiveLease, fetchExplorer, rentNode, releaseLease, toActiveLease } from "../api";
+import { type ActiveLease, fetchExplorer, fetchMe, rentNode, releaseLease, toActiveLease } from "../api";
 import type { PayStage, SignTransactions } from "../lib/x402Client";
 import { NO_E2B_SIZES, NotebookSection, type E2bSizes } from "./NotebookSection";
 import { useCustodialSign } from "../context/CustodialSignContext";
@@ -67,6 +67,7 @@ export function Explore({
   const [e2bSizes, setE2bSizes] = useState<E2bSizes>(NO_E2B_SIZES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileHint, setProfileHint] = useState(false);
   const [renting, setRenting] = useState<string | null>(null);
   const [stage, setStage] = useState<PayStage | "confirming" | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -126,10 +127,22 @@ export function Explore({
       setError("Please sign in to rent.");
       return;
     }
+    if (!session) {
+      setProfileHint(true);
+      setError("Sign in, then add an SSH public key on your profile before renting.");
+      return;
+    }
     setRenting(nodeId);
     setStage(null);
     setError(null);
+    setProfileHint(false);
     try {
+      const me = await fetchMe(session.token);
+      if (!me.sshPubKey) {
+        setProfileHint(true);
+        setError("Add an SSH public key on your profile before renting.");
+        return;
+      }
       let res: X402RentResponse;
       if (isCustodial && session) {
         setStage("confirming");
@@ -224,7 +237,15 @@ export function Explore({
 
       {error && (
         <div className="error" style={{ marginBottom: "20px" }}>
-          <span>{error}</span>
+          <span>
+            {error}
+            {profileHint && (
+              <>
+                {" "}
+                <Link to="/profile">Open profile</Link>
+              </>
+            )}
+          </span>
           <button className="error-dismiss" onClick={() => setError(null)}>&times;</button>
         </div>
       )}
