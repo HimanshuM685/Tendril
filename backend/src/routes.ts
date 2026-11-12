@@ -245,12 +245,6 @@ router.patch("/me", guard(async (req: Request, res: Response) => {
   const patch: { displayName?: string; sshPubKey?: string | null } = {};
 
   if ("name" in body) {
-    if (session.kind === "google-session") {
-      return res.status(403).json({
-        error: "name_locked",
-        detail: "Google accounts keep the name from Google.",
-      });
-    }
     if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 80) {
       return res.status(400).json({ error: "invalid_name" });
     }

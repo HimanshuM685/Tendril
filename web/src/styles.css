@@ -4502,11 +4502,6 @@ grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   line-height: 1.45;
 }
 
-.email-field input[readonly] {
-  background: #f4f5f0;
-  color: var(--text-muted, #6e7067);
-}
-
 .email-field input:focus,
 .email-field textarea:focus {
   outline: none;

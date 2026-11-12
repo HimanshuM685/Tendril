@@ -16,7 +16,6 @@ export function Profile({ session, onName, onConnect }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
-  const google = session?.authType === "google";
 
   useEffect(() => {
     if (!session) return;
@@ -108,11 +107,7 @@ export function Profile({ session, onName, onConnect }: Props) {
           style={{ maxWidth: 640, gap: 16 }}
           onSubmit={(e) => {
             e.preventDefault();
-            void save(
-              google
-                ? { sshPubKey: sshPubKey.trim() || null }
-                : { name: name.trim(), sshPubKey: sshPubKey.trim() || null },
-            );
+            void save({ name: name.trim(), sshPubKey: sshPubKey.trim() || null });
           }}
         >
           <label className="email-field">
@@ -121,12 +116,10 @@ export function Profile({ session, onName, onConnect }: Props) {
               type="text"
               autoComplete="name"
               maxLength={80}
-              required={!google}
-              readOnly={google}
+              required
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-            {google && <span className="muted small">Comes from your Google account.</span>}
           </label>
 
           <label className="email-field">
