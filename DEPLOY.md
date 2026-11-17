@@ -287,11 +287,12 @@ NODE_LABEL="ryzen-3090-box" PRICE_PER_HOUR_USD=2.0 SANDBOX_GPUS=all \
 ```
 
 Keep it alive with **pm2** (`pm2 start "npm run contributor" --name tendril-contributor`) or a systemd unit.
-The renter gets an `ssh root@<bore-host> -p <port>` command (password = the renter's wallet address).
+The renter gets an `ssh tendril@<bore-host> -p <port>` command (public-key only; `tendril` is an unprivileged user).
 
 Agent env vars: `TENDRIL_API_KEY` (required), `NODE_LABEL`, `PRICE_PER_HOUR_USD`, `SANDBOX_IMAGE`
 (defaults to the locally-built `tendril-ssh-sandbox`), `SANDBOX_MEMORY`, `SANDBOX_CPUS`,
-`SANDBOX_GPUS` (`all` to pass GPUs), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
+`SANDBOX_DISK` (writable scratch per sandbox), `SANDBOX_GPUS` (`all` to rent GPUs; opt-in), `SANDBOX_ALLOWED_IMAGES`
+(extra images this machine agrees to run), `SANDBOX_NET_GUARD` (`on`; keeps renters off your LAN), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
 backend isn't the hosted one). `BORE_SERVER`/`BORE_SECRET` are set on the **backend** and pushed to
 every agent, so a self-hosted bore server is one change in one place.
 

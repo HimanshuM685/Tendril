@@ -152,7 +152,7 @@ export const ROUTES = {
         example: {
           leaseId: "lease_9k2m",
           leaseToken: "eyJhbGciOi…",
-          ssh: { host: "bore.pub", port: 41823, username: "root", command: "ssh root@bore.pub -p 41823" },
+          ssh: { host: "bore.pub", port: 41823, username: "tendril", command: "ssh tendril@bore.pub -p 41823" },
           startedAt: "2026-08-01T10:14:02Z",
           fundedUntil: "2026-08-01T11:14:02Z",
         },

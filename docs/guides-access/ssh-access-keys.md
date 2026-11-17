@@ -7,7 +7,7 @@ When a lease is ready, the registry returns its relay host and unique port. Use 
 Copy the SSH command from your active lease. For example:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@bore.tendrilhq.com -p 38472
+ssh -i ~/.ssh/id_ed25519 tendril@bore.tendrilhq.com -p 38472
 # Uses the private key matching the public key on your profile. No password.
 ```
 
@@ -18,8 +18,12 @@ The host and port above are illustrative. Always use the values returned for you
 Save your SSH **public** key on your profile, or send it as `sshPubKey` when you rent. Keep the private key on your own machine. Tendril never asks for it.
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<lease-host> -p <lease-port>
+ssh -i ~/.ssh/id_ed25519 tendril@<lease-host> -p <lease-port>
 ```
+
+## Who you are inside
+
+You log in as `tendril`, an unprivileged user, not root. The root filesystem is read-only; `/work` (your home) and `/tmp` are writable, RAM-backed, and size-capped. They share the sandbox's memory limit with your processes, so a large dataset on disk leaves less RAM for compute. `pip install` into the venv at `/work/.venv` works; `apt install` and anything needing root does not.
 
 ## Host keys
 

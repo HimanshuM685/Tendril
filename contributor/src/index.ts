@@ -14,11 +14,15 @@ import {
 import { config } from "./config.js";
 import { detectSpecs } from "./specs.js";
 import {
+  SANDBOX_USER,
+  dockerPreflight,
   ensureImage,
+  ensureSandboxNetwork,
   runInSandbox,
   startSandbox,
   stopSandbox,
   stopWarmExecPool,
+  sweepOrphans,
   warmExecPool,
 } from "./docker.js";
 
@@ -34,10 +38,17 @@ const activeLeases = new Set<string>();
 let nodeId: string | undefined;
 
 async function main() {
-  // Build the bundled sandbox before registering. A first paid lease should
-  // not spend its registry timeout waiting for an image build.
+  // Host first: daemon posture, leftovers from a crashed agent, the private
+  // sandbox network. Then build the bundled sandbox before registering, so a
+  // first paid lease does not spend its registry timeout on an image build.
+  await dockerPreflight();
+  await sweepOrphans();
+  await ensureSandboxNetwork();
   await ensureImage(config.sandbox.image);
-  const specs = await detectSpecs();
+  const detected = await detectSpecs();
+  // GPUs are rented out only when the operator opted in with SANDBOX_GPUS, so
+  // what we advertise is exactly what a sandbox will get.
+  const specs = { ...detected, gpu: config.sandbox.gpus ? detected.gpu : null };
   // Keep only a couple of pristine, exact-profile exec containers ready. SSH
   // containers never enter this pool, and a failed warm-up does not block
   // registration; the first lease falls back to the normal cold path.
@@ -119,7 +130,7 @@ async function handleStart(socket: Socket, msg: StartContainerMsg) {
     }
     const ready: ContainerReadyMsg = { leaseId: msg.leaseId, host, port };
     socket.emit(WS.containerReady, ready);
-    console.log(`[agent] lease ${msg.leaseId} ready${msg.surface === "exec" ? " — private exec" : ` — ssh root@${host} -p ${port}`}`);
+    console.log(`[agent] lease ${msg.leaseId} ready${msg.surface === "exec" ? " — private exec" : ` — ssh ${SANDBOX_USER}@${host} -p ${port}`}`);
   } catch (err) {
     await handleDestroy(msg.leaseId);
     const failed: ContainerFailedMsg = { leaseId: msg.leaseId, error: (err as Error).message };

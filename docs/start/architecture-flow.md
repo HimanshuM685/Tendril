@@ -40,4 +40,4 @@ The facilitator follows **verify → work → settle**. Payment identity comes f
 - **Outbound-only NAT traversal:** the contributor's bore client initiates its tunnel; no port forwarding or static public IP is needed.
 - **Wallet decoupling:** the daemon holds an API key, not an Algorand private key. The wallet that minted the key owns the node and its earnings.
 - **Continuous metering:** runtime is tracked by the second and reconciled at release. A goodwill runtime grace window lets a renter save work if credit runs out.
-- **Sandbox isolation:** no host mounts, dropped Linux capabilities, `no-new-privileges`, hard resource limits, and automatic teardown.
+- **Sandbox isolation:** unprivileged user, all Linux capabilities dropped, `no-new-privileges`, read-only image with bounded scratch, no host mounts, LAN and host fenced off by a per-lease network guard, hard resource limits, and automatic teardown.

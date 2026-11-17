@@ -72,7 +72,7 @@ export interface SshAccess {
   authMethod: "password" | "publickey";
   /** Null for public-key SSH. Set only for non-SSH job sandboxes. */
   password: string | null;
-  /** Ready-to-copy connect command, e.g. "ssh root@bore.pub -p 12345". */
+  /** Ready-to-copy connect command, e.g. "ssh tendril@bore.pub -p 12345". */
   command: string;
 }
 

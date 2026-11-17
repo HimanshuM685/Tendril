@@ -19,13 +19,23 @@ sign-up and no sign-in.
 A contributor gives *compute*, never filesystem or account access. The safety boundary isn't a
 permissions system — it's an **ephemeral Docker container**:
 
+- the renter is an **unprivileged user** (`tendril`, uid 1000), never root — even sshd runs as
+  that user; `--cap-drop ALL` with nothing added back, `--security-opt no-new-privileges`,
+- **read-only image**; the only writable space is a size-capped, RAM-backed `/work` + `/tmp`,
+  so nothing a renter writes ever touches the host disk,
 - no host filesystem mounts (`-v` is never used),
-- no inbound host ports — the sandbox dials *out* over a [bore](https://github.com/ekzhang/bore)
-  tunnel for SSH (in local mode it publishes SSH only to `127.0.0.1`),
-- nearly all Linux capabilities dropped (`--cap-drop ALL` + only the handful sshd needs to let a
-  root password login in, `--security-opt no-new-privileges`),
-- hard CPU / memory / PID caps (cgroups),
+- a private bridge network with inter-container traffic off, plus a per-lease **guard** sidecar
+  that installs netfilter rules the sandbox cannot change: the contributor host, its LAN and
+  cloud metadata are unreachable from inside; the public internet stays reachable,
+- no inbound host ports — the guard dials *out* over a [bore](https://github.com/ekzhang/bore)
+  tunnel for SSH (in local mode it publishes SSH only to `127.0.0.1`); the relay secret is never
+  inside the sandbox,
+- hard CPU / memory / PID / file-size caps, bounded container logs, and the contributor's own
+  `SANDBOX_*` settings as ceilings the registry cannot exceed,
+- only the image the contributor configured is ever run (a lease naming anything else is refused),
 - **destroyed the moment the paid lease ends.**
+
+Full list and residual risks: [Security & Sandboxes](docs/guides-access/security-sandboxes.md).
 
 This is the same containerization trade-off the entire DePIN compute sector already runs on —
 Tendril just makes it prepaid and individual-scale.
@@ -101,8 +111,9 @@ Custom contributor images must supply `nbclient`, `nbformat`, `ipykernel`, and w
 - Results are in-memory: download promptly. Retained for up to one hour, subject to oldest-first
   eviction at 32 jobs or 64 MB total; restart or eviction makes old job tokens return `404`.
 
-Contributor one-shot sandboxes have no SSH/bore tunnel, no host mounts, no added capabilities,
-a read-only image, and bounded writable `/work`/`/tmp`. `%pip` installs into a disposable venv.
+Contributor one-shot sandboxes get the same hardening as SSH ones (unprivileged user, no
+capabilities, read-only image, bounded writable `/work`/`/tmp`, LAN fenced off) but no SSH server
+or bore tunnel. `%pip` installs into a disposable venv.
 Registry and contributor agents must both be updated; bundled sandbox image tags include a content
 hash and rebuild after Dockerfile changes. Explicit custom images need rebuilding by their operator.
 
@@ -399,7 +410,7 @@ curl -s "https://facilitator.goplausible.xyz/discovery/resources?includeTestnets
 2. Show the node appear in **Explore** at `http://localhost:5173`.
 3. **Human path:** connect Pera (testnet) → **Top up** (one wallet approval, any amount) → watch
    the credit appear → click **Rent**. With enough credit that's **zero popups**; without, one 402
-   and one approval. A copyable **`ssh root@… -p …`** command appears. Log in with the private key
+   and one approval. A copyable **`ssh tendril@… -p …`** command appears. Log in with the private key
    that matches the public key on your profile. **Release** refunds the unused time as credit
    and destroys the sandbox.
 4. **Autonomous path:** run `npm run client` and narrate the logs — **no sign-in anywhere**. The

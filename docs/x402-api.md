@@ -241,10 +241,10 @@ Base64 payload of `PAYMENT-RESPONSE`.
   "kind": "ssh",
   "host": "bore.pub",
   "port": 41823,
-  "username": "root",
+  "username": "tendril",
   "authMethod": "publickey",            // or "password"
   "password": null,                     // your address, under "password"
-  "command": "ssh root@bore.pub -p 41823"
+  "command": "ssh tendril@bore.pub -p 41823"
 }
 ```
 
@@ -521,10 +521,10 @@ Sandbox is up, the gate fee has settled, and the meter is running. Carries `PAYM
     "kind": "ssh",
     "host": "bore.pub",
     "port": 41823,
-    "username": "root",
+    "username": "tendril",
     "authMethod": "publickey",
     "password": null,
-    "command": "ssh root@bore.pub -p 41823"
+    "command": "ssh tendril@bore.pub -p 41823"
   },
   "startedAt": "2026-08-01T10:14:02.000Z",
   "fundedUntil": "2026-08-01T11:14:02.000Z",   // or "never" on a free node
@@ -600,7 +600,7 @@ curl -sS -X POST "$API/x402/rent?nodeId=$NODE" \
 
 ```json
 {
-  "cmd": "ssh root@bore.pub -p 41823",
+  "cmd": "ssh tendril@bore.pub -p 41823",
   "until": "2026-08-01T11:14:02.000Z"
 }
 ```
@@ -1176,7 +1176,7 @@ const res = await pay(`${API}/x402/rent?nodeId=${node.id}`, {
 if (!res.ok) throw new Error(`rent failed: ${res.status} ${await res.text()}`);
 const lease = await res.json();
 
-console.log(lease.ssh.command);                 // ssh root@bore.pub -p 41823
+console.log(lease.ssh.command);                 // ssh tendril@bore.pub -p 41823
 console.log("lease   ", lease.leaseId);
 console.log("token   ", lease.leaseToken);      // KEEP THIS — needed to release
 console.log("funded  ", lease.fundedUntil);     // when credit runs out at this rate
@@ -1184,7 +1184,7 @@ console.log("funded  ", lease.fundedUntil);     // when credit runs out at this 
 
 ```bash
 node rent.mjs
-# ssh root@bore.pub -p 41823
+# ssh tendril@bore.pub -p 41823
 ```
 
 No key yet? `ssh-keygen -t ed25519` on your own machine, then send `id_ed25519.pub` or save that

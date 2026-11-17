@@ -82,17 +82,17 @@ export function initWs(httpServer: HttpServer, corsOrigin: string | string[] = "
         socket.emit(WS.destroyContainer, { leaseId: msg.leaseId });
         return;
       }
-      // Contributor SSH always installs a public key. Password here is only for
-      // a sandbox started without one (one-shot jobs, not an SSH login).
-      const usePubKey = pendingContainers.get(msg.leaseId)?.sshPubKey != null;
+      // Contributor SSH is public-key only and logs in as the unprivileged
+      // `tendril` user; the contributor refuses to start an SSH sandbox
+      // without a key, so there is no password path to describe.
       const access: SandboxAccess = {
         kind: "ssh",
         host: msg.host,
         port: msg.port,
-        username: "root",
-        authMethod: usePubKey ? "publickey" : "password",
-        password: usePubKey ? null : lease.renterAddr,
-        command: `ssh root@${msg.host} -p ${msg.port}`,
+        username: "tendril",
+        authMethod: "publickey",
+        password: null,
+        command: `ssh tendril@${msg.host} -p ${msg.port}`,
       };
       // Marks the lease active and starts the billable window.
       activateLease(msg.leaseId, access);

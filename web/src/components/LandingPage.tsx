@@ -831,7 +831,7 @@ export function LandingPage() {
                         <div className="item-dot dot-active"></div>
                         <div className="item-details">
                           <strong>node-us-west-4090</strong>
-                          <span>ssh root@tunnel.tendril.work -p 22419 · 0.24 USDC/hr</span>
+                          <span>ssh tendril@tunnel.tendril.work -p 22419 · 0.24 USDC/hr</span>
                         </div>
                         <span className="match-score">Running</span>
                       </div>
@@ -839,7 +839,7 @@ export function LandingPage() {
                         <div className="item-dot dot-active"></div>
                         <div className="item-details">
                           <strong>node-eu-a100-80g</strong>
-                          <span>ssh root@tunnel.tendril.work -p 22894 · 0.78 USDC/hr</span>
+                          <span>ssh tendril@tunnel.tendril.work -p 22894 · 0.78 USDC/hr</span>
                         </div>
                         <span className="match-score">Running</span>
                       </div>
