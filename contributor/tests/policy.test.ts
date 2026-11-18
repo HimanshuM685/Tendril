@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { effectiveLimits, imageAllowed, parseMemory } from "../src/docker.js";
+import { effectiveLimits, hostAddrs, imageAllowed, parseMemory } from "../src/docker.js";
 
-const ceilings = { image: "tendril-ssh-sandbox:latest", allowedImages: ["ghcr.io/acme/cuda:12.4"], memory: "2g", cpus: 2, gpus: "" };
+const ceilings = {
+  image: "tendril-ssh-sandbox:latest",
+  allowedImages: ["ghcr.io/acme/cuda:12.4", "localhost:5000/tendril-cuda:1"],
+  memory: "2g",
+  cpus: 2,
+  gpus: "",
+};
 
 test("parseMemory understands docker size strings", () => {
   assert.equal(parseMemory("2g"), 2 * 1024 ** 3);
@@ -29,9 +35,25 @@ test("effectiveLimits never exceeds the operator's ceilings or the daemon", () =
 test("imageAllowed accepts only configured images with a sane reference", () => {
   assert.equal(imageAllowed("tendril-ssh-sandbox:latest", ceilings), true);
   assert.equal(imageAllowed("ghcr.io/acme/cuda:12.4", ceilings), true);
+  assert.equal(imageAllowed("localhost:5000/tendril-cuda:1", ceilings), true);
   assert.equal(imageAllowed("ubuntu:latest", ceilings), false);
   assert.equal(imageAllowed("--privileged", ceilings), false);
   assert.equal(imageAllowed("-v/:/host", ceilings), false);
   assert.equal(imageAllowed("", ceilings), false);
   assert.equal(imageAllowed("tendril-ssh-sandbox:latest --privileged", ceilings), false);
+});
+
+test("hostAddrs lists this host's external addresses plus operator extras", () => {
+  const ifaces = {
+    lo: [{ address: "127.0.0.1", internal: true }],
+    eth0: [
+      { address: "203.0.113.5", internal: false },
+      { address: "2001:db8::5%eth0", internal: false },
+    ],
+  } as any;
+  assert.deepEqual(hostAddrs(ifaces, ["198.51.100.7", "not-an-ip", "203.0.113.5"]), [
+    "203.0.113.5",
+    "2001:db8::5",
+    "198.51.100.7",
+  ]);
 });

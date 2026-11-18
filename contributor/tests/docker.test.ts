@@ -15,7 +15,7 @@ const exec = promisify(execFile);
 const image = process.env.TENDRIL_NOTEBOOK_TEST_IMAGE;
 
 // The test image stands in for the operator-configured one, so the policy
-// accepts it and the guard is built from it.
+// accepts it. Guards always run the bundled image, built from sandbox-ssh/.
 if (image) config.sandbox.image = image;
 
 async function inspect(name: string) {
@@ -63,9 +63,12 @@ test("contributor exec sandbox is unprivileged, fenced, supports writable pip, a
   const name = `tendril-${leaseId}`;
   await ensureSandboxNetwork();
   try {
-    const endpoint = await startSandbox(leaseId, image!, { cpus: 2, memory: "1g", gpus: "" }, null, null, "exec", 60_000);
+    const endpoint = await startSandbox(leaseId, image!, { cpus: 2, memory: "1g", gpus: "" }, null, "exec", 60_000);
     assert.equal(endpoint.port, 0);
-    assertHardened(await inspect(name));
+    const container = await inspect(name);
+    assertHardened(container);
+    // One-shot sandboxes publish nothing on the host.
+    assert.equal(Object.keys(container.HostConfig.PortBindings ?? {}).length, 0);
     // The one-shot guard has done its job and is gone.
     await assert.rejects(exec("docker", ["inspect", `${name}-guard`]));
 
@@ -129,7 +132,7 @@ test("contributor SSH sandbox logs in as tendril with a key only, and refuses ro
   config.tunnelMode = "local";
   await ensureSandboxNetwork();
   try {
-    const endpoint = await startSandbox(leaseId, image!, { cpus: 1, memory: "512m", gpus: "" }, null, pub, "ssh");
+    const endpoint = await startSandbox(leaseId, image!, { cpus: 1, memory: "512m", gpus: "" }, pub, "ssh");
     assert.equal(endpoint.host, "127.0.0.1");
     assertHardened(await inspect(name));
 

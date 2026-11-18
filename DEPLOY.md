@@ -292,7 +292,7 @@ The renter gets an `ssh tendril@<bore-host> -p <port>` command (public-key only;
 Agent env vars: `TENDRIL_API_KEY` (required), `NODE_LABEL`, `PRICE_PER_HOUR_USD`, `SANDBOX_IMAGE`
 (defaults to the locally-built `tendril-ssh-sandbox`), `SANDBOX_MEMORY`, `SANDBOX_CPUS`,
 `SANDBOX_DISK` (writable scratch per sandbox), `SANDBOX_GPUS` (`all` to rent GPUs; opt-in), `SANDBOX_ALLOWED_IMAGES`
-(extra images this machine agrees to run), `SANDBOX_NET_GUARD` (`on`; keeps renters off your LAN), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
+(extra images this machine agrees to run), `SANDBOX_NET_GUARD` (`on`; keeps renters off your LAN), `SANDBOX_BLOCK_ADDRS` (extra host IPs to fence off, e.g. a NAT'd public IP), `TUNNEL_MODE` (`bore`|`local`), `REGISTRY_URL` (only when the
 backend isn't the hosted one). `BORE_SERVER`/`BORE_SECRET` are set on the **backend** and pushed to
 every agent, so a self-hosted bore server is one change in one place.
 

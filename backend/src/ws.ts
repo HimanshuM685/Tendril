@@ -27,8 +27,6 @@ const pendingContainers = new Map<
   {
     resolve: (access: SandboxAccess) => void;
     reject: (err: Error) => void;
-    /** Set when the renter supplied a key, which decides `access.authMethod`. */
-    sshPubKey: string | null;
   }
 >();
 
@@ -146,15 +144,13 @@ export function startContainer(args: {
   leaseId: string;
   image: string;
   limits: SandboxLimits;
-  /** SSH password (the renter's address), or null under key auth. */
-  sshPassword: string | null;
   /** OpenSSH public key to install in the sandbox, or null. */
   sshPubKey: string | null;
   timeoutMs?: number;
   surface?: "ssh" | "exec";
   lifetimeMs?: number;
 }): Promise<SandboxAccess> {
-  const { nodeId, leaseId, image, limits, sshPassword, sshPubKey } = args;
+  const { nodeId, leaseId, image, limits, sshPubKey } = args;
   const timeoutMs = args.timeoutMs ?? config.sandboxReadyTimeoutMs;
   const socket = agentSockets.get(nodeId);
   if (!socket) return Promise.reject(new Error("node not connected"));
@@ -167,7 +163,6 @@ export function startContainer(args: {
     }, timeoutMs);
 
     pendingContainers.set(leaseId, {
-      sshPubKey,
       resolve: (access) => {
         clearTimeout(timer);
         resolve(access);
@@ -178,7 +173,7 @@ export function startContainer(args: {
       },
     });
 
-    const msg: StartContainerMsg = { leaseId, image, limits, sshPassword, sshPubKey, surface: args.surface, lifetimeMs: args.lifetimeMs };
+    const msg: StartContainerMsg = { leaseId, image, limits, sshPubKey, surface: args.surface, lifetimeMs: args.lifetimeMs };
     socket.emit(WS.startContainer, msg);
   });
 }
