@@ -67,6 +67,9 @@ export const config = {
     // Per-lease netfilter rules that keep the sandbox off this host's LAN,
     // the host itself, and cloud metadata. "off" only on an isolated box.
     netGuard: (process.env.SANDBOX_NET_GUARD ?? "on") === "off" ? "off" : "on",
+    // Extra addresses of this host to fence off, on top of its own interfaces:
+    // a NAT'd public IP, or the host's IPs when the agent itself runs in Docker.
+    blockAddrs: csv(process.env.SANDBOX_BLOCK_ADDRS),
     // Reverse tunnel the sandbox dials out to, to expose SSH publicly. NOT from
     // the environment: the registry sends these in the hello ack, so the
     // platform can move every node to a different bore server at once.

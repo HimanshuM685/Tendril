@@ -242,8 +242,8 @@ Base64 payload of `PAYMENT-RESPONSE`.
   "host": "bore.pub",
   "port": 41823,
   "username": "tendril",
-  "authMethod": "publickey",            // or "password"
-  "password": null,                     // your address, under "password"
+  "authMethod": "publickey",            // always; password login is not supported
+  "password": null,                     // always null
   "command": "ssh tendril@bore.pub -p 41823"
 }
 ```

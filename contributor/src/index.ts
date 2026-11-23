@@ -16,6 +16,7 @@ import { detectSpecs } from "./specs.js";
 import {
   SANDBOX_USER,
   dockerPreflight,
+  ensureBundledImage,
   ensureImage,
   ensureSandboxNetwork,
   runInSandbox,
@@ -45,6 +46,8 @@ async function main() {
   await sweepOrphans();
   await ensureSandboxNetwork();
   await ensureImage(config.sandbox.image);
+  // Every guard runs the bundled image, even when SANDBOX_IMAGE is custom.
+  await ensureBundledImage();
   const detected = await detectSpecs();
   // GPUs are rented out only when the operator opted in with SANDBOX_GPUS, so
   // what we advertise is exactly what a sandbox will get.
@@ -119,7 +122,6 @@ async function handleStart(socket: Socket, msg: StartContainerMsg) {
       msg.leaseId,
       msg.image,
       msg.limits,
-      msg.sshPassword,
       msg.sshPubKey,
       msg.surface ?? "ssh",
       msg.lifetimeMs,

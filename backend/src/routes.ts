@@ -1067,7 +1067,6 @@ async function provision(res: Response, args: ProvisionArgs): Promise<void> {
         hostedReadyMs(node.provider),
       ),
       // Contributor SSH is public-key only. Hosted Jupyter has no SSH login.
-      sshPassword: null,
       sshPubKey: isHosted(node.provider) ? null : sshPubKey,
     });
     if (isHosted(node.provider)) activateLease(lease.id, access);
@@ -1420,8 +1419,6 @@ async function runAnywhere(req: Request, res: Response, job: JobInput): Promise<
           gpus: node.gpu ? "all" : "",
         },
         timeoutMs: hostedReadyMs(node.provider) + budgetMs,
-        // One-shot sandboxes are not logged into. Never the wallet address.
-        sshPassword: isHosted(node.provider) ? null : nanoid(32),
         sshPubKey: null,
       });
       if (!activateLease(lease.id, access)) {
@@ -1520,7 +1517,6 @@ async function runNotebookJob(
         gpus: node.gpu ? "all" : "",
       },
       timeoutMs: readyTimeoutMs + budgetMs,
-      sshPassword: isHosted(node.provider) ? null : nanoid(32),
       sshPubKey: null,
     }).then(async (access) => {
       const lease = getLease(leaseId);

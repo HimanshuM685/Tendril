@@ -66,11 +66,11 @@ export interface SshAccess {
   port: number;
   username: string;
   /**
-   * `"publickey"` for a contributor SSH lease. `"password"` remains for
-   * internal one-shot jobs that are not an SSH login.
+   * Always `"publickey"` today. `"password"` stays in the type only so older
+   * clients that switch on it keep compiling.
    */
   authMethod: "password" | "publickey";
-  /** Null for public-key SSH. Set only for non-SSH job sandboxes. */
+  /** Always null: no sandbox accepts a password. */
   password: string | null;
   /** Ready-to-copy connect command, e.g. "ssh tendril@bore.pub -p 12345". */
   command: string;
@@ -371,12 +371,9 @@ export interface StartContainerMsg {
   leaseId: string;
   image: string;
   limits: SandboxLimits;
-  /** SSH password to set inside the sandbox (the renter's address), or null. */
-  sshPassword: string | null;
   /**
-   * OpenSSH public key to write to the sandbox's `authorized_keys`. Takes
-   * precedence over `sshPassword` and is the only option that works for a
-   * renter with no session (nothing to use as a password).
+   * OpenSSH public key to write to the sandbox's `authorized_keys`. Required
+   * for an SSH sandbox (login is public-key only); null for one-shot exec.
    */
   sshPubKey: string | null;
   /** One-shot jobs have no SSH server or bore tunnel. Old agents default to SSH. */

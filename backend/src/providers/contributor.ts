@@ -14,7 +14,6 @@ export async function start(args: StartArgs) {
     leaseId: args.leaseId,
     image: args.image,
     limits: args.limits,
-    sshPassword: args.sshPassword,
     sshPubKey: args.sshPubKey,
     surface: args.surface === "exec" ? "exec" : "ssh",
     lifetimeMs: args.timeoutMs,

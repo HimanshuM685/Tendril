@@ -77,6 +77,12 @@ install_rules() {
              127.0.0.0/8 0.0.0.0/8 224.0.0.0/4 240.0.0.0/4; do
     $IPT -w -A OUTPUT -d "$net" -j REJECT --reject-with icmp-admin-prohibited
   done
+  # The contributor host's own public addresses (a VPS IP is not private, but
+  # traffic to it lands on the host). HOST_ADDRS comes from the agent.
+  for ip in ${HOST_ADDRS:-}; do
+    case "$ip" in *:*) continue ;; esac
+    $IPT -w -A OUTPUT -d "$ip" -j REJECT --reject-with icmp-admin-prohibited
+  done
   # The public internet (pip, apt mirrors, APIs) stays reachable.
   $IPT -w -P OUTPUT ACCEPT
 
@@ -108,6 +114,9 @@ install_rules() {
     fi
     for net in fc00::/7 fe80::/10 ::1/128 ff00::/8; do
       $IP6T -w -A OUTPUT -d "$net" -j REJECT
+    done
+    for ip in ${HOST_ADDRS:-}; do
+      case "$ip" in *:*) $IP6T -w -A OUTPUT -d "$ip" -j REJECT ;; esac
     done
     $IP6T -w -P OUTPUT ACCEPT
     $IP6T -w -F INPUT

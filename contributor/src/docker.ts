@@ -1,7 +1,8 @@
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { createConnection, createServer } from "node:net";
+import { createConnection, createServer, isIP } from "node:net";
+import { networkInterfaces } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -23,6 +24,15 @@ const SANDBOX_UID = "1000";
 const SANDBOX_NETWORK = "tendril-sandbox";
 /** Every container we start carries this label, so a restart can sweep leftovers. */
 const LEASE_LABEL = "tendril.lease";
+/**
+ * Which agent owns a container. Stable across restarts of the same node (same
+ * API key) so a restart sweeps its own leftovers, and distinct per node so it
+ * never sweeps another agent's live sandboxes on a shared daemon.
+ */
+const AGENT_LABEL = "tendril.agent";
+const AGENT_ID = createHash("sha256").update(config.apiKey).digest("hex").slice(0, 16);
+/** The image built from sandbox-ssh/. Also the guard's image, whatever SANDBOX_IMAGE is. */
+const BUNDLED_IMAGE = "tendril-ssh-sandbox:latest";
 
 type ExecProfile = {
   image: string;
@@ -132,15 +142,18 @@ export function effectiveLimits(
   return { memory, cpus, gpus };
 }
 
-/** Image references we will ever hand to `docker run`. */
-const IMAGE_REF = /^[a-z0-9][a-z0-9._/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?(?:@sha256:[0-9a-f]{64})?$/;
+/**
+ * Never a flag, never whitespace. Deliberately not the full reference grammar:
+ * membership in the operator's list is the real check, and a stricter regex
+ * only refused valid listed refs (`registry:5000/img:tag`).
+ */
+const IMAGE_REF = /^[^-\s]\S*$/;
 
 /**
  * Only the image the operator configured (or explicitly allow-listed) is run.
  * The registry names an image per lease; a compromised or impersonated
  * registry must not be able to make every contributor pull and run an
- * arbitrary image. The shape check also guarantees the reference can never be
- * parsed as a `docker run` flag.
+ * arbitrary image.
  */
 export function imageAllowed(image: string, policy = config.sandbox): boolean {
   if (!IMAGE_REF.test(image)) return false;
@@ -171,7 +184,8 @@ export async function dockerPreflight(): Promise<void> {
     "{{json .SecurityOptions}} {{.ServerVersion}} {{.OperatingSystem}}",
   ]);
   const [json, ...rest] = stdout.trim().split(" ");
-  const opts: string[] = JSON.parse(json || "[]");
+  // `{{json .SecurityOptions}}` prints `null` on daemons that report none.
+  const opts: string[] = JSON.parse(json || "null") ?? [];
   const has = (name: string) => opts.some((o) => o === `name=${name}` || o.startsWith(`name=${name},`));
   dockerLog("preflight", {
     server: rest.join(" "),
@@ -209,9 +223,16 @@ export async function ensureSandboxNetwork(): Promise<void> {
   dockerLog("network.created", { network: SANDBOX_NETWORK });
 }
 
-/** Remove sandboxes and guards left behind by a previous agent process. */
+/** Remove sandboxes and guards left behind by a previous run of THIS agent. */
 export async function sweepOrphans(): Promise<void> {
-  const { stdout } = await execFileP("docker", ["ps", "-aq", "--filter", `label=${LEASE_LABEL}`]);
+  const { stdout } = await execFileP("docker", [
+    "ps",
+    "-aq",
+    "--filter",
+    `label=${LEASE_LABEL}`,
+    "--filter",
+    `label=${AGENT_LABEL}=${AGENT_ID}`,
+  ]);
   const ids = stdout.split("\n").map((s) => s.trim()).filter(Boolean);
   if (!ids.length) return;
   await execFileP("docker", ["rm", "-f", ...ids]);
@@ -247,19 +268,41 @@ function sandboxTag(): string | null {
 }
 
 /**
- * Resolve the image to run, building it if needed. Returns the tag actually
- * used, which may differ from `image` when we substitute a content-tagged build
- * of the bundled sandbox. Refuses anything outside the operator's allow-list
- * before touching the daemon, so an unknown name is never pulled.
+ * Resolve the image to run. Refuses anything outside the operator's allow-list
+ * before touching the daemon, so an unknown name is never pulled. The bundled
+ * image resolves to its content-tagged build; any other image is the
+ * operator's to manage: we only check it exists and never build or pull it.
  */
 export async function ensureImage(image: string): Promise<string> {
-  const startedAt = Date.now();
   assertImageAllowed(image);
-  // An explicitly configured SANDBOX_IMAGE is the operator's to manage: we only
-  // check it exists and never rebuild it from our context.
-  const bundled = image === config.sandbox.image && existsSync(join(SANDBOX_CTX, "Dockerfile"));
-  const tag = bundled ? (sandboxTag() ?? image) : image;
+  if (image === BUNDLED_IMAGE) return ensureBundledImage();
+  const startedAt = Date.now();
+  try {
+    await execFileP("docker", ["image", "inspect", image]);
+  } catch {
+    throw new Error(`image ${JSON.stringify(image)} is not present locally; pull or build it first`);
+  }
+  dockerLog("image.reused", { image, elapsedMs: Date.now() - startedAt });
+  return image;
+}
 
+/**
+ * The bundled image, built from sandbox-ssh/ if needed. Not subject to the
+ * renter-image allow-list: it is what every guard runs. Resolved once per
+ * process, since its build context cannot change under a running agent.
+ */
+let bundledTag: Promise<string> | null = null;
+export function ensureBundledImage(): Promise<string> {
+  bundledTag ??= buildBundledImage().catch((err) => {
+    bundledTag = null;
+    throw err;
+  });
+  return bundledTag;
+}
+
+async function buildBundledImage(): Promise<string> {
+  const startedAt = Date.now();
+  const tag = sandboxTag() ?? BUNDLED_IMAGE;
   try {
     await execFileP("docker", ["image", "inspect", tag]);
     dockerLog("image.reused", { image: tag, elapsedMs: Date.now() - startedAt });
@@ -267,8 +310,8 @@ export async function ensureImage(image: string): Promise<string> {
   } catch {
     /* not present */
   }
-  if (!bundled) {
-    throw new Error(`image ${JSON.stringify(tag)} is not present locally; pull or build it first`);
+  if (!existsSync(join(SANDBOX_CTX, "Dockerfile"))) {
+    throw new Error(`image ${JSON.stringify(tag)} is not present locally and there is no build context`);
   }
 
   console.log(`[docker] building sandbox image ${tag} (streamed context)…`);
@@ -330,6 +373,8 @@ function hardenedRunArgs(name: string, leaseId: string, profile: ExecProfile): s
     name,
     "--label",
     `${LEASE_LABEL}=${leaseId}`,
+    "--label",
+    `${AGENT_LABEL}=${AGENT_ID}`,
     "--network",
     SANDBOX_NETWORK,
     "--user",
@@ -389,6 +434,24 @@ function execRunArgs(profile: ExecProfile, name: string, leaseId: string, lifeti
 }
 
 /**
+ * Addresses of this host the sandbox must not reach. The private-range rules
+ * do not cover a public address the host owns (a VPS's IP), and traffic to it
+ * lands on the host just like traffic to the bridge gateway.
+ * ponytail: sees only this process's interfaces; an agent run in a container,
+ * or a NAT'd public IP, needs SANDBOX_BLOCK_ADDRS.
+ */
+export function hostAddrs(
+  ifaces: ReturnType<typeof networkInterfaces> = networkInterfaces(),
+  extra: string[] = config.sandbox.blockAddrs,
+): string[] {
+  const own = Object.values(ifaces)
+    .flatMap((list) => list ?? [])
+    .filter((i) => !i.internal)
+    .map((i) => i.address.split("%")[0]);
+  return [...new Set([...own, ...extra])].filter((a) => isIP(a) !== 0);
+}
+
+/**
  * The guard is the privileged half of a lease: root with CAP_NET_ADMIN (plus
  * SETUID/SETGID, used once to drop to uid 1000), sharing only the sandbox's
  * network namespace. It installs the
@@ -406,6 +469,8 @@ function guardRunArgs(sandbox: string, leaseId: string, image: string, mode: "bo
     guardName(sandbox),
     "--label",
     `${LEASE_LABEL}=${leaseId}`,
+    "--label",
+    `${AGENT_LABEL}=${AGENT_ID}`,
     "--network",
     `container:${sandbox}`,
     "--cap-drop",
@@ -423,6 +488,10 @@ function guardRunArgs(sandbox: string, leaseId: string, image: string, mode: "bo
     "--read-only",
     "--tmpfs",
     "/tmp:rw,nosuid,nodev,size=16m",
+    // iptables-legacy must create /run/xtables.lock; without this the guard
+    // fails closed on every kernel that lacks nf_tables.
+    "--tmpfs",
+    "/run:rw,nosuid,nodev,size=1m",
     "--pids-limit",
     "32",
     "--memory",
@@ -439,6 +508,8 @@ function guardRunArgs(sandbox: string, leaseId: string, image: string, mode: "bo
     "compress=false",
     "-e",
     `SANDBOX_NET_GUARD=${config.sandbox.netGuard}`,
+    "-e",
+    `HOST_ADDRS=${hostAddrs().join(" ")}`,
     ...(bore
       ? [
         "-e",
@@ -461,7 +532,7 @@ function guardRunArgs(sandbox: string, leaseId: string, image: string, mode: "bo
  */
 async function startGuard(sandbox: string, leaseId: string, mode: "bore" | "oneshot"): Promise<void> {
   const startedAt = Date.now();
-  const image = await ensureImage(config.sandbox.image);
+  const image = await ensureBundledImage();
   try {
     await execFileP("docker", guardRunArgs(sandbox, leaseId, image, mode), { timeout: 60_000, maxBuffer: 1024 * 1024 });
     dockerLog("guard.ready", { container: guardName(sandbox), mode, elapsedMs: Date.now() - startedAt });
@@ -561,7 +632,6 @@ export async function startSandbox(
   leaseId: string,
   imageOverride: string,
   limits: SandboxLimits,
-  _sshPassword: string | null,
   sshPubKey: string | null,
   surface: "ssh" | "exec" = "ssh",
   lifetimeMs = RUN_MAX_TIMEOUT_MS + 300_000,

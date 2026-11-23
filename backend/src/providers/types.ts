@@ -14,7 +14,6 @@ export interface StartArgs {
   leaseId: string;
   node: ComputeNode;
   surface: Surface;
-  sshPassword: string | null;
   sshPubKey: string | null;
   /** Sandbox lifetime for Modal. Contributor ignores it. */
   timeoutMs: number;
